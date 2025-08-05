@@ -438,45 +438,26 @@ done:
 	return err;
 }
 
-/* return negative if a before b. */
-static int tv_cmp(struct timeval *a, struct timeval *b)
-{
-	time_t diff = a->tv_sec - b->tv_sec;
-	int udiff = a->tv_usec - b->tv_usec;
-
-	if (diff != 0)
-		return diff;
-
-	return udiff;
-}
-
 static int reftable_stack_reload_maybe_reuse(struct reftable_stack *st,
 					     int reuse_open)
 {
 	char **names = NULL, **names_after = NULL;
-	struct timeval deadline;
+	uint64_t deadline;
 	int64_t delay = 0;
 	int tries = 0, err;
 	int fd = -1;
 
-	err = gettimeofday(&deadline, NULL);
-	if (err < 0)
-		goto out;
-	deadline.tv_sec += 3;
+	deadline = reftable_time_ms() + 3000;
 
 	while (1) {
-		struct timeval now;
-
-		err = gettimeofday(&now, NULL);
-		if (err < 0)
-			goto out;
+		uint64_t now = reftable_time_ms();
 
 		/*
 		 * Only look at deadlines after the first few times. This
 		 * simplifies debugging in GDB.
 		 */
 		tries++;
-		if (tries > 3 && tv_cmp(&now, &deadline) >= 0)
+		if (tries > 3 && now >= deadline)
 			goto out;
 
 		fd = open(st->list_file, O_RDONLY);
@@ -525,7 +506,7 @@ static int reftable_stack_reload_maybe_reuse(struct reftable_stack *st,
 		fd = -1;
 
 		delay = delay + (delay * reftable_rand()) / UINT32_MAX + 1;
-		poll(NULL, 0, delay);
+		reftable_sleep_ms(delay);
 	}
 
 out:

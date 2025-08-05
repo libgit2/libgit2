@@ -256,3 +256,13 @@ int reftable_munmap(struct reftable_mmap *mmap)
 	memset(mmap, 0, sizeof(*mmap));
 	return 0;
 }
+
+uint64_t reftable_time_ms(void)
+{
+	return git_time_monotonic();
+}
+
+void reftable_sleep_ms(uint64_t ms)
+{
+	p_poll(NULL, 0, (int) ms);
+}

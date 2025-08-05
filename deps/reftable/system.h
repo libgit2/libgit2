@@ -122,6 +122,10 @@ struct reftable_mmap {
 int reftable_mmap(struct reftable_mmap *out, int fd, size_t len);
 int reftable_munmap(struct reftable_mmap *mmap);
 
+uint64_t reftable_time_ms(void);
+
+void reftable_sleep_ms(uint64_t ms);
+
 #define reftable_stat_s stat
 #define reftable_stat(path, st) p_stat(path, st)
 #define reftable_fstat(fd, st) p_fstat(fd, st)
