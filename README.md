@@ -333,7 +333,7 @@ run the index tests:
 
 To run a single test named `index::racy::diff`, which corresponds to
 the test function
-[`test_index_racy__diff`](https://github.com/libgit2/libgit2/blob/main/tests/index/racy.c#L23):
+[`test_index_racy__diff`](https://github.com/libgit2/libgit2/blob/main/tests/libgit2/index/racy.c#L22):
 
 	$ ./libgit2_tests -sindex::racy::diff
 
