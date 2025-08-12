@@ -596,9 +596,8 @@ struct git_remote_callbacks {
 	git_credential_acquire_cb credentials;
 
 	/**
-	 * If cert verification fails, this will be called to let the
-	 * user make the final decision of whether to allow the
-	 * connection to proceed. Returns 0 to allow the connection
+	 * This will be called to let the user make the final decision of whether
+	 * to allow the connection to proceed. Returns 0 to allow the connection
 	 * or a negative value to indicate an error.
 	 */
 	git_transport_certificate_check_cb certificate_check;
