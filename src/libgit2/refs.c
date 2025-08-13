@@ -819,7 +819,7 @@ int git_reference_list(
 
 static int is_valid_ref_char(char ch)
 {
-	if ((unsigned) ch <= ' ')
+	if ((unsigned) ch <= ' ' || ch == '\177') /* ASCII control characters */
 		return 0;
 
 	switch (ch) {
