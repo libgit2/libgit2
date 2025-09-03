@@ -29,7 +29,25 @@ static git_index *repo_index;
 #define OURS_DIRECTORY_FILE			"df_side1"
 #define THEIRS_DIRECTORY_FILE		"fc90237dc4891fa6c69827fc465632225e391618"
 
+#define BRANCH1_INDEX_ENTRY \
+        { 100644, "4652cb85053eb3a0cb857f62424cf1fce149ef6f", 0, \
+          "added-in-branch1.txt" }
 
+#define BRANCH2_INDEX_ENTRY \
+        { 100644, "bc8359fca4381e671000798bd503470f6173c54d", 0, \
+          "added-in-branch2.txt" }
+
+#define BRANCH3_INDEX_ENTRY \
+        { 100644, "7faf136975b6a6193d6d7afec973af738d7bea91", 0, \
+          "added-in-branch3.txt" }
+
+#define MASTER_INDEX_ENTRY \
+        { 100644, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", 0, \
+          "added-in-master.txt" }
+
+#define OUR_INDEX_ENTRY \
+        { 100644, "9fa7335e756cc1df8cbbce492cd270340042fade", 0, \
+          "added-in-target.txt" }
 
 /* Fixture setup and teardown */
 void test_merge_workdir_octopus__initialize(void)
@@ -78,6 +96,16 @@ static void octopus_merge(int merge_file_favor, int addl_checkout_strategy)
 
 void test_merge_workdir_octopus__merge_multiple_commits(void)
 {
+    struct merge_index_entry merge_index_entries[] = {
+        BRANCH1_INDEX_ENTRY,
+        BRANCH2_INDEX_ENTRY,
+        BRANCH3_INDEX_ENTRY,
+        MASTER_INDEX_ENTRY,
+        OUR_INDEX_ENTRY
+    };
+
 	octopus_merge(0, 0);
+
+    cl_assert(merge_test_index(repo_index, merge_index_entries, 5));
 }
 
