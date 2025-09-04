@@ -1802,6 +1802,7 @@ static int merge_diff_list_insert_unmodified(
 struct merge_diff_find_data {
 	git_merge_diff_list *diff_list;
 	struct merge_diff_df_data df_data;
+    size_t entries_len;
 };
 
 static int queue_difference(const git_index_entry **entries, void *data)
@@ -1810,10 +1811,14 @@ static int queue_difference(const git_index_entry **entries, void *data)
 	bool item_modified = false;
 	size_t i;
 
-	if (!entries[0] || !entries[1] || !entries[2]) {
-		item_modified = true;
-	} else {
-		for (i = 1; i < 3; i++) {
+    for (i = 0; i < find_data->entries_len; i++) {
+        if(!entries[i]) {
+            item_modified = true;
+            break;
+        }
+    }
+	if(!item_modified) {
+		for (i = 1; i < find_data->entries_len; i++) {
 			if (index_entry_cmp(entries[0], entries[i]) != 0) {
 				item_modified = true;
 				break;
@@ -1827,16 +1832,32 @@ static int queue_difference(const git_index_entry **entries, void *data)
 		merge_diff_list_insert_unmodified(find_data->diff_list, entries);
 }
 
+/* TODO: changing this; declare in merge.h or replace entirely (looks internal) */
+int git_merge_diff_list__find_differences_multiple(
+	git_merge_diff_list *diff_list,
+	git_iterator *ancestor_iter,
+	git_iterator *our_iter,
+	git_iterator **their_iters,
+    size_t their_iters_len)
+{
+    size_t iters_len = 2 + their_iters_len;
+    git_array_t(git_iterator*) iters = GIT_ARRAY_INIT;
+    /* TODO: add assert alloc here */
+    git_array_init_to_size(iters, iters_len);
+	git_iterator **iterators = iters.ptr;
+	struct merge_diff_find_data find_data = { diff_list, {}, iters_len };
+
+	return git_iterator_walk(iterators, iters_len, queue_difference, &find_data);
+}
+
 int git_merge_diff_list__find_differences(
 	git_merge_diff_list *diff_list,
 	git_iterator *ancestor_iter,
 	git_iterator *our_iter,
 	git_iterator *their_iter)
 {
-	git_iterator *iterators[3] = { ancestor_iter, our_iter, their_iter };
-	struct merge_diff_find_data find_data = { diff_list };
-
-	return git_iterator_walk(iterators, 3, queue_difference, &find_data);
+    return git_merge_diff_list__find_differences_multiple(diff_list, ancestor_iter, 
+            our_iter, &their_iter, 1);
 }
 
 git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
