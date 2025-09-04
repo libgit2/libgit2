@@ -1832,6 +1832,8 @@ static int queue_difference(const git_index_entry **entries, void *data)
 		merge_diff_list_insert_unmodified(find_data->diff_list, entries);
 }
 
+typedef git_array_t(git_iterator*) git_iterator_array_t;
+
 /* TODO: changing this; declare in merge.h or replace entirely (looks internal) */
 int git_merge_diff_list__find_differences_multiple(
 	git_merge_diff_list *diff_list,
@@ -1840,12 +1842,21 @@ int git_merge_diff_list__find_differences_multiple(
 	git_iterator **their_iters,
     size_t their_iters_len)
 {
-    size_t iters_len = 2 + their_iters_len;
-    git_array_t(git_iterator*) iters = GIT_ARRAY_INIT;
-    /* TODO: add assert alloc here */
-    git_array_init_to_size(iters, iters_len);
-	git_iterator **iterators = iters.ptr;
-	struct merge_diff_find_data find_data = { diff_list, {}, iters_len };
+    size_t i, iters_len = 2 + their_iters_len;
+    git_iterator** iterators;
+    struct merge_diff_find_data find_data;
+
+    /* TODO: see if this can/should be implemented as an git_array_t */
+    iterators = git__calloc(iters_len, sizeof(git_iterator*));
+    GIT_ERROR_CHECK_ALLOC(iterators);
+    
+	iterators[0] = ancestor_iter;
+	iterators[1] = our_iter;
+    
+    for(i = 0; i < their_iters_len; i++) {
+        iterators[i + 2] = their_iters[i];
+    }
+	find_data = (struct merge_diff_find_data){ diff_list, {}, iters_len };
 
 	return git_iterator_walk(iterators, iters_len, queue_difference, &find_data);
 }
@@ -1856,7 +1867,7 @@ int git_merge_diff_list__find_differences(
 	git_iterator *our_iter,
 	git_iterator *their_iter)
 {
-    return git_merge_diff_list__find_differences_multiple(diff_list, ancestor_iter, 
+    return git_merge_diff_list__find_differences_multiple(diff_list, ancestor_iter,
             our_iter, &their_iter, 1);
 }
 
