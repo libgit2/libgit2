@@ -1845,6 +1845,7 @@ int git_merge_diff_list__find_differences_multiple(
     size_t i, iters_len = 2 + their_iters_len;
     git_iterator** iterators;
     struct merge_diff_find_data find_data;
+    int error = 0;
 
     /* TODO: see if this can/should be implemented as an git_array_t */
     iterators = git__calloc(iters_len, sizeof(git_iterator*));
@@ -1858,7 +1859,12 @@ int git_merge_diff_list__find_differences_multiple(
     }
 	find_data = (struct merge_diff_find_data){ diff_list, {}, iters_len };
 
-	return git_iterator_walk(iterators, iters_len, queue_difference, &find_data);
+	error = git_iterator_walk(iterators, iters_len, queue_difference, &find_data);
+
+cleanup:
+    git__free(iterators);
+
+    return error;
 }
 
 int git_merge_diff_list__find_differences(
@@ -2128,17 +2134,18 @@ static git_iterator *iterator_given_or_empty(git_iterator **empty, git_iterator 
 	return *empty;
 }
 
-int git_merge__iterators(
+int git_merge__iterators_multiple(
 	git_index **out,
 	git_repository *repo,
 	git_iterator *ancestor_iter,
 	git_iterator *our_iter,
-	git_iterator *theirs_iter,
+	git_iterator **theirs_iters,
+    size_t theirs_iters_len,
 	const git_merge_options *given_opts)
 {
 	git_iterator *empty_ancestor = NULL,
-		*empty_ours = NULL,
-		*empty_theirs = NULL;
+		*empty_ours = NULL;
+    git_iterator **empty_theirs_iters;
 	git_merge_diff_list *diff_list;
 	git_merge_options opts;
 	git_merge_file_options file_opts = GIT_MERGE_FILE_OPTIONS_INIT;
@@ -2175,10 +2182,16 @@ int git_merge__iterators(
 
 	ancestor_iter = iterator_given_or_empty(&empty_ancestor, ancestor_iter);
 	our_iter = iterator_given_or_empty(&empty_ours, our_iter);
-	theirs_iter = iterator_given_or_empty(&empty_theirs, theirs_iter);
 
-	if ((error = git_merge_diff_list__find_differences(
-			diff_list, ancestor_iter, our_iter, theirs_iter)) < 0 ||
+    empty_theirs_iters = git__calloc(theirs_iters_len, sizeof(git_iterator*));
+    GIT_ERROR_CHECK_ALLOC(empty_theirs_iters);
+    for(i = 0; i < theirs_iters_len; i++) {
+        theirs_iters[i] = iterator_given_or_empty(&empty_theirs_iters[i], 
+                theirs_iters[i]);
+    }
+
+	if ((error = git_merge_diff_list__find_differences_multiple(
+			diff_list, ancestor_iter, our_iter, theirs_iters, theirs_iters_len)) < 0 ||
 		(error = git_merge_diff_list__find_renames(repo, diff_list, &opts)) < 0)
 		goto done;
 
@@ -2215,9 +2228,21 @@ done:
 	git_merge_diff_list__free(diff_list);
 	git_iterator_free(empty_ancestor);
 	git_iterator_free(empty_ours);
-	git_iterator_free(empty_theirs);
+    git__free(empty_theirs_iters);
 
 	return error;
+}
+
+int git_merge__iterators(
+	git_index **out,
+	git_repository *repo,
+	git_iterator *ancestor_iter,
+	git_iterator *our_iter,
+	git_iterator *theirs_iter,
+	const git_merge_options *given_opts)
+{
+    return git_merge__iterators_multiple(out, repo, ancestor_iter, our_iter,
+            &theirs_iter, 1, given_opts);
 }
 
 int git_merge_trees(
