@@ -103,7 +103,6 @@ static int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_r
 		commit = git_revwalk__commit_lookup(walk, &input_array[i]);
 		if (commit == NULL)
 			goto on_error;
-
 		git_vector_insert(&list, commit);
 	}
 
@@ -2300,6 +2299,16 @@ done:
 	return error;
 }
 
+static int merge_annotated_commits_multiple(
+	git_index **index_out,
+	git_annotated_commit **base_out,
+	git_repository *repo,
+	git_annotated_commit *our_commit,
+	git_annotated_commit **their_commits,
+    size_t their_commits_len,
+	size_t recursion_level,
+	const git_merge_options *opts);
+
 static int merge_annotated_commits(
 	git_index **index_out,
 	git_annotated_commit **base_out,
@@ -2471,6 +2480,68 @@ done:
 	return error;
 }
 
+static int merge_annotated_commits_multiple(
+	git_index **index_out,
+	git_annotated_commit **base_out,
+	git_repository *repo,
+	git_annotated_commit *ours,
+	git_annotated_commit **their_commits,
+    size_t their_commits_len,
+	size_t recursion_level,
+	const git_merge_options *opts)
+{
+	git_annotated_commit *base = NULL, *prev_base = ours;
+	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
+	int error;
+    size_t i;
+    git_iterator **their_iters;
+
+    their_iters = git__calloc(their_commits_len, sizeof(git_iterator*));
+
+    /* TODO: compute base with multiple theirs; will need to pass proper their and len */
+    for(i = 0; i < their_commits_len; i++) {
+        base = NULL;
+        if ((error = compute_base(&base, repo, prev_base, their_commits[i], opts,
+            recursion_level)) < 0) {
+
+            if (error != GIT_ENOTFOUND)
+                goto done;
+
+            git_error_clear();
+        }
+        prev_base = base;
+    }
+
+	if ((error = iterator_for_annotated_commit(&base_iter, base)) < 0 ||
+		(error = iterator_for_annotated_commit(&our_iter, ours)) < 0) 
+        goto done;
+
+    for(i = 0; i < their_commits_len; i++) {
+        if((error = iterator_for_annotated_commit(&their_iter, their_commits[i])) < 0)
+            goto done;
+        their_iters[i] = their_iter;
+    }
+	if((error = git_merge__iterators_multiple(index_out, repo, base_iter, our_iter,
+			their_iters, their_commits_len, opts)) < 0)
+		goto done;
+
+	if (base_out) {
+		*base_out = base;
+		base = NULL;
+	}
+
+done:
+    /* TODO: check for memory leaks */
+	git_annotated_commit_free(base);
+	git_iterator_free(base_iter);
+	git_iterator_free(our_iter);
+    for(i = 0; i < their_commits_len; i++) {
+        git_iterator_free(their_iters[i]);
+    }
+    git__free(their_iters);
+	return error;
+}
+
 static int merge_annotated_commits(
 	git_index **index_out,
 	git_annotated_commit **base_out,
@@ -2480,37 +2551,39 @@ static int merge_annotated_commits(
 	size_t recursion_level,
 	const git_merge_options *opts)
 {
-	git_annotated_commit *base = NULL;
-	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
-	int error;
+    return merge_annotated_commits_multiple(index_out, base_out, repo, ours, 
+            &theirs, 1, recursion_level, opts);
+	/* git_annotated_commit *base = NULL; */
+	/* git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL; */
+	/* int error, i; */
 
-	if ((error = compute_base(&base, repo, ours, theirs, opts,
-		recursion_level)) < 0) {
+	/* if ((error = compute_base(&base, repo, ours, theirs, opts, */
+	/* 	recursion_level)) < 0) { */
 
-		if (error != GIT_ENOTFOUND)
-			goto done;
+	/* 	if (error != GIT_ENOTFOUND) */
+	/* 		goto done; */
 
-		git_error_clear();
-	}
+	/* 	git_error_clear(); */
+	/* } */
 
-	if ((error = iterator_for_annotated_commit(&base_iter, base)) < 0 ||
-		(error = iterator_for_annotated_commit(&our_iter, ours)) < 0 ||
-		(error = iterator_for_annotated_commit(&their_iter, theirs)) < 0 ||
-		(error = git_merge__iterators(index_out, repo, base_iter, our_iter,
-			their_iter, opts)) < 0)
-		goto done;
+	/* if ((error = iterator_for_annotated_commit(&base_iter, base)) < 0 || */
+	/* 	(error = iterator_for_annotated_commit(&our_iter, ours)) < 0 || */
+	/* 	(error = iterator_for_annotated_commit(&their_iter, theirs)) < 0 || */
+	/* 	(error = git_merge__iterators(index_out, repo, base_iter, our_iter, */
+	/* 		their_iter, opts)) < 0) */
+	/* 	goto done; */
 
-	if (base_out) {
-		*base_out = base;
-		base = NULL;
-	}
+	/* if (base_out) { */
+	/* 	*base_out = base; */
+	/* 	base = NULL; */
+	/* } */
 
-done:
-	git_annotated_commit_free(base);
-	git_iterator_free(base_iter);
-	git_iterator_free(our_iter);
-	git_iterator_free(their_iter);
-	return error;
+/* done: */
+	/* git_annotated_commit_free(base); */
+	/* git_iterator_free(base_iter); */
+	/* git_iterator_free(our_iter); */
+	/* git_iterator_free(their_iter); */
+	/* return error; */
 }
 
 
@@ -3404,10 +3477,10 @@ int git_merge(
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(their_heads && their_heads_len > 0);
 
-	if (their_heads_len != 1) {
-		git_error_set(GIT_ERROR_MERGE, "can only merge a single branch");
-		return -1;
-	}
+	/* if (their_heads_len != 1) { */
+	/* 	git_error_set(GIT_ERROR_MERGE, "can only merge a single branch"); */
+	/* 	return -1; */
+	/* } */
 
 	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
 		goto done;
@@ -3431,8 +3504,8 @@ int git_merge(
 
 	/* TODO: octopus */
 
-	if ((error = merge_annotated_commits(&index, &base, repo, our_head,
-			(git_annotated_commit *)their_heads[0], 0, merge_opts)) < 0 ||
+	if ((error = merge_annotated_commits_multiple(&index, &base, repo, our_head,
+                    their_heads, their_heads_len, 0, merge_opts)) < 0 ||
 		(error = git_merge__check_result(repo, index)) < 0 ||
 		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0)
 		goto done;
