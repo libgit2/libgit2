@@ -22,31 +22,33 @@ static git_index *repo_index;
 #define OUR_TARGET_BRANCH "target"
 #define NUM_COMMITS 4
 
-#define THEIRS_UNRELATED_BRANCH		"unrelated"
-#define THEIRS_UNRELATED_OID		"55b4e4687e7a0d9ca367016ed930f385d4022e6f"
-#define THEIRS_UNRELATED_PARENT		"d6cf6c7741b3316826af1314042550c97ded1d50"
+/* TODO: implement test for this; i.e. verify that the merge base is as expected; it is, but need a test */
+#define COMMON_BASE_OID "b9fe1c1159fbfa8235ea0e5487174ab7703fa3d7"
 
-#define OURS_DIRECTORY_FILE			"df_side1"
-#define THEIRS_DIRECTORY_FILE		"fc90237dc4891fa6c69827fc465632225e391618"
+/* TODO: figure out why stage is nonzero!! currently is 2, which is a conflict from "target" */
 
 #define BRANCH1_INDEX_ENTRY \
-        { 100644, "4652cb85053eb3a0cb857f62424cf1fce149ef6f", 0, \
+        { 0100644, "206e7338ee5863b438f3f0602f0c0e5ca89fd7a6", 0, \
+          "added-in-branch1.txt" }
+
+#define BRANCH1_B_INDEX_ENTRY \
+        { 0100644, "4652cb85053eb3a0cb857f62424cf1fce149ef6f", 0, \
           "added-in-branch1.txt" }
 
 #define BRANCH2_INDEX_ENTRY \
-        { 100644, "bc8359fca4381e671000798bd503470f6173c54d", 0, \
+        { 0100644, "bc8359fca4381e671000798bd503470f6173c54d", 0, \
           "added-in-branch2.txt" }
 
 #define BRANCH3_INDEX_ENTRY \
-        { 100644, "7faf136975b6a6193d6d7afec973af738d7bea91", 0, \
+        { 0100644, "7faf136975b6a6193d6d7afec973af738d7bea91", 0, \
           "added-in-branch3.txt" }
 
 #define MASTER_INDEX_ENTRY \
-        { 100644, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", 0, \
+        { 0100644, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", 0, \
           "added-in-master.txt" }
 
 #define OUR_INDEX_ENTRY \
-        { 100644, "9fa7335e756cc1df8cbbce492cd270340042fade", 0, \
+        { 0100644, "9fa7335e756cc1df8cbbce492cd270340042fade", 0, \
           "added-in-target.txt" }
 
 /* Fixture setup and teardown */
@@ -90,14 +92,14 @@ static void octopus_merge(int merge_file_favor, int addl_checkout_strategy)
 	cl_git_pass(git_merge(repo, (const git_annotated_commit **)their_heads, NUM_COMMITS, &merge_opts, &checkout_opts));
 
     for(i = 0; i < NUM_COMMITS; ++i) {
-        git_annotated_commit_free(their_heads[0]);
+        git_annotated_commit_free(their_heads[i]);
     }
 }
 
 void test_merge_workdir_octopus__merge_multiple_commits(void)
 {
     struct merge_index_entry merge_index_entries[] = {
-        BRANCH1_INDEX_ENTRY,
+        BRANCH1_B_INDEX_ENTRY,
         BRANCH2_INDEX_ENTRY,
         BRANCH3_INDEX_ENTRY,
         MASTER_INDEX_ENTRY,
@@ -109,3 +111,7 @@ void test_merge_workdir_octopus__merge_multiple_commits(void)
     cl_assert(merge_test_index(repo_index, merge_index_entries, 5));
 }
 
+void test_merge_workdir_octopus__merge_base(void)
+{
+    
+}
