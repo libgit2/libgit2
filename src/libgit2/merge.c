@@ -1741,6 +1741,37 @@ GIT_INLINE(int) merge_delta_type_from_index_entries(
 	return GIT_DELTA_UNMODIFIED;
 }
 
+static git_merge_diff *merge_diff_from_index_entries_multiple(
+	git_merge_diff_list *diff_list,
+	const git_index_entry **entries,
+    size_t theirs_len)
+{
+	git_merge_diff *conflict;
+	git_pool *pool = &diff_list->pool;
+    size_t i;
+
+	if ((conflict = git_pool_mallocz(pool, sizeof(git_merge_diff))) == NULL)
+		return NULL;
+
+	if (index_entry_dup_pool(&conflict->ancestor_entry, pool, entries[TREE_IDX_ANCESTOR]) < 0 ||
+		index_entry_dup_pool(&conflict->our_entry, pool, entries[TREE_IDX_OURS]) < 0 ||
+		index_entry_dup_pool(&conflict->their_entry, pool, entries[TREE_IDX_THEIRS]) < 0) {
+        /* TODO: for (i = 0; i < theirs_len; i++) { */
+
+        /*     index_entry_dup_pool */
+        /* } */
+		return NULL;
+    }
+
+	conflict->our_status = merge_delta_type_from_index_entries(
+		entries[TREE_IDX_ANCESTOR], entries[TREE_IDX_OURS]);
+	conflict->their_status = merge_delta_type_from_index_entries(
+		entries[TREE_IDX_ANCESTOR], entries[TREE_IDX_THEIRS]);
+
+	return conflict;
+}
+
+/* TODO: this doesn't support multiple merge */
 static git_merge_diff *merge_diff_from_index_entries(
 	git_merge_diff_list *diff_list,
 	const git_index_entry **entries)
@@ -1765,6 +1796,34 @@ static git_merge_diff *merge_diff_from_index_entries(
 }
 
 /* Merge trees */
+
+static int merge_diff_list_insert_conflict_multiple(
+	git_merge_diff_list *diff_list,
+	struct merge_diff_df_data *merge_df_data,
+	const git_index_entry **tree_items,
+    size_t tree_items_len)
+{
+	git_merge_diff *conflict;
+    git_index_entry* curr_items[3] = { tree_items[0], NULL, NULL };
+    size_t i, j;
+
+    /* Find all conflicts between tree items; 0 is ancestor, 1 is base, 2+ are theirs */
+    /* Check each index entry for conflicts with entries past it in the input tree_items */
+    /* Each index entry will be treated as an 'ours' compared with each subsequent entry as 'theirs' */
+    /* The last index entry will only ever be a 'theirs' in the comparisons */
+    for (i = 1; i < tree_items_len - 1; i++)
+        for(j = i + 1; j < tree_items_len; j++) {
+            curr_items[1] = tree_items[i];
+            curr_items[2] = tree_items[j];
+            if ((conflict = merge_diff_from_index_entries(diff_list, curr_items)) == NULL ||
+                merge_diff_detect_type(conflict) < 0 ||
+                merge_diff_detect_df_conflict(merge_df_data, conflict) < 0 ||
+                git_vector_insert(&diff_list->conflicts, conflict) < 0)
+                return -1;
+        }
+
+	return 0;
+}
 
 static int merge_diff_list_insert_conflict(
 	git_merge_diff_list *diff_list,
@@ -1804,7 +1863,7 @@ struct merge_diff_find_data {
     size_t entries_len;
 };
 
-static int queue_difference(const git_index_entry **entries, void *data)
+/* TODO: the issue is here */ static int queue_difference(const git_index_entry **entries, void *data)
 {
 	struct merge_diff_find_data *find_data = data;
 	bool item_modified = false;
@@ -1826,8 +1885,9 @@ static int queue_difference(const git_index_entry **entries, void *data)
 	}
 
 	return item_modified ?
-		merge_diff_list_insert_conflict(
-			find_data->diff_list, &find_data->df_data, entries) :
+		merge_diff_list_insert_conflict_multiple(
+			find_data->diff_list, &find_data->df_data, entries, 
+            find_data->entries_len) :
 		merge_diff_list_insert_unmodified(find_data->diff_list, entries);
 }
 
@@ -2184,11 +2244,12 @@ int git_merge__iterators_multiple(
 
     empty_theirs_iters = git__calloc(theirs_iters_len, sizeof(git_iterator*));
     GIT_ERROR_CHECK_ALLOC(empty_theirs_iters);
-    for(i = 0; i < theirs_iters_len; i++) {
+    for (i = 0; i < theirs_iters_len; i++) {
         theirs_iters[i] = iterator_given_or_empty(&empty_theirs_iters[i], 
                 theirs_iters[i]);
     }
 
+    /* TODO: build merge diff list correctly with multiple theirs */
 	if ((error = git_merge_diff_list__find_differences_multiple(
 			diff_list, ancestor_iter, our_iter, theirs_iters, theirs_iters_len)) < 0 ||
 		(error = git_merge_diff_list__find_renames(repo, diff_list, &opts)) < 0)
@@ -2204,7 +2265,7 @@ int git_merge__iterators_multiple(
 			&resolved, diff_list, conflict, &opts, &file_opts)) < 0)
 			goto done;
 
-		if (!resolved) {
+		if (!resolved) { /* TODO: figure out if fail on conflict flag should be set automatically for octo merges; seems yes */
 			if ((opts.flags & GIT_MERGE_FAIL_ON_CONFLICT)) {
 				git_error_set(GIT_ERROR_MERGE, "merge conflicts exist");
 				error = GIT_EMERGECONFLICT;
@@ -2498,7 +2559,7 @@ static int merge_annotated_commits_multiple(
 
     their_iters = git__calloc(their_commits_len, sizeof(git_iterator*));
 
-    /* TODO: compute base with multiple theirs; will need to pass proper their and len */
+    /* TODO: write test confirming that the base is as expected*/
     for(i = 0; i < their_commits_len; i++) {
         base = NULL;
         if ((error = compute_base(&base, repo, prev_base, their_commits[i], opts,
@@ -2516,12 +2577,13 @@ static int merge_annotated_commits_multiple(
 		(error = iterator_for_annotated_commit(&our_iter, ours)) < 0) 
         goto done;
 
-    for(i = 0; i < their_commits_len; i++) {
+    for (i = 0; i < their_commits_len; i++) {
         if((error = iterator_for_annotated_commit(&their_iter, their_commits[i])) < 0)
             goto done;
         their_iters[i] = their_iter;
     }
-	if((error = git_merge__iterators_multiple(index_out, repo, base_iter, our_iter,
+
+	if ((error = git_merge__iterators_multiple(index_out, repo, base_iter, our_iter,
 			their_iters, their_commits_len, opts)) < 0)
 		goto done;
 
