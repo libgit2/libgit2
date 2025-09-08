@@ -2238,6 +2238,7 @@ int git_merge__iterators_multiple(
 
     /* set fail on merge conflict for octopus merge */
     if (theirs_iters_len > 1) {
+        /* TODO: write test for this case */
         opts.flags |= GIT_MERGE_FAIL_ON_CONFLICT;
         file_opts.flags &= ~GIT_MERGE_FILE_ACCEPT_CONFLICTS
     }
