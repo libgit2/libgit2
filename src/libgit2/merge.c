@@ -2237,8 +2237,10 @@ int git_merge__iterators_multiple(
 	}
 
     /* set fail on merge conflict for octopus merge */
-    if (theirs_iters_len > 1)
+    if (theirs_iters_len > 1) {
         opts.flags |= GIT_MERGE_FAIL_ON_CONFLICT;
+        file_opts.flags &= ~GIT_MERGE_FILE_ACCEPT_CONFLICTS
+    }
 
 	diff_list = git_merge_diff_list__alloc(repo);
 	GIT_ERROR_CHECK_ALLOC(diff_list);
