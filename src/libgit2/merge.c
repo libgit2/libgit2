@@ -1865,6 +1865,7 @@ struct merge_diff_find_data {
 
 /* TODO: the issue is here */ static int queue_difference(const git_index_entry **entries, void *data)
 {
+    /* TODO: figure out how to ignore index entries that are parents of other index entries; i.e. branch1 is parent of branch1-b */
 	struct merge_diff_find_data *find_data = data;
 	bool item_modified = false;
 	size_t i;
@@ -2212,6 +2213,7 @@ int git_merge__iterators_multiple(
 	git_vector changes;
 	size_t i;
 	int error = 0;
+    bool is_octopus = theirs_iters_len > 1;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(repo);
@@ -2237,7 +2239,7 @@ int git_merge__iterators_multiple(
 	}
 
     /* set fail on merge conflict for octopus merge */
-    if (theirs_iters_len > 1) {
+    if (is_octopus) {
         /* TODO: write test for this case */
         opts.flags |= GIT_MERGE_FAIL_ON_CONFLICT;
         file_opts.flags &= ~GIT_MERGE_FILE_ACCEPT_CONFLICTS;
@@ -2274,7 +2276,11 @@ int git_merge__iterators_multiple(
 
 		if (!resolved) { /* TODO: figure out if fail on conflict flag should be set automatically for octo merges; seems yes */
 			if ((opts.flags & GIT_MERGE_FAIL_ON_CONFLICT)) {
-				git_error_set(GIT_ERROR_MERGE, "merge conflicts exist");
+                if (is_octopus)
+                    git_error_set(GIT_ERROR_MERGE, "Automated merge did not work.\n"
+                            "Should not be doing an octopus.");
+                else
+                    git_error_set(GIT_ERROR_MERGE, "merge conflicts exist");
 				error = GIT_EMERGECONFLICT;
 				goto done;
 			}
