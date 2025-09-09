@@ -52,7 +52,7 @@ static git_index *repo_index;
           "added-in-target.txt" }
 
 /* Fixture setup and teardown */
-void test_merge_workdir_octopus__initialize(void)
+void test_merge_octopus_simple__initialize(void)
 {
 	git_config *cfg;
 
@@ -65,7 +65,7 @@ void test_merge_workdir_octopus__initialize(void)
 	git_config_free(cfg);
 }
 
-void test_merge_workdir_octopus__cleanup(void)
+void test_merge_octopus_simple__cleanup(void)
 {
 	git_index_free(repo_index);
 	cl_git_sandbox_cleanup();
@@ -96,7 +96,7 @@ static void octopus_merge(int merge_file_favor, int addl_checkout_strategy)
     }
 }
 
-void test_merge_workdir_octopus__merge_multiple_commits(void)
+void test_merge_octopus_simple__merge_multiple_commits(void)
 {
     struct merge_index_entry merge_index_entries[] = {
         BRANCH1_B_INDEX_ENTRY,
@@ -111,7 +111,3 @@ void test_merge_workdir_octopus__merge_multiple_commits(void)
     cl_assert(merge_test_index(repo_index, merge_index_entries, 5));
 }
 
-void test_merge_workdir_octopus__merge_base(void)
-{
-    
-}
