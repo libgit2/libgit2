@@ -1860,24 +1860,18 @@ static int merge_diff_list_insert_unmodified(
 struct merge_diff_find_data {
 	git_merge_diff_list *diff_list;
 	struct merge_diff_df_data df_data;
-    size_t entries_len;
 };
 
-/* TODO: the issue is here */ static int queue_difference(const git_index_entry **entries, void *data)
+static int queue_difference(const git_index_entry **entries, void *data)
 {
-    /* TODO: figure out how to ignore index entries that are parents of other index entries; i.e. branch1 is parent of branch1-b */
 	struct merge_diff_find_data *find_data = data;
 	bool item_modified = false;
 	size_t i;
 
-    for (i = 0; i < find_data->entries_len; i++) {
-        if(!entries[i]) {
-            item_modified = true;
-            break;
-        }
-    }
-	if(!item_modified) {
-		for (i = 1; i < find_data->entries_len; i++) {
+    if(!entries[0] || !entries[1] || !entries[2]) {
+        item_modified = true;
+    } else {
+		for (i = 1; i < 3; i++) {
 			if (index_entry_cmp(entries[0], entries[i]) != 0) {
 				item_modified = true;
 				break;
@@ -1886,9 +1880,7 @@ struct merge_diff_find_data {
 	}
 
 	return item_modified ?
-		merge_diff_list_insert_conflict_multiple(
-			find_data->diff_list, &find_data->df_data, entries, 
-            find_data->entries_len) :
+		merge_diff_list_insert_conflict(find_data->diff_list, &find_data->df_data, entries) :
 		merge_diff_list_insert_unmodified(find_data->diff_list, entries);
 }
 
@@ -1902,7 +1894,7 @@ int git_merge_diff_list__find_differences_multiple(
 	git_iterator **their_iters,
     size_t their_iters_len)
 {
-    size_t i, iters_len = 2 + their_iters_len;
+    size_t i, j, iters_len = 1 + their_iters_len;
     git_iterator** iterators;
     struct merge_diff_find_data find_data;
     int error = 0;
@@ -1911,17 +1903,22 @@ int git_merge_diff_list__find_differences_multiple(
     iterators = git__calloc(iters_len, sizeof(git_iterator*));
     GIT_ERROR_CHECK_ALLOC(iterators);
     
-	iterators[0] = ancestor_iter;
-	iterators[1] = our_iter;
+	iterators[0] = our_iter;
     
     for(i = 0; i < their_iters_len; i++) {
-        iterators[i + 2] = their_iters[i];
+        iterators[i + 1] = their_iters[i];
     }
-	find_data = (struct merge_diff_find_data){ diff_list, {}, iters_len };
 
-	error = git_iterator_walk(iterators, iters_len, queue_difference, &find_data);
+    for (i = 0; i < iters_len - 1; i++)
+        for(j = i + 1; j < iters_len; j++) {
+            find_data = (struct merge_diff_find_data){ diff_list };
+            git_iterator* curr_iterators[3] = { ancestor_iter, iterators[i], iterators[j] };
 
-cleanup:
+            if ((error = git_iterator_walk(curr_iterators, 3, queue_difference, &find_data)) < 0)
+                goto done;
+        }
+
+done:
     git__free(iterators);
 
     return error;
