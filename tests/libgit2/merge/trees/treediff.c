@@ -75,7 +75,7 @@ static void test_find_differences(
 	cl_git_pass(git_iterator_for_tree(&ours_iter, ours_tree, &iter_opts));
 	cl_git_pass(git_iterator_for_tree(&theirs_iter, theirs_tree, &iter_opts));
 
-	cl_git_pass(git_merge_diff_list__find_differences(merge_diff_list, ancestor_iter, ours_iter, theirs_iter));
+	cl_git_pass(git_merge_diff_list__find_differences(merge_diff_list, ancestor_iter, ours_iter, &theirs_iter, 1));
 	cl_git_pass(git_merge_diff_list__find_renames(repo, merge_diff_list, &opts));
 
 	/*
