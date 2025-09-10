@@ -1742,7 +1742,6 @@ GIT_INLINE(int) merge_delta_type_from_index_entries(
 	return GIT_DELTA_UNMODIFIED;
 }
 
-/* TODO: this doesn't support multiple merge */
 static git_merge_diff *merge_diff_from_index_entries(
 	git_merge_diff_list *diff_list,
 	const git_index_entry **entries)
@@ -1827,7 +1826,6 @@ static int queue_difference(const git_index_entry **entries, void *data)
 		merge_diff_list_insert_unmodified(find_data->diff_list, entries);
 }
 
-/* TODO: changing this; declare in merge.h or replace entirely (looks internal) */
 int git_merge_diff_list__find_differences(
 	git_merge_diff_list *diff_list,
 	git_iterator *ancestor_iter,
@@ -1841,7 +1839,6 @@ int git_merge_diff_list__find_differences(
 	struct merge_diff_find_data find_data;
 	int error = 0;
 
-	/* TODO: see if this can/should be implemented as an git_array_t */
 	iterators = git__calloc(iters_len, sizeof(git_iterator*));
 	GIT_ERROR_CHECK_ALLOC(iterators);
 
@@ -2178,7 +2175,6 @@ int git_merge__iterators(
 
 	/* set fail on merge conflict for octopus merge */
 	if (is_octopus) {
-		/* TODO: write test for this case */
 		opts.flags |= GIT_MERGE_FAIL_ON_CONFLICT;
 		file_opts.flags &= ~GIT_MERGE_FILE_ACCEPT_CONFLICTS;
 	}
@@ -2196,7 +2192,6 @@ int git_merge__iterators(
 				theirs_iters[i]);
 	}
 
-	/* TODO: build merge diff list correctly with multiple theirs */
 	if ((error = git_merge_diff_list__find_differences(
 			diff_list, ancestor_iter, our_iter, theirs_iters, theirs_iters_len)) < 0 ||
 		(error = git_merge_diff_list__find_renames(repo, diff_list, &opts)) < 0)
@@ -2212,7 +2207,7 @@ int git_merge__iterators(
 			&resolved, diff_list, conflict, &opts, &file_opts)) < 0)
 			goto done;
 
-		if (!resolved) { /* TODO: figure out if fail on conflict flag should be set automatically for octo merges; seems yes */
+		if (!resolved) { 
 			if ((opts.flags & GIT_MERGE_FAIL_ON_CONFLICT)) {
 				if (is_octopus)
 					git_error_set(GIT_ERROR_MERGE, "Automated merge did not work.\n"
@@ -3503,8 +3498,7 @@ int git_merge(
 			their_heads_len)) < 0)
 		goto done;
 
-	/* TODO: octopus */
-
+	/* Run octopus merge if there is more than one `their_heads` */
 	if ((error = merge_annotated_commits_multiple(&index, &base, repo, our_head,
 					their_heads, their_heads_len, 0, merge_opts)) < 0 ||
 		(error = git_merge__check_result(repo, index)) < 0 ||
