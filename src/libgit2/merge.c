@@ -1741,36 +1741,6 @@ GIT_INLINE(int) merge_delta_type_from_index_entries(
 	return GIT_DELTA_UNMODIFIED;
 }
 
-static git_merge_diff *merge_diff_from_index_entries_multiple(
-	git_merge_diff_list *diff_list,
-	const git_index_entry **entries,
-    size_t theirs_len)
-{
-	git_merge_diff *conflict;
-	git_pool *pool = &diff_list->pool;
-    size_t i;
-
-	if ((conflict = git_pool_mallocz(pool, sizeof(git_merge_diff))) == NULL)
-		return NULL;
-
-	if (index_entry_dup_pool(&conflict->ancestor_entry, pool, entries[TREE_IDX_ANCESTOR]) < 0 ||
-		index_entry_dup_pool(&conflict->our_entry, pool, entries[TREE_IDX_OURS]) < 0 ||
-		index_entry_dup_pool(&conflict->their_entry, pool, entries[TREE_IDX_THEIRS]) < 0) {
-        /* TODO: for (i = 0; i < theirs_len; i++) { */
-
-        /*     index_entry_dup_pool */
-        /* } */
-		return NULL;
-    }
-
-	conflict->our_status = merge_delta_type_from_index_entries(
-		entries[TREE_IDX_ANCESTOR], entries[TREE_IDX_OURS]);
-	conflict->their_status = merge_delta_type_from_index_entries(
-		entries[TREE_IDX_ANCESTOR], entries[TREE_IDX_THEIRS]);
-
-	return conflict;
-}
-
 /* TODO: this doesn't support multiple merge */
 static git_merge_diff *merge_diff_from_index_entries(
 	git_merge_diff_list *diff_list,
@@ -1796,34 +1766,6 @@ static git_merge_diff *merge_diff_from_index_entries(
 }
 
 /* Merge trees */
-
-static int merge_diff_list_insert_conflict_multiple(
-	git_merge_diff_list *diff_list,
-	struct merge_diff_df_data *merge_df_data,
-	const git_index_entry **tree_items,
-    size_t tree_items_len)
-{
-	git_merge_diff *conflict;
-    git_index_entry* curr_items[3] = { tree_items[0], NULL, NULL };
-    size_t i, j;
-
-    /* Find all conflicts between tree items; 0 is ancestor, 1 is base, 2+ are theirs */
-    /* Check each index entry for conflicts with entries past it in the input tree_items */
-    /* Each index entry will be treated as an 'ours' compared with each subsequent entry as 'theirs' */
-    /* The last index entry will only ever be a 'theirs' in the comparisons */
-    for (i = 1; i < tree_items_len - 1; i++)
-        for(j = i + 1; j < tree_items_len; j++) {
-            curr_items[1] = tree_items[i];
-            curr_items[2] = tree_items[j];
-            if ((conflict = merge_diff_from_index_entries(diff_list, curr_items)) == NULL ||
-                merge_diff_detect_type(conflict) < 0 ||
-                merge_diff_detect_df_conflict(merge_df_data, conflict) < 0 ||
-                git_vector_insert(&diff_list->conflicts, conflict) < 0)
-                return -1;
-        }
-
-	return 0;
-}
 
 static int merge_diff_list_insert_conflict(
 	git_merge_diff_list *diff_list,
@@ -1896,6 +1838,7 @@ int git_merge_diff_list__find_differences_multiple(
 {
     size_t i, j, iters_len = 1 + their_iters_len;
     git_iterator** iterators;
+	git_iterator* curr_iterators[3];
     struct merge_diff_find_data find_data;
     int error = 0;
 
@@ -1918,7 +1861,9 @@ int git_merge_diff_list__find_differences_multiple(
             /* Reset the "ours" iterator since it may have previously been walked. */
             git_iterator_reset(iterators[i]);
 
-            git_iterator* curr_iterators[3] = { ancestor_iter, iterators[i], iterators[j] };
+			curr_iterators[0] = ancestor_iter;
+			curr_iterators[1] = iterators[i];
+			curr_iterators[2] = iterators[j];
 
             if ((error = git_iterator_walk(curr_iterators, 3, queue_difference, &find_data)) < 0)
                 goto done;
@@ -2382,7 +2327,7 @@ static int merge_annotated_commits_multiple(
 	git_annotated_commit **base_out,
 	git_repository *repo,
 	git_annotated_commit *our_commit,
-	git_annotated_commit **their_commits,
+	const git_annotated_commit **their_commits,
     size_t their_commits_len,
 	size_t recursion_level,
 	const git_merge_options *opts);
@@ -2392,7 +2337,7 @@ static int merge_annotated_commits(
 	git_annotated_commit **base_out,
 	git_repository *repo,
 	git_annotated_commit *our_commit,
-	git_annotated_commit *their_commit,
+	const git_annotated_commit *their_commit,
 	size_t recursion_level,
 	const git_merge_options *opts);
 
@@ -2563,7 +2508,7 @@ static int merge_annotated_commits_multiple(
 	git_annotated_commit **base_out,
 	git_repository *repo,
 	git_annotated_commit *ours,
-	git_annotated_commit **their_commits,
+	const git_annotated_commit **their_commits,
     size_t their_commits_len,
 	size_t recursion_level,
 	const git_merge_options *opts)
@@ -2626,7 +2571,7 @@ static int merge_annotated_commits(
 	git_annotated_commit **base_out,
 	git_repository *repo,
 	git_annotated_commit *ours,
-	git_annotated_commit *theirs,
+	const git_annotated_commit *theirs,
 	size_t recursion_level,
 	const git_merge_options *opts)
 {
