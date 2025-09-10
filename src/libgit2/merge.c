@@ -103,6 +103,7 @@ static int merge_bases_many(git_commit_list **out, git_revwalk **walk_out, git_r
 		commit = git_revwalk__commit_lookup(walk, &input_array[i]);
 		if (commit == NULL)
 			goto on_error;
+
 		git_vector_insert(&list, commit);
 	}
 
@@ -497,7 +498,7 @@ static int remove_redundant(git_revwalk *walk, git_vector *commits, uint32_t min
 		git_commit_list_free(&common);
 
 		if ((error = clear_commit_marks(commit, ALL_FLAGS)) < 0 ||
-			(error = clear_commit_marks_many(&work, ALL_FLAGS)) < 0)
+		    (error = clear_commit_marks_many(&work, ALL_FLAGS)) < 0)
 				goto done;
 	}
 
@@ -566,8 +567,8 @@ int git_merge__bases_many(
 			git_vector_insert(&redundant, git_commit_list_pop(&result));
 
 		if ((error = clear_commit_marks(one, ALL_FLAGS)) < 0 ||
-			(error = clear_commit_marks_many(twos, ALL_FLAGS)) < 0 ||
-			(error = remove_redundant(walk, &redundant, minimum_generation)) < 0) {
+		    (error = clear_commit_marks_many(twos, ALL_FLAGS)) < 0 ||
+		    (error = remove_redundant(walk, &redundant, minimum_generation)) < 0) {
 			git_vector_dispose(&redundant);
 			return error;
 		}
@@ -1113,7 +1114,7 @@ static int index_entry_similarity_inexact(
 
 	/* update signature cache if needed */
 	if ((error = index_entry_similarity_calc(&cache[a_idx], repo, a, opts)) < 0 ||
-		(error = index_entry_similarity_calc(&cache[b_idx], repo, b, opts)) < 0)
+	    (error = index_entry_similarity_calc(&cache[b_idx], repo, b, opts)) < 0)
 		return error;
 
 	/* some metrics may not wish to process this file (too big / too small) */
@@ -1213,7 +1214,7 @@ static int merge_diff_mark_similarity_exact(
 	size_t i, j;
 	git_merge_diff *conflict_src, *conflict_tgt;
 	git_merge_deletes_oidmap ours_deletes_by_oid = GIT_HASHMAP_INIT,
-							 theirs_deletes_by_oid = GIT_HASHMAP_INIT;
+	                         theirs_deletes_by_oid = GIT_HASHMAP_INIT;
 	int error = 0;
 
 	/* Build a map of object ids to conflicts */
@@ -1556,7 +1557,7 @@ int git_merge_diff_list__find_renames(
 	GIT_ASSERT_ARG(opts);
 
 	if ((opts->flags & GIT_MERGE_FIND_RENAMES) == 0 ||
-		!diff_list->conflicts.length)
+	    !diff_list->conflicts.length)
 		return 0;
 
 	similarity_ours = git__calloc(diff_list->conflicts.length,
@@ -1810,7 +1811,7 @@ static int queue_difference(const git_index_entry **entries, void *data)
 	bool item_modified = false;
 	size_t i;
 
-	if(!entries[0] || !entries[1] || !entries[2]) {
+	if (!entries[0] || !entries[1] || !entries[2]) {
 		item_modified = true;
 	} else {
 		for (i = 1; i < 3; i++) {
@@ -1825,8 +1826,6 @@ static int queue_difference(const git_index_entry **entries, void *data)
 		merge_diff_list_insert_conflict(find_data->diff_list, &find_data->df_data, entries) :
 		merge_diff_list_insert_unmodified(find_data->diff_list, entries);
 }
-
-typedef git_array_t(git_iterator*) git_iterator_array_t;
 
 /* TODO: changing this; declare in merge.h or replace entirely (looks internal) */
 int git_merge_diff_list__find_differences(
@@ -1887,10 +1886,10 @@ git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
 
 
 	if (git_pool_init(&diff_list->pool, 1) < 0 ||
-		git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
-		git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
-		git_vector_init(&diff_list->resolved, 0, NULL) < 0) {
-		git_merge_diff_list__free(diff_list);
+	    git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
+	    git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
+	    git_vector_init(&diff_list->resolved, 0, NULL) < 0) {
+	    git_merge_diff_list__free(diff_list);
 		return NULL;
 	}
 
