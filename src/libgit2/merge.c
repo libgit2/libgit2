@@ -1823,7 +1823,7 @@ static int queue_difference(const git_index_entry **entries, void *data)
 
 	return item_modified ?
 		merge_diff_list_insert_conflict(
-				find_data->diff_list, &find_data->df_data, entries) :
+			find_data->diff_list, &find_data->df_data, entries) :
 		merge_diff_list_insert_unmodified(find_data->diff_list, entries);
 }
 
