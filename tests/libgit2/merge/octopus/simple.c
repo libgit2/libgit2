@@ -22,10 +22,7 @@ static git_index *repo_index;
 #define OUR_TARGET_BRANCH "target"
 #define NUM_COMMITS 4
 
-/* TODO: implement test for this; i.e. verify that the merge base is as expected; it is, but need a test */
 #define COMMON_BASE_OID "b9fe1c1159fbfa8235ea0e5487174ab7703fa3d7"
-
-/* TODO: figure out why stage is nonzero!! currently is 2, which is a conflict from "target" */
 
 #define BRANCH1_INDEX_ENTRY \
         { 0100644, "206e7338ee5863b438f3f0602f0c0e5ca89fd7a6", 0, \
