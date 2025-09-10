@@ -2512,7 +2512,8 @@ static int merge_annotated_commits_multiple(
 		goto done;
 
 	for (i = 0; i < their_commits_len; i++) {
-		if((error = iterator_for_annotated_commit(&their_iter, their_commits[i])) < 0)
+		if((error = iterator_for_annotated_commit(&their_iter, 
+						(git_annotated_commit *)their_commits[i])) < 0)
 			goto done;
 		their_iters[i] = their_iter;
 	}
