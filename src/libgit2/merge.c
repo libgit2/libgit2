@@ -2297,22 +2297,13 @@ done:
 	return error;
 }
 
-static int merge_annotated_commits_multiple(
+static int merge_annotated_commits(
 	git_index **index_out,
 	git_annotated_commit **base_out,
 	git_repository *repo,
 	git_annotated_commit *our_commit,
 	const git_annotated_commit **their_commits,
 	size_t their_commits_len,
-	size_t recursion_level,
-	const git_merge_options *opts);
-
-static int merge_annotated_commits(
-	git_index **index_out,
-	git_annotated_commit **base_out,
-	git_repository *repo,
-	git_annotated_commit *our_commit,
-	const git_annotated_commit *their_commit,
 	size_t recursion_level,
 	const git_merge_options *opts);
 
@@ -2361,8 +2352,9 @@ static int create_virtual_base(
 	virtual_opts.flags &= ~GIT_MERGE_FAIL_ON_CONFLICT;
 	virtual_opts.flags |= GIT_MERGE_VIRTUAL_BASE;
 
-	if ((merge_annotated_commits(&index, NULL, repo, one, two,
-			recursion_level + 1, &virtual_opts)) < 0)
+	if ((merge_annotated_commits(&index, NULL, repo, one, 
+					(const git_annotated_commit **)&two, 1, 
+					recursion_level + 1, &virtual_opts)) < 0)
 		return -1;
 
 	result = git__calloc(1, sizeof(git_annotated_commit));
@@ -2478,7 +2470,7 @@ done:
 	return error;
 }
 
-static int merge_annotated_commits_multiple(
+static int merge_annotated_commits(
 	git_index **index_out,
 	git_annotated_commit **base_out,
 	git_repository *repo,
@@ -2542,51 +2534,6 @@ done:
 	return error;
 }
 
-static int merge_annotated_commits(
-	git_index **index_out,
-	git_annotated_commit **base_out,
-	git_repository *repo,
-	git_annotated_commit *ours,
-	const git_annotated_commit *theirs,
-	size_t recursion_level,
-	const git_merge_options *opts)
-{
-	return merge_annotated_commits_multiple(index_out, base_out, repo, ours, 
-			&theirs, 1, recursion_level, opts);
-	/* git_annotated_commit *base = NULL; */
-	/* git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL; */
-	/* int error, i; */
-
-	/* if ((error = compute_base(&base, repo, ours, theirs, opts, */
-	/* 	recursion_level)) < 0) { */
-
-	/* 	if (error != GIT_ENOTFOUND) */
-	/* 		goto done; */
-
-	/* 	git_error_clear(); */
-	/* } */
-
-	/* if ((error = iterator_for_annotated_commit(&base_iter, base)) < 0 || */
-	/* 	(error = iterator_for_annotated_commit(&our_iter, ours)) < 0 || */
-	/* 	(error = iterator_for_annotated_commit(&their_iter, theirs)) < 0 || */
-	/* 	(error = git_merge__iterators(index_out, repo, base_iter, our_iter, */
-	/* 		their_iter, opts)) < 0) */
-	/* 	goto done; */
-
-	/* if (base_out) { */
-	/* 	*base_out = base; */
-	/* 	base = NULL; */
-	/* } */
-
-/* done: */
-	/* git_annotated_commit_free(base); */
-	/* git_iterator_free(base_iter); */
-	/* git_iterator_free(our_iter); */
-	/* git_iterator_free(their_iter); */
-	/* return error; */
-}
-
-
 int git_merge_commits(
 	git_index **out,
 	git_repository *repo,
@@ -2601,7 +2548,8 @@ int git_merge_commits(
 		(error = git_annotated_commit_from_commit(&theirs, (git_commit *)their_commit)) < 0)
 		goto done;
 
-	error = merge_annotated_commits(out, &base, repo, ours, theirs, 0, opts);
+	error = merge_annotated_commits(out, &base, repo, ours, 
+			(const git_annotated_commit **)&theirs, 1, 0, opts);
 
 done:
 	git_annotated_commit_free(ours);
@@ -3503,7 +3451,7 @@ int git_merge(
 		goto done;
 
 	/* Run octopus merge if there is more than one `their_heads` */
-	if ((error = merge_annotated_commits_multiple(&index, &base, repo, our_head,
+	if ((error = merge_annotated_commits(&index, &base, repo, our_head,
 					their_heads, their_heads_len, 0, merge_opts)) < 0 ||
 		(error = git_merge__check_result(repo, index)) < 0 ||
 		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0)
