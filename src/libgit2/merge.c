@@ -497,7 +497,7 @@ static int remove_redundant(git_revwalk *walk, git_vector *commits, uint32_t min
 		git_commit_list_free(&common);
 
 		if ((error = clear_commit_marks(commit, ALL_FLAGS)) < 0 ||
-		    (error = clear_commit_marks_many(&work, ALL_FLAGS)) < 0)
+			(error = clear_commit_marks_many(&work, ALL_FLAGS)) < 0)
 				goto done;
 	}
 
@@ -566,8 +566,8 @@ int git_merge__bases_many(
 			git_vector_insert(&redundant, git_commit_list_pop(&result));
 
 		if ((error = clear_commit_marks(one, ALL_FLAGS)) < 0 ||
-		    (error = clear_commit_marks_many(twos, ALL_FLAGS)) < 0 ||
-		    (error = remove_redundant(walk, &redundant, minimum_generation)) < 0) {
+			(error = clear_commit_marks_many(twos, ALL_FLAGS)) < 0 ||
+			(error = remove_redundant(walk, &redundant, minimum_generation)) < 0) {
 			git_vector_dispose(&redundant);
 			return error;
 		}
@@ -1113,7 +1113,7 @@ static int index_entry_similarity_inexact(
 
 	/* update signature cache if needed */
 	if ((error = index_entry_similarity_calc(&cache[a_idx], repo, a, opts)) < 0 ||
-	    (error = index_entry_similarity_calc(&cache[b_idx], repo, b, opts)) < 0)
+		(error = index_entry_similarity_calc(&cache[b_idx], repo, b, opts)) < 0)
 		return error;
 
 	/* some metrics may not wish to process this file (too big / too small) */
@@ -1213,7 +1213,7 @@ static int merge_diff_mark_similarity_exact(
 	size_t i, j;
 	git_merge_diff *conflict_src, *conflict_tgt;
 	git_merge_deletes_oidmap ours_deletes_by_oid = GIT_HASHMAP_INIT,
-	                         theirs_deletes_by_oid = GIT_HASHMAP_INIT;
+							 theirs_deletes_by_oid = GIT_HASHMAP_INIT;
 	int error = 0;
 
 	/* Build a map of object ids to conflicts */
@@ -1556,7 +1556,7 @@ int git_merge_diff_list__find_renames(
 	GIT_ASSERT_ARG(opts);
 
 	if ((opts->flags & GIT_MERGE_FIND_RENAMES) == 0 ||
-	    !diff_list->conflicts.length)
+		!diff_list->conflicts.length)
 		return 0;
 
 	similarity_ours = git__calloc(diff_list->conflicts.length,
@@ -1810,9 +1810,9 @@ static int queue_difference(const git_index_entry **entries, void *data)
 	bool item_modified = false;
 	size_t i;
 
-    if(!entries[0] || !entries[1] || !entries[2]) {
-        item_modified = true;
-    } else {
+	if(!entries[0] || !entries[1] || !entries[2]) {
+		item_modified = true;
+	} else {
 		for (i = 1; i < 3; i++) {
 			if (index_entry_cmp(entries[0], entries[i]) != 0) {
 				item_modified = true;
@@ -1834,46 +1834,46 @@ int git_merge_diff_list__find_differences(
 	git_iterator *ancestor_iter,
 	git_iterator *our_iter,
 	git_iterator **their_iters,
-    size_t their_iters_len)
+	size_t their_iters_len)
 {
-    size_t i, j, iters_len = 1 + their_iters_len;
-    git_iterator** iterators;
+	size_t i, j, iters_len = 1 + their_iters_len;
+	git_iterator** iterators;
 	git_iterator* curr_iterators[3];
-    struct merge_diff_find_data find_data;
-    int error = 0;
+	struct merge_diff_find_data find_data;
+	int error = 0;
 
-    /* TODO: see if this can/should be implemented as an git_array_t */
-    iterators = git__calloc(iters_len, sizeof(git_iterator*));
-    GIT_ERROR_CHECK_ALLOC(iterators);
-    
+	/* TODO: see if this can/should be implemented as an git_array_t */
+	iterators = git__calloc(iters_len, sizeof(git_iterator*));
+	GIT_ERROR_CHECK_ALLOC(iterators);
+
 	iterators[0] = our_iter;
-    
-    for(i = 0; i < their_iters_len; i++) {
-        iterators[i + 1] = their_iters[i];
-    }
 
-    for (i = 0; i < iters_len - 1; i++) {
-        for(j = i + 1; j < iters_len; j++) {
-            find_data = (struct merge_diff_find_data){ diff_list };
+	for(i = 0; i < their_iters_len; i++) {
+		iterators[i + 1] = their_iters[i];
+	}
 
-            /* Reset the ancestor iterator, since it is always walked. */
-            git_iterator_reset(ancestor_iter);
-            /* Reset the "ours" iterator since it may have previously been walked. */
-            git_iterator_reset(iterators[i]);
+	for (i = 0; i < iters_len - 1; i++) {
+		for(j = i + 1; j < iters_len; j++) {
+			find_data = (struct merge_diff_find_data){ diff_list };
+
+			/* Reset the ancestor iterator, since it is always walked. */
+			git_iterator_reset(ancestor_iter);
+			/* Reset the "ours" iterator since it may have previously been walked. */
+			git_iterator_reset(iterators[i]);
 
 			curr_iterators[0] = ancestor_iter;
 			curr_iterators[1] = iterators[i];
 			curr_iterators[2] = iterators[j];
 
-            if ((error = git_iterator_walk(curr_iterators, 3, queue_difference, &find_data)) < 0)
-                goto done;
-        }
-    }
+			if ((error = git_iterator_walk(curr_iterators, 3, queue_difference, &find_data)) < 0)
+				goto done;
+		}
+	}
 
 done:
-    git__free(iterators);
+	git__free(iterators);
 
-    return error;
+	return error;
 }
 
 git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
@@ -1887,10 +1887,10 @@ git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
 
 
 	if (git_pool_init(&diff_list->pool, 1) < 0 ||
-	    git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
-	    git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
-	    git_vector_init(&diff_list->resolved, 0, NULL) < 0) {
-	    git_merge_diff_list__free(diff_list);
+		git_vector_init(&diff_list->staged, 0, NULL) < 0 ||
+		git_vector_init(&diff_list->conflicts, 0, NULL) < 0 ||
+		git_vector_init(&diff_list->resolved, 0, NULL) < 0) {
+		git_merge_diff_list__free(diff_list);
 		return NULL;
 	}
 
@@ -2139,12 +2139,12 @@ int git_merge__iterators_multiple(
 	git_iterator *ancestor_iter,
 	git_iterator *our_iter,
 	git_iterator **theirs_iters,
-    size_t theirs_iters_len,
+	size_t theirs_iters_len,
 	const git_merge_options *given_opts)
 {
 	git_iterator *empty_ancestor = NULL,
 		*empty_ours = NULL;
-    git_iterator **empty_theirs_iters;
+	git_iterator **empty_theirs_iters;
 	git_merge_diff_list *diff_list;
 	git_merge_options opts;
 	git_merge_file_options file_opts = GIT_MERGE_FILE_OPTIONS_INIT;
@@ -2152,7 +2152,7 @@ int git_merge__iterators_multiple(
 	git_vector changes;
 	size_t i;
 	int error = 0;
-    bool is_octopus = theirs_iters_len > 1;
+	bool is_octopus = theirs_iters_len > 1;
 
 	GIT_ASSERT_ARG(out);
 	GIT_ASSERT_ARG(repo);
@@ -2177,12 +2177,12 @@ int git_merge__iterators_multiple(
 		file_opts.marker_size = GIT_MERGE_CONFLICT_MARKER_SIZE + 2;
 	}
 
-    /* set fail on merge conflict for octopus merge */
-    if (is_octopus) {
-        /* TODO: write test for this case */
-        opts.flags |= GIT_MERGE_FAIL_ON_CONFLICT;
-        file_opts.flags &= ~GIT_MERGE_FILE_ACCEPT_CONFLICTS;
-    }
+	/* set fail on merge conflict for octopus merge */
+	if (is_octopus) {
+		/* TODO: write test for this case */
+		opts.flags |= GIT_MERGE_FAIL_ON_CONFLICT;
+		file_opts.flags &= ~GIT_MERGE_FILE_ACCEPT_CONFLICTS;
+	}
 
 	diff_list = git_merge_diff_list__alloc(repo);
 	GIT_ERROR_CHECK_ALLOC(diff_list);
@@ -2190,14 +2190,14 @@ int git_merge__iterators_multiple(
 	ancestor_iter = iterator_given_or_empty(&empty_ancestor, ancestor_iter);
 	our_iter = iterator_given_or_empty(&empty_ours, our_iter);
 
-    empty_theirs_iters = git__calloc(theirs_iters_len, sizeof(git_iterator*));
-    GIT_ERROR_CHECK_ALLOC(empty_theirs_iters);
-    for (i = 0; i < theirs_iters_len; i++) {
-        theirs_iters[i] = iterator_given_or_empty(&empty_theirs_iters[i], 
-                theirs_iters[i]);
-    }
+	empty_theirs_iters = git__calloc(theirs_iters_len, sizeof(git_iterator*));
+	GIT_ERROR_CHECK_ALLOC(empty_theirs_iters);
+	for (i = 0; i < theirs_iters_len; i++) {
+		theirs_iters[i] = iterator_given_or_empty(&empty_theirs_iters[i], 
+				theirs_iters[i]);
+	}
 
-    /* TODO: build merge diff list correctly with multiple theirs */
+	/* TODO: build merge diff list correctly with multiple theirs */
 	if ((error = git_merge_diff_list__find_differences(
 			diff_list, ancestor_iter, our_iter, theirs_iters, theirs_iters_len)) < 0 ||
 		(error = git_merge_diff_list__find_renames(repo, diff_list, &opts)) < 0)
@@ -2215,11 +2215,11 @@ int git_merge__iterators_multiple(
 
 		if (!resolved) { /* TODO: figure out if fail on conflict flag should be set automatically for octo merges; seems yes */
 			if ((opts.flags & GIT_MERGE_FAIL_ON_CONFLICT)) {
-                if (is_octopus)
-                    git_error_set(GIT_ERROR_MERGE, "Automated merge did not work.\n"
-                            "Should not be doing an octopus.");
-                else
-                    git_error_set(GIT_ERROR_MERGE, "merge conflicts exist");
+				if (is_octopus)
+					git_error_set(GIT_ERROR_MERGE, "Automated merge did not work.\n"
+							"Should not be doing an octopus.");
+				else
+					git_error_set(GIT_ERROR_MERGE, "merge conflicts exist");
 				error = GIT_EMERGECONFLICT;
 				goto done;
 			}
@@ -2240,7 +2240,7 @@ done:
 	git_merge_diff_list__free(diff_list);
 	git_iterator_free(empty_ancestor);
 	git_iterator_free(empty_ours);
-    git__free(empty_theirs_iters);
+	git__free(empty_theirs_iters);
 
 	return error;
 }
@@ -2253,8 +2253,8 @@ int git_merge__iterators(
 	git_iterator *theirs_iter,
 	const git_merge_options *given_opts)
 {
-    return git_merge__iterators_multiple(out, repo, ancestor_iter, our_iter,
-            &theirs_iter, 1, given_opts);
+	return git_merge__iterators_multiple(out, repo, ancestor_iter, our_iter,
+			&theirs_iter, 1, given_opts);
 }
 
 int git_merge_trees(
@@ -2318,7 +2318,7 @@ static int merge_annotated_commits_multiple(
 	git_repository *repo,
 	git_annotated_commit *our_commit,
 	const git_annotated_commit **their_commits,
-    size_t their_commits_len,
+	size_t their_commits_len,
 	size_t recursion_level,
 	const git_merge_options *opts);
 
@@ -2499,41 +2499,41 @@ static int merge_annotated_commits_multiple(
 	git_repository *repo,
 	git_annotated_commit *ours,
 	const git_annotated_commit **their_commits,
-    size_t their_commits_len,
+	size_t their_commits_len,
 	size_t recursion_level,
 	const git_merge_options *opts)
 {
 	git_annotated_commit *base = NULL, *prev_base = ours;
 	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
 	int error;
-    size_t i;
-    git_iterator **their_iters;
+	size_t i;
+	git_iterator **their_iters;
 
-    their_iters = git__calloc(their_commits_len, sizeof(git_iterator*));
+	their_iters = git__calloc(their_commits_len, sizeof(git_iterator*));
 
-    /* TODO: write test confirming that the base is as expected*/
-    for(i = 0; i < their_commits_len; i++) {
-        base = NULL;
-        if ((error = compute_base(&base, repo, prev_base, their_commits[i], opts,
-            recursion_level)) < 0) {
+	/* TODO: write test confirming that the base is as expected*/
+	for(i = 0; i < their_commits_len; i++) {
+		base = NULL;
+		if ((error = compute_base(&base, repo, prev_base, their_commits[i], opts,
+			recursion_level)) < 0) {
 
-            if (error != GIT_ENOTFOUND)
-                goto done;
+			if (error != GIT_ENOTFOUND)
+				goto done;
 
-            git_error_clear();
-        }
-        prev_base = base;
-    }
+			git_error_clear();
+		}
+		prev_base = base;
+	}
 
 	if ((error = iterator_for_annotated_commit(&base_iter, base)) < 0 ||
 		(error = iterator_for_annotated_commit(&our_iter, ours)) < 0) 
-        goto done;
+		goto done;
 
-    for (i = 0; i < their_commits_len; i++) {
-        if((error = iterator_for_annotated_commit(&their_iter, their_commits[i])) < 0)
-            goto done;
-        their_iters[i] = their_iter;
-    }
+	for (i = 0; i < their_commits_len; i++) {
+		if((error = iterator_for_annotated_commit(&their_iter, their_commits[i])) < 0)
+			goto done;
+		their_iters[i] = their_iter;
+	}
 
 	if ((error = git_merge__iterators_multiple(index_out, repo, base_iter, our_iter,
 			their_iters, their_commits_len, opts)) < 0)
@@ -2545,14 +2545,14 @@ static int merge_annotated_commits_multiple(
 	}
 
 done:
-    /* TODO: check for memory leaks */
+	/* TODO: check for memory leaks */
 	git_annotated_commit_free(base);
 	git_iterator_free(base_iter);
 	git_iterator_free(our_iter);
-    for(i = 0; i < their_commits_len; i++) {
-        git_iterator_free(their_iters[i]);
-    }
-    git__free(their_iters);
+	for(i = 0; i < their_commits_len; i++) {
+		git_iterator_free(their_iters[i]);
+	}
+	git__free(their_iters);
 	return error;
 }
 
@@ -2565,8 +2565,8 @@ static int merge_annotated_commits(
 	size_t recursion_level,
 	const git_merge_options *opts)
 {
-    return merge_annotated_commits_multiple(index_out, base_out, repo, ours, 
-            &theirs, 1, recursion_level, opts);
+	return merge_annotated_commits_multiple(index_out, base_out, repo, ours, 
+			&theirs, 1, recursion_level, opts);
 	/* git_annotated_commit *base = NULL; */
 	/* git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL; */
 	/* int error, i; */
@@ -3507,7 +3507,7 @@ int git_merge(
 		goto done;
 
 	if ((error = git_repository_index(&repo_index, repo) < 0) ||
-	    (error = git_index_read(repo_index, 0) < 0))
+		(error = git_index_read(repo_index, 0) < 0))
 		goto done;
 
 	/* Write the merge setup files to the repository. */
@@ -3519,7 +3519,7 @@ int git_merge(
 	/* TODO: octopus */
 
 	if ((error = merge_annotated_commits_multiple(&index, &base, repo, our_head,
-                    their_heads, their_heads_len, 0, merge_opts)) < 0 ||
+					their_heads, their_heads_len, 0, merge_opts)) < 0 ||
 		(error = git_merge__check_result(repo, index)) < 0 ||
 		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0)
 		goto done;
