@@ -1909,14 +1909,21 @@ int git_merge_diff_list__find_differences_multiple(
         iterators[i + 1] = their_iters[i];
     }
 
-    for (i = 0; i < iters_len - 1; i++)
+    for (i = 0; i < iters_len - 1; i++) {
         for(j = i + 1; j < iters_len; j++) {
             find_data = (struct merge_diff_find_data){ diff_list };
+
+            /* Reset the ancestor iterator, since it is always walked. */
+            git_iterator_reset(ancestor_iter);
+            /* Reset the "ours" iterator since it may have previously been walked. */
+            git_iterator_reset(iterators[i]);
+
             git_iterator* curr_iterators[3] = { ancestor_iter, iterators[i], iterators[j] };
 
             if ((error = git_iterator_walk(curr_iterators, 3, queue_difference, &find_data)) < 0)
                 goto done;
         }
+    }
 
 done:
     git__free(iterators);
