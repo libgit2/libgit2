@@ -65,10 +65,7 @@ void test_merge_octopus_fail__fail_to_merge(void)
 	merge_opts.file_favor = 0;
 	checkout_opts.checkout_strategy = GIT_CHECKOUT_ALLOW_CONFLICTS;
 
-    /* TODO: move this into the cl_git_fail_with call */
-    int err = git_merge(repo, (const git_annotated_commit **)their_heads, NUM_COMMITS, &merge_opts, &checkout_opts);
-
-	cl_git_fail_with(GIT_EMERGECONFLICT, err);
+	cl_git_fail_with(GIT_EMERGECONFLICT, git_merge(repo, (const git_annotated_commit **)their_heads, NUM_COMMITS, &merge_opts, &checkout_opts));
 
     for(i = 0; i < NUM_COMMITS; ++i) {
         git_annotated_commit_free(their_heads[i]);
