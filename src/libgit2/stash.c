@@ -885,7 +885,7 @@ static int merge_indexes(
 		(error = git_iterator_for_index(&theirs, repo, theirs_index, &iter_opts)) < 0)
 		goto done;
 
-	error = git_merge__iterators(out, repo, ancestor, ours, theirs, NULL);
+	error = git_merge__iterators(out, repo, ancestor, ours, &theirs, 1, NULL);
 
 done:
 	git_iterator_free(ancestor);
@@ -912,7 +912,7 @@ static int merge_index_and_tree(
 		(error = git_iterator_for_tree(&theirs, theirs_tree, &iter_opts)) < 0)
 		goto done;
 
-	error = git_merge__iterators(out, repo, ancestor, ours, theirs, NULL);
+	error = git_merge__iterators(out, repo, ancestor, ours, &theirs, 1, NULL);
 
 done:
 	git_iterator_free(ancestor);
