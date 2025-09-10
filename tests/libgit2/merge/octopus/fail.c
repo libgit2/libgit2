@@ -43,10 +43,6 @@ void test_merge_octopus_fail__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-static void octopus_merge(int merge_file_favor, int addl_checkout_strategy)
-{
-}
-
 void test_merge_octopus_fail__fail_to_merge(void)
 {
 
