@@ -1829,7 +1829,7 @@ static int queue_difference(const git_index_entry **entries, void *data)
 typedef git_array_t(git_iterator*) git_iterator_array_t;
 
 /* TODO: changing this; declare in merge.h or replace entirely (looks internal) */
-int git_merge_diff_list__find_differences_multiple(
+int git_merge_diff_list__find_differences(
 	git_merge_diff_list *diff_list,
 	git_iterator *ancestor_iter,
 	git_iterator *our_iter,
@@ -1874,16 +1874,6 @@ done:
     git__free(iterators);
 
     return error;
-}
-
-int git_merge_diff_list__find_differences(
-	git_merge_diff_list *diff_list,
-	git_iterator *ancestor_iter,
-	git_iterator *our_iter,
-	git_iterator *their_iter)
-{
-    return git_merge_diff_list__find_differences_multiple(diff_list, ancestor_iter,
-            our_iter, &their_iter, 1);
 }
 
 git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
@@ -2208,7 +2198,7 @@ int git_merge__iterators_multiple(
     }
 
     /* TODO: build merge diff list correctly with multiple theirs */
-	if ((error = git_merge_diff_list__find_differences_multiple(
+	if ((error = git_merge_diff_list__find_differences(
 			diff_list, ancestor_iter, our_iter, theirs_iters, theirs_iters_len)) < 0 ||
 		(error = git_merge_diff_list__find_renames(repo, diff_list, &opts)) < 0)
 		goto done;
