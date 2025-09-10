@@ -1856,6 +1856,7 @@ int git_merge_diff_list__find_differences(
 			git_iterator_reset(ancestor_iter);
 			/* Reset the "ours" iterator since it may have previously been walked. */
 			git_iterator_reset(iterators[i]);
+			/* "theirs" will get reset once it takes the "ours" spot on the next loop */
 
 			curr_iterators[0] = ancestor_iter;
 			curr_iterators[1] = iterators[i];
