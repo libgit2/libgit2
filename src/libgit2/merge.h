@@ -129,7 +129,8 @@ int git_merge_diff_list__find_differences(
 	git_merge_diff_list *merge_diff_list,
 	git_iterator *ancestor_iterator,
 	git_iterator *ours_iter,
-	git_iterator *theirs_iter);
+	git_iterator **theirs_iters,
+	size_t theirs_iters_len);
 
 int git_merge_diff_list__find_renames(git_repository *repo, git_merge_diff_list *merge_diff_list, const git_merge_options *opts);
 
@@ -148,7 +149,8 @@ int git_merge__iterators(
 	git_repository *repo,
 	git_iterator *ancestor_iter,
 	git_iterator *our_iter,
-	git_iterator *their_iter,
+	git_iterator **their_iters,
+	size_t their_iters_len,
 	const git_merge_options *given_opts);
 
 int git_merge__check_result(git_repository *repo, git_index *index_new);
