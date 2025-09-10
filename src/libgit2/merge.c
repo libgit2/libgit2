@@ -2235,6 +2235,8 @@ done:
 	git_merge_diff_list__free(diff_list);
 	git_iterator_free(empty_ancestor);
 	git_iterator_free(empty_ours);
+	for (i = 0; i < theirs_iters_len; i++)
+		git_iterator_free(empty_theirs_iters[i]);
 	git__free(empty_theirs_iters);
 
 	return error;
