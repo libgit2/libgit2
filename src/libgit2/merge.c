@@ -2132,7 +2132,7 @@ static git_iterator *iterator_given_or_empty(git_iterator **empty, git_iterator 
 	return *empty;
 }
 
-int git_merge__iterators_multiple(
+int git_merge__iterators(
 	git_index **out,
 	git_repository *repo,
 	git_iterator *ancestor_iter,
@@ -2244,18 +2244,6 @@ done:
 	return error;
 }
 
-int git_merge__iterators(
-	git_index **out,
-	git_repository *repo,
-	git_iterator *ancestor_iter,
-	git_iterator *our_iter,
-	git_iterator *theirs_iter,
-	const git_merge_options *given_opts)
-{
-	return git_merge__iterators_multiple(out, repo, ancestor_iter, our_iter,
-			&theirs_iter, 1, given_opts);
-}
-
 int git_merge_trees(
 	git_index **out,
 	git_repository *repo,
@@ -2301,7 +2289,7 @@ int git_merge_trees(
 		goto done;
 
 	error = git_merge__iterators(
-		out, repo, ancestor_iter, our_iter, their_iter, merge_opts);
+		out, repo, ancestor_iter, our_iter, &their_iter, 1, merge_opts);
 
 done:
 	git_iterator_free(ancestor_iter);
@@ -2534,7 +2522,7 @@ static int merge_annotated_commits_multiple(
 		their_iters[i] = their_iter;
 	}
 
-	if ((error = git_merge__iterators_multiple(index_out, repo, base_iter, our_iter,
+	if ((error = git_merge__iterators(index_out, repo, base_iter, our_iter,
 			their_iters, their_commits_len, opts)) < 0)
 		goto done;
 
