@@ -2446,6 +2446,55 @@ done:
 	return error;
 }
 
+static int compute_base_octopus(
+	git_annotated_commit **out,
+	git_repository *repo,
+	const git_annotated_commit *one,
+	const git_annotated_commit **twos,
+	size_t twos_len,
+	const git_merge_options *given_opts)
+{
+	git_array_oid_t head_ids = GIT_ARRAY_INIT;
+	git_oid base_id;
+	git_annotated_commit *base = NULL;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
+	size_t i;
+	int error;
+
+	*out = NULL;
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_merge_options));
+
+	/* With more than two commits, merge_bases_many finds the base of
+	 * the first commit and a hypothetical merge of the others. Since
+	 * "one" may itself be a virtual commit, which insert_head_ids
+	 * substitutes multiple ancestors for, it needs to be added
+	 * after "two" which is always a single real commit.
+	 */
+	for (i = 0; i < twos_len; i++) {
+		if ((error = insert_head_ids(&head_ids, twos[i])) < 0)
+			goto done;
+
+	}
+	if ((error = insert_head_ids(&head_ids, one)) < 0 ||
+		(error = git_merge_base_octopus(&base_id, repo,
+			head_ids.size, head_ids.ptr)) < 0)
+		goto done;
+
+	if ((error = git_annotated_commit_lookup(&base, repo, &base_id)) < 0)
+		goto done;
+
+done:
+	if (error == 0)
+		*out = base;
+	else
+		git_annotated_commit_free(base);
+
+	git_array_clear(head_ids);
+	return error;
+}
+
 static int iterator_for_annotated_commit(
 	git_iterator **out,
 	git_annotated_commit *commit)
@@ -2486,26 +2535,30 @@ static int merge_annotated_commits(
 	int error;
 	size_t i;
 	git_iterator **their_iters;
+	bool is_octopus = their_commits_len > 1;
 
 	their_iters = git__calloc(their_commits_len, sizeof(git_iterator*));
 
 	/* TODO: write test confirming that the base is as expected*/
-	for(i = 0; i < their_commits_len; i++) {
-		base = NULL;
-		if ((error = compute_base(&base, repo, prev_base, their_commits[i], opts,
-			recursion_level)) < 0) {
+	if (is_octopus) {
+		if ((error = compute_base_octopus(&base, repo, ours, their_commits, 
+						their_commits_len, opts)) < 0)
+			goto done;
+	} else if ((error = compute_base(&base, repo, prev_base, their_commits[0], 
+					opts, recursion_level)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto done;
 
-			if (error != GIT_ENOTFOUND)
-				goto done;
-
-			git_error_clear();
-		}
-		prev_base = base;
+		git_error_clear();
 	}
 
 	if ((error = iterator_for_annotated_commit(&base_iter, base)) < 0 ||
 		(error = iterator_for_annotated_commit(&our_iter, ours)) < 0) 
 		goto done;
+
+	if (is_octopus) {
+	/* TODO: remove ancestor commits */
+	}
 
 	for (i = 0; i < their_commits_len; i++) {
 		if((error = iterator_for_annotated_commit(&their_iter, 
