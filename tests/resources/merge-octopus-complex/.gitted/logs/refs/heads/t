@@ -1,0 +1,17 @@
+0000000000000000000000000000000000000000 91a7496439d00cfb4e9f67f52d6a53b8d5bded08 Sam <altier.sam@gmail.com> 1757532114 -0400	branch: Created from master
+91a7496439d00cfb4e9f67f52d6a53b8d5bded08 bb06048f4c460f8ecdfc1d5875ccf223526f69e3 Sam <altier.sam@gmail.com> 1757532136 -0400	commit: add in t
+bb06048f4c460f8ecdfc1d5875ccf223526f69e3 5868f5abe74dd36115830b55afbb0d2ad1c93bbf Sam <altier.sam@gmail.com> 1757532323 -0400	commit: append in t
+5868f5abe74dd36115830b55afbb0d2ad1c93bbf 17012548651ab2c174d93e2e71d60f4f9020c6e5 Sam <altier.sam@gmail.com> 1757532334 -0400	merge t1: Merge made by the 'ort' strategy.
+17012548651ab2c174d93e2e71d60f4f9020c6e5 4d098dfd28cb2d3ee2312a42bc93bd9b6170a8cd Sam <altier.sam@gmail.com> 1757532365 -0400	commit: append again in t
+4d098dfd28cb2d3ee2312a42bc93bd9b6170a8cd ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam <altier.sam@gmail.com> 1757532602 -0400	merge 1: Merge made by the 'ort' strategy.
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 3201adfdb03218bd7e3eae1efb3123e42e97bd17 Sam <altier.sam@gmail.com> 1757533158 -0400	merge 1 1a 1b 2 2a 3 t1: Merge made by the 'octopus' strategy.
+3201adfdb03218bd7e3eae1efb3123e42e97bd17 ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam <altier.sam@gmail.com> 1757533168 -0400	reset: moving to HEAD~1
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 87aeb35b1a705828a5f7b75e1357e79d8f6cb053 Sam <altier.sam@gmail.com> 1757533178 -0400	merge 1 1a 1b 2 2a 3 t1: Merge made by the 'octopus' strategy.
+87aeb35b1a705828a5f7b75e1357e79d8f6cb053 ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam <altier.sam@gmail.com> 1757533654 -0400	reset: moving to HEAD~1
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 4f3284670d0041fc35440a527841f4ebe798c6a5 Sam <altier.sam@gmail.com> 1757535492 -0400	merge 1 1a 1b 2 2a 3 t1: Merge made by the 'octopus' strategy.
+4f3284670d0041fc35440a527841f4ebe798c6a5 ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam <altier.sam@gmail.com> 1757535512 -0400	reset: moving to HEAD~1
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 4d098dfd28cb2d3ee2312a42bc93bd9b6170a8cd Sam <altier.sam@gmail.com> 1757712432 -0400	reset: moving to HEAD~1
+4d098dfd28cb2d3ee2312a42bc93bd9b6170a8cd 5136b71930b78146dfbe5f4c080c54e05b1f884a Sam <altier.sam@gmail.com> 1757712610 -0400	reset: moving to 5136b71
+5136b71930b78146dfbe5f4c080c54e05b1f884a ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam <altier.sam@gmail.com> 1757712655 -0400	reset: moving to ec7080d
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b bc514b1b37cf78eaf5694b32e4d2e6f27ffdeffc Sam <altier.sam@gmail.com> 1757714374 -0400	merge 1a 1b 1 2 2a 3 t1: Merge made by the 'octopus' strategy.
+bc514b1b37cf78eaf5694b32e4d2e6f27ffdeffc ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam <altier.sam@gmail.com> 1757714412 -0400	reset: moving to HEAD~1
