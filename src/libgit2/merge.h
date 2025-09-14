@@ -129,8 +129,7 @@ int git_merge_diff_list__find_differences(
 	git_merge_diff_list *merge_diff_list,
 	git_iterator *ancestor_iterator,
 	git_iterator *ours_iter,
-	git_iterator **theirs_iters,
-	size_t theirs_iters_len);
+	git_iterator *theirs_iter);
 
 int git_merge_diff_list__find_renames(git_repository *repo, git_merge_diff_list *merge_diff_list, const git_merge_options *opts);
 
