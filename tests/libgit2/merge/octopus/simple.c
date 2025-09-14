@@ -10,7 +10,7 @@
 static git_repository *repo;
 static git_index *repo_index;
 
-#define TEST_REPO_PATH "merge-octopus"
+#define TEST_REPO_PATH "merge-octopus-simple"
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
 
 #define THEIRS_SIMPLE_BRANCHES		{"branch1", "branch1-b", "branch2", "branch3"}
