@@ -2505,6 +2505,149 @@ done:
 	return error;
 }
 
+static int merge_annotated_commits_octopus(
+	git_index **index_out,
+	git_annotated_commit **base_out,
+	git_repository *repo,
+	git_annotated_commit *ours,
+	git_annotated_commit **their_commits,
+	size_t their_commits_len,
+	const git_merge_options *opts)
+{
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_annotated_commit *base = NULL, *their_commit = NULL;
+	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
+	git_oid *our_oid, *id;
+	git_array_oid_t reference_commits = GIT_ARRAY_INIT;
+	size_t num_reference_commits = 0;
+	int error;
+	git_oidarray bases = {0};
+	git_tree *base_tree, *result_tree;
+	size_t i, j, skip = 0, ff = 0;
+
+	if ((error = compute_base_octopus(&base, repo, ours,
+					(const git_annotated_commit**)their_commits,
+					their_commits_len, opts)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto done;
+
+		git_error_clear();
+	}
+
+	/* Set base reference commit */
+	id = git_array_alloc(reference_commits);
+	GIT_ERROR_CHECK_ARRAY(reference_commits);
+
+	if (id == NULL) {
+		error = -1;
+		goto done;
+	}
+
+	git_oid_cpy(id, &ours->commit->tree_id);
+
+	/* Set result tree */
+	if ((error = git_index_write_tree(our_oid, *index_out)) < 0 ||
+			(error = git_tree_lookup(&result_tree, repo, our_oid)) < 0)
+		goto done;
+
+
+	for (i = 0; i < their_commits_len; i++) {
+		id = git_array_alloc(reference_commits);
+		if (id == NULL) {
+			error = -1;
+			goto done;
+		}
+
+		their_commit = their_commits[i];
+		git_oid_cpy(id, &their_commit->commit->tree_id);
+
+		if ((error = git_merge_bases_many(&bases, repo, reference_commits.size,
+						reference_commits.ptr)) < 0)
+			goto done;
+
+		/* Check if already up to date */
+		for (j = 0; j < bases.count; j++) {
+			if (git_oid_cmp(&bases.ids[j], &their_commit->commit->tree_id) == 0) {
+				skip = 1;
+				break;
+			}
+		}
+
+		if (skip) {
+			skip = 0;
+			continue;
+		}
+
+		if (!ff) {
+			/* Check if fastforward is possible */
+			/* TODO: this might need to be a loope to check that all bases is identical to reference commits */
+			/* TODO: this logic is incorrect; it doesn't execute FF if the oidcmp condition is true */
+			if (git_oid_cmp(&reference_commits.ptr[0], &bases.ids[0]) == 0) {
+				ff = 1;
+			}
+
+			if (ff) {
+				/* Ensure tree is present */
+				if (!their_commit->tree &&
+					(error = git_commit_tree(&their_commit->tree, their_commit->commit)) < 0)
+					goto done;
+
+				/* Perform fastforward on index, if possible */
+				if ((error = git_index_read_tree(*index_out, their_commit->tree)) < 0)
+						goto done;
+
+				/* Fastforward result tree */
+				if ((error = git_index_write_tree(our_oid, *index_out)) < 0 ||
+						(error = git_tree_lookup(&result_tree, repo, our_oid)) < 0)
+					goto done;
+
+				/* Fastforward base reference commit */
+
+				reference_commits.ptr[0] = their_commit->commit->tree_id;
+			}
+
+		}
+
+		/* disable fast forward after first attempt */
+		ff = 1;
+
+		/* Simple merge */
+		if ((error = git_tree_lookup(&base_tree, repo, (const git_oid*)&bases.ids[0]) < 0) ||
+				(error = git_iterator_for_tree(&base_iter, base_tree, &iter_opts)) < 0 ||
+				(error = git_iterator_for_tree(&our_iter, result_tree, &iter_opts)) < 0 ||
+				(error = iterator_for_annotated_commit(&their_iter, their_commit)) < 0 ||
+				(error = git_merge__iterators(index_out, repo, base_iter, our_iter,
+				their_iter, opts)) < 0)
+			goto done;
+
+		git_tree_free(result_tree);
+
+		/* Update result tree to index*/
+		if ((error = git_index_write_tree(our_oid, *index_out)) < 0 ||
+				(error = git_tree_lookup(&result_tree, repo, our_oid)) < 0)
+			goto done;
+
+		git_oidarray_dispose(&bases);
+	}
+
+	/* TODO :figure out what to do between here and `done` */
+	if (base_out) {
+		*base_out = base;
+		base = NULL;
+	}
+
+done:
+	git_annotated_commit_free(base);
+	git_array_dispose(reference_commits);
+	git_tree_free(base_tree);
+	git_tree_free(result_tree);
+	/* TODO: make sure no weird memory effects here */
+	git_oidarray_dispose(&bases);
+	git_iterator_free(base_iter);
+	git_iterator_free(our_iter);
+	git_iterator_free(their_iter);
+	return error;
+}
 
 int git_merge_commits(
 	git_index **out,
