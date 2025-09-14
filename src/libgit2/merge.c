@@ -2248,7 +2248,7 @@ static int merge_annotated_commits(
 	git_annotated_commit **base_out,
 	git_repository *repo,
 	git_annotated_commit *our_commit,
-	const git_annotated_commit *their_commit,
+	git_annotated_commit *their_commit,
 	size_t recursion_level,
 	const git_merge_options *opts);
 
