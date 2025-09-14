@@ -149,8 +149,7 @@ int git_merge__iterators(
 	git_repository *repo,
 	git_iterator *ancestor_iter,
 	git_iterator *our_iter,
-	git_iterator **their_iters,
-	size_t their_iters_len,
+	git_iterator *theirs_iter,
 	const git_merge_options *given_opts);
 
 int git_merge__check_result(git_repository *repo, git_index *index_new);
