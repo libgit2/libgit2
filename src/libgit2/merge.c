@@ -514,6 +514,7 @@ done:
 	return error;
 }
 
+/* TODO: error is here */
 int git_merge__bases_many(
 		git_commit_list **out,
 		git_revwalk *walk,
@@ -2509,6 +2510,7 @@ static int merge_annotated_commits_octopus(
 	git_index **index_out,
 	git_annotated_commit **base_out,
 	git_repository *repo,
+	git_index *repo_index,
 	git_annotated_commit *ours,
 	git_annotated_commit **their_commits,
 	size_t their_commits_len,
@@ -2517,9 +2519,8 @@ static int merge_annotated_commits_octopus(
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_annotated_commit *base = NULL, *their_commit = NULL;
 	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
-	git_oid *our_oid, *id;
+	git_oid our_oid, *id = NULL;
 	git_array_oid_t reference_commits = GIT_ARRAY_INIT;
-	size_t num_reference_commits = 0;
 	int error;
 	git_oidarray bases = {0};
 	git_tree *base_tree, *result_tree;
@@ -2543,11 +2544,11 @@ static int merge_annotated_commits_octopus(
 		goto done;
 	}
 
-	git_oid_cpy(id, &ours->commit->tree_id);
+	git_oid_cpy(id, &ours->commit->object.cached.oid);
 
 	/* Set result tree */
-	if ((error = git_index_write_tree(our_oid, *index_out)) < 0 ||
-			(error = git_tree_lookup(&result_tree, repo, our_oid)) < 0)
+	if ((error = git_index_write_tree(&our_oid, repo_index)) < 0 ||
+			(error = git_tree_lookup(&result_tree, repo, &our_oid)) < 0)
 		goto done;
 
 
@@ -2559,15 +2560,16 @@ static int merge_annotated_commits_octopus(
 		}
 
 		their_commit = their_commits[i];
-		git_oid_cpy(id, &their_commit->commit->tree_id);
+		git_oid_cpy(id, &their_commit->commit->object.cached.oid);
 
+		/* TODO: issue is here */
 		if ((error = git_merge_bases_many(&bases, repo, reference_commits.size,
 						reference_commits.ptr)) < 0)
 			goto done;
 
 		/* Check if already up to date */
 		for (j = 0; j < bases.count; j++) {
-			if (git_oid_cmp(&bases.ids[j], &their_commit->commit->tree_id) == 0) {
+			if (git_oid_cmp(&bases.ids[j], &their_commit->commit->object.cached.oid) == 0) {
 				skip = 1;
 				break;
 			}
@@ -2593,17 +2595,18 @@ static int merge_annotated_commits_octopus(
 					goto done;
 
 				/* Perform fastforward on index, if possible */
-				if ((error = git_index_read_tree(*index_out, their_commit->tree)) < 0)
+				if ((error = git_index_read_tree(repo_index, their_commit->tree)) < 0)
 						goto done;
 
 				/* Fastforward result tree */
-				if ((error = git_index_write_tree(our_oid, *index_out)) < 0 ||
-						(error = git_tree_lookup(&result_tree, repo, our_oid)) < 0)
+				if ((error = git_index_write_tree(&our_oid, repo_index)) < 0 ||
+						(error = git_tree_lookup(&result_tree, repo, &our_oid)) < 0)
 					goto done;
 
 				/* Fastforward base reference commit */
 
-				reference_commits.ptr[0] = their_commit->commit->tree_id;
+				reference_commits.ptr[0] = their_commit->commit->object.cached.oid;
+				reference_commits.size--;
 			}
 
 		}
@@ -2612,7 +2615,7 @@ static int merge_annotated_commits_octopus(
 		ff = 1;
 
 		/* Simple merge */
-		if ((error = git_tree_lookup(&base_tree, repo, (const git_oid*)&bases.ids[0]) < 0) ||
+		if ((error = git_tree_lookup(&base_tree, repo, (const git_oid*)&bases.ids[0])) < 0 ||
 				(error = git_iterator_for_tree(&base_iter, base_tree, &iter_opts)) < 0 ||
 				(error = git_iterator_for_tree(&our_iter, result_tree, &iter_opts)) < 0 ||
 				(error = iterator_for_annotated_commit(&their_iter, their_commit)) < 0 ||
@@ -2623,8 +2626,8 @@ static int merge_annotated_commits_octopus(
 		git_tree_free(result_tree);
 
 		/* Update result tree to index*/
-		if ((error = git_index_write_tree(our_oid, *index_out)) < 0 ||
-				(error = git_tree_lookup(&result_tree, repo, our_oid)) < 0)
+		if ((error = git_index_write_tree(&our_oid, *index_out)) < 0 ||
+				(error = git_tree_lookup(&result_tree, repo, &our_oid)) < 0)
 			goto done;
 
 		git_oidarray_dispose(&bases);
@@ -3535,14 +3538,16 @@ int git_merge(
 	git_indexwriter indexwriter = GIT_INDEXWRITER_INIT;
 	unsigned int checkout_strategy;
 	int error = 0;
+	size_t octopus = their_heads_len > 1;
 
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(their_heads && their_heads_len > 0);
 
-	if (their_heads_len != 1) {
-		git_error_set(GIT_ERROR_MERGE, "can only merge a single branch");
-		return -1;
-	}
+	/* TODO: remove this */
+	/* if (their_heads_len != 1) { */
+	/* 	git_error_set(GIT_ERROR_MERGE, "can only merge a single branch"); */
+	/* 	return -1; */
+	/* } */
 
 	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
 		goto done;
@@ -3566,9 +3571,15 @@ int git_merge(
 
 	/* TODO: octopus */
 
-	if ((error = merge_annotated_commits(&index, &base, repo, our_head,
-			(git_annotated_commit *)their_heads[0], 0, merge_opts)) < 0 ||
-		(error = git_merge__check_result(repo, index)) < 0 ||
+	if (octopus) {
+		if ((error = merge_annotated_commits_octopus(&index, &base, repo, repo_index,
+					   	our_head, their_heads, their_heads_len, merge_opts)) < 0)
+			goto done;
+	} else if ((error = merge_annotated_commits(&index, &base, repo, our_head,
+			(git_annotated_commit *)their_heads[0], 0, merge_opts)) < 0)
+		goto done;
+
+	if ((error = git_merge__check_result(repo, index)) < 0 ||
 		(error = git_merge__append_conflicts_to_merge_msg(repo, index)) < 0)
 		goto done;
 
