@@ -1855,47 +1855,12 @@ int git_merge_diff_list__find_differences(
 	git_merge_diff_list *diff_list,
 	git_iterator *ancestor_iter,
 	git_iterator *our_iter,
-	git_iterator **their_iters,
-	size_t their_iters_len)
+	git_iterator *their_iter)
 {
-	size_t i, j, iters_len = 1 + their_iters_len;
-	git_iterator** iterators;
-	git_iterator* curr_iterators[3];
-	struct merge_diff_find_data find_data;
-	int error = 0;
+	git_iterator *iterators[3] = { ancestor_iter, our_iter, their_iter };
+	struct merge_diff_find_data find_data = { diff_list };
 
-	iterators = git__calloc(iters_len, sizeof(git_iterator*));
-	GIT_ERROR_CHECK_ALLOC(iterators);
-
-	iterators[0] = our_iter;
-
-	for(i = 0; i < their_iters_len; i++) {
-		iterators[i + 1] = their_iters[i];
-	}
-
-	for (i = 0; i < iters_len - 1; i++) {
-		for(j = i + 1; j < iters_len; j++) {
-			find_data = (struct merge_diff_find_data){ diff_list };
-
-			/* Reset the ancestor iterator, since it is always walked. */
-			git_iterator_reset(ancestor_iter);
-			/* Reset the "ours" iterator since it may have previously been walked. */
-			git_iterator_reset(iterators[i]);
-			/* "theirs" will get reset once it takes the "ours" spot on the next loop */
-
-			curr_iterators[0] = ancestor_iter;
-			curr_iterators[1] = iterators[i];
-			curr_iterators[2] = iterators[j];
-
-			if ((error = git_iterator_walk(curr_iterators, 3, queue_difference, &find_data)) < 0)
-				goto done;
-		}
-	}
-
-done:
-	git__free(iterators);
-
-	return error;
+	return git_iterator_walk(iterators, 3, queue_difference, &find_data);
 }
 
 git_merge_diff_list *git_merge_diff_list__alloc(git_repository *repo)
