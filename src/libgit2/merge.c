@@ -2389,6 +2389,55 @@ done:
 	return error;
 }
 
+static int compute_base_octopus(
+	git_annotated_commit **out,
+	git_repository *repo,
+	const git_annotated_commit *one,
+	const git_annotated_commit **twos,
+	size_t twos_len,
+	const git_merge_options *given_opts)
+{
+	git_array_oid_t head_ids = GIT_ARRAY_INIT;
+	git_oid base_id;
+	git_annotated_commit *base = NULL;
+	git_merge_options opts = GIT_MERGE_OPTIONS_INIT;
+	size_t i;
+	int error;
+
+	*out = NULL;
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_merge_options));
+
+	/* With more than two commits, merge_bases_many finds the base of
+	 * the first commit and a hypothetical merge of the others. Since
+	 * "one" may itself be a virtual commit, which insert_head_ids
+	 * substitutes multiple ancestors for, it needs to be added
+	 * after "two" which is always a single real commit.
+	 */
+	for (i = 0; i < twos_len; i++) {
+		if ((error = insert_head_ids(&head_ids, twos[i])) < 0)
+			goto done;
+
+	}
+	if ((error = insert_head_ids(&head_ids, one)) < 0 ||
+		(error = git_merge_base_octopus(&base_id, repo,
+			head_ids.size, head_ids.ptr)) < 0)
+		goto done;
+
+	if ((error = git_annotated_commit_lookup(&base, repo, &base_id)) < 0)
+		goto done;
+
+done:
+	if (error == 0)
+		*out = base;
+	else
+		git_annotated_commit_free(base);
+
+	git_array_clear(head_ids);
+	return error;
+}
+
 static int iterator_for_annotated_commit(
 	git_iterator **out,
 	git_annotated_commit *commit)
