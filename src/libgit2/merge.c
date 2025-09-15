@@ -1035,8 +1035,8 @@ static int merge_conflict_resolve_aggressive(
 	/* TODO: stage 1,3 same, stage 2 different, take stage 2 */
 
 done:
-	git_merge_file_result_free(&result);
-	git_odb_free(odb);
+	/* git_merge_file_result_free(&result); */
+	/* git_odb_free(odb); */
 
 	return error;
 }
@@ -2552,7 +2552,8 @@ static int merge_annotated_commits_octopus(
 	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_annotated_commit *base = NULL, *their_commit = NULL;
 	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
-	git_oid our_oid, *id = NULL;
+	git_oid result_oid, *id = NULL, *their_commit_id = NULL;
+	git_oid base_id;
 	git_array_oid_t reference_commits = GIT_ARRAY_INIT;
 	git_merge_options opts;
 	int error;
@@ -2560,6 +2561,10 @@ static int merge_annotated_commits_octopus(
 	git_tree *base_tree, *result_tree;
 	git_commit *commit;
 	size_t i, j, skip = 0, ff = 0;
+
+	char result_id[GIT_OID_SHA1_HEXSIZE + 1], their_oid[GIT_OID_SHA1_HEXSIZE + 1], base_oid[GIT_OID_SHA1_HEXSIZE + 1];
+	char ref_commits[20][GIT_OID_SHA1_HEXSIZE + 1], base_commits[20][GIT_OID_SHA1_HEXSIZE + 1];
+	int ref_count = 0, base_count = 0;
 
 	/* Set fail on conflict */
 
@@ -2579,6 +2584,8 @@ static int merge_annotated_commits_octopus(
 		git_error_clear();
 	}
 
+	their_commit_id = git_array_alloc(reference_commits);
+
 	/* Set base reference commit */
 	id = git_array_alloc(reference_commits);
 	GIT_ERROR_CHECK_ARRAY(reference_commits);
@@ -2591,33 +2598,36 @@ static int merge_annotated_commits_octopus(
 	git_oid_cpy(id, git_commit_id(ours->commit));
 
 	/* Set result tree */
-	if ((error = git_index_write_tree(&our_oid, repo_index)) < 0 ||
-			(error = git_tree_lookup(&result_tree, repo, &our_oid)) < 0)
+	if ((error = git_index_write_tree(&result_oid, repo_index)) < 0 ||
+			(error = git_tree_lookup(&result_tree, repo, &result_oid)) < 0)
 		goto done;
 
 
 	for (i = 0; i < their_commits_len; i++) {
-		id = git_array_alloc(reference_commits);
-		if (id == NULL) {
-			error = -1;
-			goto done;
-		}
-
+		base_count = 0;
+		ref_count = 0;
 		their_commit = their_commits[i];
-		git_oid_cpy(id, git_commit_id(their_commit->commit));
+
+		/* Set current commit OID as the first entry in reference, 
+		 * since it must be the first entry when calling `git_merge_bases_many`
+		 * to produce the correct merge ancestor. */
+		git_oid_cpy(their_commit_id, git_commit_id(their_commit->commit));
 
 		/* TODO: issue is here */
 		if ((error = git_merge_bases_many(&bases, repo, reference_commits.size,
 						reference_commits.ptr)) < 0)
 			goto done;
-
+		
 		/* Check if already up to date */
-		for (j = 0; j < bases.count; j++) {
-			if (git_oid_cmp(&bases.ids[j], git_commit_id(their_commit->commit)) == 0) {
-				skip = 1; /* TODO: test this */
-				break;
-			}
-		}
+		/* for (j = 0; j < bases.count; j++) { */
+		/* 	if (git_oid_cmp(&bases.ids[j], git_commit_id(their_commit->commit)) == 0) { */
+		/* 		skip = 1; /1* TODO: test this *1/ */
+		/* 		break; */
+		/* 	} */
+		/* } */
+
+		if (git_oid_cmp(&bases.ids[0], git_commit_id(their_commit->commit)) == 0)
+			skip = 1; /* TODO: test this */
 
 		if (skip) {
 			skip = 0;
@@ -2629,7 +2639,7 @@ static int merge_annotated_commits_octopus(
 			/* TODO: this might need to be a loope to check that all bases is identical to reference commits */
 			/* TODO: this logic is incorrect; it doesn't execute FF if the oidcmp condition is true */
 			/* TODO: write a test for this case */
-			if (git_oid_cmp(&reference_commits.ptr[0], &bases.ids[0]) == 0) {
+			if (git_oid_cmp(&reference_commits.ptr[1], &bases.ids[0]) == 0) {
 				ff = 1;
 			}
 
@@ -2644,13 +2654,13 @@ static int merge_annotated_commits_octopus(
 						goto done;
 
 				/* Fastforward result tree */
-				if ((error = git_index_write_tree(&our_oid, repo_index)) < 0 ||
-						(error = git_tree_lookup(&result_tree, repo, &our_oid)) < 0)
+				if ((error = git_index_write_tree(&result_oid, repo_index)) < 0 ||
+						(error = git_tree_lookup(&result_tree, repo, &result_oid)) < 0)
 					goto done;
 
-				/* Fastforward base reference commit */
+				/* Fastforward base reference commit */ /* TODO: test result annotated commit for multiple parents */
 
-				reference_commits.ptr[0] = their_commit->commit->object.cached.oid;
+				reference_commits.ptr[1] = their_commit->commit->object.cached.oid;
 				reference_commits.size--;
 			}
 
@@ -2658,11 +2668,23 @@ static int merge_annotated_commits_octopus(
 
 		/* disable fast forward after first attempt */
 		ff = 1;
+		
+		/* git_oid_tostr(base_commits[base_count++], GIT_OID_SHA1_HEXSIZE + 1, &base_id); */
+		for (j = 0; j < bases.count; j++) {
+			git_oid_tostr(base_commits[base_count++], GIT_OID_SHA1_HEXSIZE + 1, &bases.ids[j]);
+		}
+		for (j = 0; j < reference_commits.size; j++) {
+			git_oid_tostr(ref_commits[ref_count++], GIT_OID_SHA1_HEXSIZE + 1, &reference_commits.ptr[j]);
+		}
+
+		git_oid_tostr(their_oid, GIT_OID_SHA1_HEXSIZE + 1, git_commit_id(their_commit->commit));
+		git_oid_tostr(base_oid, GIT_OID_SHA1_HEXSIZE + 1, &bases.ids[0]);
+		git_oid_tostr(result_id, GIT_OID_SHA1_HEXSIZE + 1, &result_oid);
 
 		/* Simple merge */
 		/* TODO: git_tree_lookup is failing */
 		if ((error = git_commit_lookup(&commit, repo, (const git_oid*)&bases.ids[0])) < 0 ||
-				(error = git_tree_lookup(&base_tree, repo, &commit->tree_id)) < 0 ||
+				(error = git_commit_tree(&base_tree, commit)) < 0 ||
 				(error = git_iterator_for_tree(&base_iter, base_tree, &iter_opts)) < 0 ||
 				(error = git_iterator_for_tree(&our_iter, result_tree, &iter_opts)) < 0 ||
 				(error = iterator_for_annotated_commit(&their_iter, their_commit)) < 0 ||
@@ -2673,9 +2695,18 @@ static int merge_annotated_commits_octopus(
 		git_tree_free(result_tree);
 
 		/* Update result tree to index*/
-		if ((error = git_tree__write_index(&our_oid, *index_out, repo)) < 0 ||
-				(error = git_tree_lookup(&result_tree, repo, &our_oid)) < 0)
+		if ((error = git_tree__write_index(&result_oid, *index_out, repo)) < 0 ||
+				(error = git_tree_lookup(&result_tree, repo, &result_oid)) < 0)
 			goto done;
+
+		/* Append current commit to reference commits */
+		id = git_array_alloc(reference_commits);
+		if (id == NULL) {
+			error = -1;
+			goto done;
+		}
+
+		git_oid_cpy(id, git_commit_id(their_commit->commit));
 
 		git_oidarray_dispose(&bases);
 	}
