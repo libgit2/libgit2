@@ -2520,6 +2520,7 @@ static int merge_annotated_commits_octopus(
 	git_annotated_commit *base = NULL, *their_commit = NULL;
 	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
 	git_oid result_oid, *id = NULL, *their_commit_id = NULL;
+	git_index *index;
 	/* git_oid base_id; */ /* TODO: remove this */
 	git_array_oid_t reference_commits = GIT_ARRAY_INIT;
 	git_merge_options opts;
@@ -2571,6 +2572,8 @@ static int merge_annotated_commits_octopus(
 
 
 	for (i = 0; i < their_commits_len; i++) {
+		git_index_new(&index);
+
 		base_count = 0;
 		ref_count = 0;
 		their_commit = their_commits[i];
@@ -2617,11 +2620,11 @@ static int merge_annotated_commits_octopus(
 					goto done;
 
 				/* Perform fastforward on index, if possible */
-				if ((error = git_index_read_tree(repo_index, their_commit->tree)) < 0)
+				if ((error = git_index_read_tree(index, their_commit->tree)) < 0)
 						goto done;
 
 				/* Fastforward result tree */
-				if ((error = git_index_write_tree(&result_oid, repo_index)) < 0 ||
+				if ((error = git_index_write_tree(&result_oid, index)) < 0 ||
 						(error = git_tree_lookup(&result_tree, repo, &result_oid)) < 0)
 					goto done;
 
@@ -2655,14 +2658,14 @@ static int merge_annotated_commits_octopus(
 				(error = git_iterator_for_tree(&base_iter, base_tree, &iter_opts)) < 0 ||
 				(error = git_iterator_for_tree(&our_iter, result_tree, &iter_opts)) < 0 ||
 				(error = iterator_for_annotated_commit(&their_iter, their_commit)) < 0 ||
-				(error = git_merge__iterators(index_out, repo, base_iter, our_iter,
+				(error = git_merge__iterators(&index, repo, base_iter, our_iter,
 				their_iter, &opts)) < 0)
 			goto done;
 
 		git_tree_free(result_tree);
 
 		/* Update result tree to index*/
-		if ((error = git_tree__write_index(&result_oid, *index_out, repo)) < 0 ||
+		if ((error = git_tree__write_index(&result_oid, index, repo)) < 0 ||
 				(error = git_tree_lookup(&result_tree, repo, &result_oid)) < 0)
 			goto done;
 
@@ -2675,8 +2678,16 @@ static int merge_annotated_commits_octopus(
 
 		git_oid_cpy(id, git_commit_id(their_commit->commit));
 
+		git_index_free(index);
+
 		git_oidarray_dispose(&bases);
 	}
+
+	git_index_new(&index);
+
+	git_index_read_tree(index, result_tree);
+
+	*index_out = index;
 
 	/* TODO :figure out what to do between here and `done` */
 	if (base_out) {
