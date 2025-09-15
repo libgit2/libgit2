@@ -2520,7 +2520,7 @@ static int merge_annotated_commits_octopus(
 	git_annotated_commit *base = NULL, *their_commit = NULL;
 	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
 	git_oid result_oid, *id = NULL, *their_commit_id = NULL;
-	git_oid base_id;
+	/* git_oid base_id; */ /* TODO: remove this */
 	git_array_oid_t reference_commits = GIT_ARRAY_INIT;
 	git_merge_options opts;
 	int error;
@@ -3619,7 +3619,7 @@ int git_merge(
 
 	if (octopus) {
 		if ((error = merge_annotated_commits_octopus(&index, &base, repo, repo_index,
-					   	our_head, their_heads, their_heads_len, merge_opts)) < 0)
+					   	our_head, (git_annotated_commit**)their_heads, their_heads_len, merge_opts)) < 0)
 			goto done;
 	} else if ((error = merge_annotated_commits(&index, &base, repo, our_head,
 			(git_annotated_commit *)their_heads[0], 0, merge_opts)) < 0)
