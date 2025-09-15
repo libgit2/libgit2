@@ -1013,35 +1013,6 @@ done:
 	return error;
 }
 
-static int merge_conflict_resolve_aggressive(
-	int *resolved,
-	git_merge_diff_list *diff_list,
-	const git_merge_diff *conflict,
-	const git_merge_options *merge_opts,
-	const git_merge_file_options *file_opts)
-{
-	int error;
-
-	GIT_ASSERT_ARG(resolved);
-	GIT_ASSERT_ARG(diff_list);
-	GIT_ASSERT_ARG(conflict);
-
-	*resolved = 0;
-
-	/* TODO: stage 2 and 3 are teh same; take stage 2 */
-
-	/* TODO: stage 1,2 same, stage 3 different, take stage 3 */
-
-	/* TODO: stage 1,3 same, stage 2 different, take stage 2 */
-
-done:
-	/* git_merge_file_result_free(&result); */
-	/* git_odb_free(odb); */
-
-	return error;
-}
-
-
 static int merge_conflict_resolve(
 	int *out,
 	git_merge_diff_list *diff_list,
@@ -1068,10 +1039,6 @@ static int merge_conflict_resolve(
 
 	if (!resolved && (error = merge_conflict_resolve_contents(
 			&resolved, diff_list, conflict, merge_opts, file_opts)) < 0)
-		goto done;
-
-	/* TODO: implement aggressive merge for octopus */
-	if (!resolved)
 		goto done;
 
 	*out = resolved;
