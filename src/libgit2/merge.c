@@ -2688,6 +2688,7 @@ static int merge_annotated_commits_octopus(
 			ff = 1;
 		}
 
+		/* TODO: implement automatic merge; right now this fails at the first conflict */
 		if ((error = git_merge__octopus_simple(&temp_tree, &reference_commits, repo, 
 						&bases, reference_tree, their_commit, &opts)) < 0)
 			goto done;
