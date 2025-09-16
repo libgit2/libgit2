@@ -10,43 +10,48 @@
 static git_repository *repo;
 static git_index *repo_index;
 
-#define TEST_REPO_PATH "merge-octopus-simple"
+#define TEST_REPO_PATH "merge-octopus"
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
 
 #define THEIRS_SIMPLE_BRANCHES		{"branch1", "branch1-b", "branch2", "branch3"}
-#define THEIRS_SIMPLE_OIDS			{"a4f76792d9bbf5a939cfc43a7a0df48bd8f0efb2", \
-                                     "d5b8b3e29080838047c80e139d46d381c8200253", \
-                                     "b904bbfb2674a1df716feaf9cc30c51ca4e2f351", \
-                                     "07f14b3a5eeb7d6db41f03bf7f29d5a404d9de16"}
+#define THEIRS_SIMPLE_OIDS			{"ab409242f7ade0f4823a51fa0a87a553cafd1c14", \
+                                     "1ae815cbcbf1cc17bb338bf584de73bd9241ee84", \
+                                     "53a65eaa4ff1167f183e2dd91b6cde4d9d3200ce", \
+                                     "e6678029e2f92db6539e161cf43d467aff87157f"}
 
-#define OUR_TARGET_BRANCH "target"
+#define OUR_TARGET_BRANCH "t"
 #define NUM_COMMITS 4
 
-#define COMMON_BASE_OID "b9fe1c1159fbfa8235ea0e5487174ab7703fa3d7"
 
-#define BRANCH1_INDEX_ENTRY \
-        { 0100644, "206e7338ee5863b438f3f0602f0c0e5ca89fd7a6", 0, \
-          "added-in-branch1.txt" }
+#define BRANCH_T_INDEX_ENTRY_1 \
+        { 0100644, "2c6e75856f24a210d21973441874bb1512fc5edd", 0, \
+          "1.txt" }
 
 #define BRANCH1_B_INDEX_ENTRY \
-        { 0100644, "4652cb85053eb3a0cb857f62424cf1fce149ef6f", 0, \
+        { 0100644, "374cd34a4752890de19d6c8a39510dbbe69406a5", 0, \
           "added-in-branch1.txt" }
 
 #define BRANCH2_INDEX_ENTRY \
-        { 0100644, "bc8359fca4381e671000798bd503470f6173c54d", 0, \
+        { 0100644, "527a828f16ab91bc9004269d2e3e3f30cbc8a854", 0, \
           "added-in-branch2.txt" }
 
 #define BRANCH3_INDEX_ENTRY \
-        { 0100644, "7faf136975b6a6193d6d7afec973af738d7bea91", 0, \
+        { 0100644, "dc61ca12000e7be2c4ea40398e783086428d053e", 0, \
           "added-in-branch3.txt" }
 
 #define MASTER_INDEX_ENTRY \
-        { 0100644, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", 0, \
-          "added-in-master.txt" }
+        { 0100644, "1f7391f92b6a3792204e07e99f71f643cc35e7e1", 0, \
+          "master.txt" }
 
-#define OUR_INDEX_ENTRY \
-        { 0100644, "9fa7335e756cc1df8cbbce492cd270340042fade", 0, \
-          "added-in-target.txt" }
+#define BRANCH_T_INDEX_ENTRY_T \
+        { 0100644, "4b4d41231929d23b3f1de89c00b339831ebaa2b4", 0, \
+          "t.txt" }
+
+#define BRANCH_T_INDEX_ENTRY_T1 \
+        { 0100644, "f15c1d17d1ebef8adbdb7379cc3dcf7f48fa9cb5", 0, \
+          "t1.txt" }
+
+#define EXPECTED_INDEX_ENTRY_COUNT 7
 
 /* Fixture setup and teardown */
 void test_merge_octopus_simple__initialize(void)
@@ -96,15 +101,17 @@ static void octopus_merge(int merge_file_favor, int addl_checkout_strategy)
 void test_merge_octopus_simple__merge_multiple_commits(void)
 {
     struct merge_index_entry merge_index_entries[] = {
+		BRANCH_T_INDEX_ENTRY_1,
         BRANCH1_B_INDEX_ENTRY,
         BRANCH2_INDEX_ENTRY,
         BRANCH3_INDEX_ENTRY,
         MASTER_INDEX_ENTRY,
-        OUR_INDEX_ENTRY
+		BRANCH_T_INDEX_ENTRY_T,
+		BRANCH_T_INDEX_ENTRY_T1
     };
 
 	octopus_merge(0, 0);
 
-    cl_assert(merge_test_index(repo_index, merge_index_entries, 5));
+    cl_assert(merge_test_index(repo_index, merge_index_entries, EXPECTED_INDEX_ENTRY_COUNT));
 }
 
