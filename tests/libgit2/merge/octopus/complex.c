@@ -10,6 +10,54 @@
 static git_repository *repo;
 static git_index *repo_index;
 
+/*
+ * Relevant branch graph of the situation before the octopus merge.
+ *		*   1b7ad0f (2) Merge branch 't2' into 2
+ *		|\
+ *		| * 96e6022 (t2) add in t2
+ *		* | 80194ba append in 2 again
+ *		| | * a49a6a4 (2a) add in 2a
+ *		| |/
+ *		|/|
+ *		* | 7b07a0f append in 2
+ *		* | 0d37365 add in 2
+ *		| | * 026a849 (t1) append in t1 again
+ *		| |/
+ *		| | * 6d7a094 (1b) append in 1b
+ *		| | | *   5136b71 (1) Merge branch '1b' into 1
+ *		| | | |\
+ *		| | | |/
+ *		| | |/|
+ *		| | * | 862ab60 add in 1b
+ *		| | | * 2686687 append in 1 again
+ *		| | |/
+ *		| | | *   ec7080d (HEAD -> t) Merge branch '1' into t
+ *		| | | |\
+ *		| | | |/
+ *		| | |/|
+ *		| | * | 3e25ef4 (skippable) append in 1
+ *		| | | * 4d098df append again in t
+ *		| | | *   1701254 Merge branch 't1' into t
+ *		| | | |\
+ *		| | |_|/
+ *		| |/| |
+ *		| * | | f5683f6 append in t1
+ *		| * | | b82129c add in t1
+ *		| | | * 5868f5a append in t
+ *		| | |/
+ *		| |/|
+ *		| * | bb06048 add in t
+ *		|/ /
+ *		| | * e2161c7 (1a) append in 1a
+ *		| | * 3bbd2a3 add in 1a
+ *		| |/
+ *		| * cf9ed0f add in 1
+ *		|/
+ *		| * 75f1c45 (3) add in 3
+ *		|/
+ *		* 91a7496 (unskippable, master) add in master
+ */
+
 #define TEST_REPO_PATH "merge-octopus"
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
 
