@@ -23,7 +23,7 @@ static git_index *repo_index;
 									 "026a849d3c17944b00bd2de4840591df30852769", \
                                      "96e602252e180110495f303b6164a7d1158de595"}
 
-#define OUR_TARGET_BRANCH "t"
+#define OUR_TARGET_BRANCH "t" /* ec7080d7b13802e78dc64ef04b4ff218f7f3a06b */
 #define NUM_COMMITS 8
 
 #define INDEX_ENTRY_1_TXT \
