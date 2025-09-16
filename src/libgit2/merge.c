@@ -2506,6 +2506,105 @@ done:
 	return error;
 }
 
+static int merge_octopus_fastforward(
+		git_tree **tree_out,
+		git_repository *repo,
+		git_array_oid_t *reference_commits,
+		git_annotated_commit *their_commit)
+{
+	git_index *index;
+	git_oid result_oid;
+	int error;
+
+	git_index_new(&index);
+
+	/* Ensure tree is present */
+	if (!their_commit->tree &&
+		(error = git_commit_tree(&their_commit->tree, their_commit->commit)) < 0)
+		goto done;
+
+	/* Perform fastforward on index, if possible */
+	if ((error = git_index_read_tree(index, their_commit->tree)) < 0)
+			goto done;
+
+	/* Fastforward result tree */
+	if ((error = git_index_write_tree(&result_oid, index)) < 0 ||
+			(error = git_tree_lookup(tree_out, repo, &result_oid)) < 0)
+		goto done;
+
+	/* Fastforward base reference commit */ /* TODO: test result annotated commit for multiple parents */
+
+	reference_commits->ptr[1] = their_commit->commit->object.cached.oid;
+	reference_commits->size--;
+
+done:
+	git_index_free(index);
+	return error;
+}
+
+static int merge_octopus_simple(
+		git_tree **tree_out, 
+		git_array_oid_t *reference_commits_out, /* TODO: output param? */
+		git_repository *repo,
+		git_oidarray *bases,
+		git_tree *reference_tree,
+		git_annotated_commit *their_commit, 
+		const git_merge_options *opts)
+{
+	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
+	git_iterator *base_iter = NULL, *reference_iter = NULL, *their_iter = NULL;
+	git_oid result_oid, *id = NULL;
+	git_index *index;
+	git_tree *base_tree;
+	git_commit *commit;
+	int error;
+
+	GIT_ASSERT_ARG(tree_out);
+	GIT_ASSERT_ARG(reference_commits_out);
+
+	*tree_out = NULL;
+
+	git_index_new(&index);
+	
+	/* Simple merge */
+	if ((error = git_commit_lookup(&commit, repo, (const git_oid*)&bases->ids[0])) < 0 ||
+			(error = git_commit_tree(&base_tree, commit)) < 0 ||
+			(error = git_iterator_for_tree(&base_iter, base_tree, &iter_opts)) < 0 ||
+			(error = git_iterator_for_tree(&reference_iter, reference_tree, &iter_opts)) < 0 ||
+			(error = iterator_for_annotated_commit(&their_iter, their_commit)) < 0 ||
+			(error = git_merge__iterators(&index, repo, base_iter, reference_iter,
+			their_iter, opts)) < 0)
+		goto done;
+
+	/* Update result tree to index*/
+	if ((error = git_tree__write_index(&result_oid, index, repo)) < 0 ||
+			(error = git_tree_lookup(tree_out, repo, &result_oid)) < 0)
+		goto done;
+
+	/* Append current commit to reference commits */
+	id = git_array_alloc(*reference_commits_out);
+	if (id == NULL) {
+		error = -1;
+		goto done;
+	}
+
+	git_oid_cpy(id, git_commit_id(their_commit->commit));
+
+done:
+
+	git_index_free(index);
+
+	git_tree_free(base_tree);
+
+	git_commit_free(commit);
+
+	git_iterator_free(base_iter);
+	git_iterator_free(reference_iter);
+	git_iterator_free(their_iter);
+
+	return error;
+}
+
 static int merge_annotated_commits_octopus(
 	git_index **index_out,
 	git_annotated_commit **base_out,
@@ -2516,7 +2615,6 @@ static int merge_annotated_commits_octopus(
 	size_t their_commits_len,
 	const git_merge_options *given_opts)
 {
-	git_iterator_options iter_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_annotated_commit *base = NULL, *their_commit = NULL;
 	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
 	git_oid result_oid, *id = NULL, *their_commit_id = NULL;
@@ -2526,13 +2624,11 @@ static int merge_annotated_commits_octopus(
 	git_merge_options opts;
 	int error;
 	git_oidarray bases = {0};
-	git_tree *base_tree, *result_tree;
-	git_commit *commit;
-	size_t i, j, skip = 0, ff = 0;
+	git_tree *reference_tree, *temp_tree;
+	size_t i, ff = 0;
 
-	char result_id[GIT_OID_SHA1_HEXSIZE + 1], their_oid[GIT_OID_SHA1_HEXSIZE + 1], base_oid[GIT_OID_SHA1_HEXSIZE + 1];
-	char ref_commits[20][GIT_OID_SHA1_HEXSIZE + 1], base_commits[20][GIT_OID_SHA1_HEXSIZE + 1];
-	int ref_count = 0, base_count = 0;
+	GIT_ASSERT_ARG(index_out);
+	GIT_ASSERT_ARG(base_out);
 
 	/* Set fail on conflict */
 
@@ -2567,16 +2663,13 @@ static int merge_annotated_commits_octopus(
 
 	/* Set result tree */
 	if ((error = git_index_write_tree(&result_oid, repo_index)) < 0 ||
-			(error = git_tree_lookup(&result_tree, repo, &result_oid)) < 0)
+			(error = git_tree_lookup(&reference_tree, repo, &result_oid)) < 0)
 		goto done;
 
 
 	for (i = 0; i < their_commits_len; i++) {
-		git_index_new(&index);
-
-		base_count = 0;
-		ref_count = 0;
 		their_commit = their_commits[i];
+		their_commit_id = &reference_commits.ptr[0];
 
 		/* Set current commit OID as the first entry in reference, 
 		 * since it must be the first entry when calling `git_merge_bases_many`
@@ -2596,13 +2689,14 @@ static int merge_annotated_commits_octopus(
 		/* 	} */
 		/* } */
 
-		if (git_oid_cmp(&bases.ids[0], git_commit_id(their_commit->commit)) == 0)
-			skip = 1; /* TODO: test this */
 
-		if (skip) {
-			skip = 0;
+		if (git_oid_cmp(&bases.ids[0], git_commit_id(their_commit->commit)) == 0) {
+			/* TODO: test this */
 			continue;
 		}
+
+		/* TODO: use this if the `= NULL` line breaks something */
+		/* git_tree *temp_tree; */
 
 		if (!ff) {
 			/* Check if fastforward is possible */
@@ -2613,79 +2707,29 @@ static int merge_annotated_commits_octopus(
 				ff = 1;
 			}
 
-			if (ff) {
-				/* Ensure tree is present */
-				if (!their_commit->tree &&
-					(error = git_commit_tree(&their_commit->tree, their_commit->commit)) < 0)
-					goto done;
+			if (ff && (error = merge_octopus_fastforward(&temp_tree, repo, 
+							&reference_commits, their_commit)) < 0) 
+				goto done;
 
-				/* Perform fastforward on index, if possible */
-				if ((error = git_index_read_tree(index, their_commit->tree)) < 0)
-						goto done;
-
-				/* Fastforward result tree */
-				if ((error = git_index_write_tree(&result_oid, index)) < 0 ||
-						(error = git_tree_lookup(&result_tree, repo, &result_oid)) < 0)
-					goto done;
-
-				/* Fastforward base reference commit */ /* TODO: test result annotated commit for multiple parents */
-
-				reference_commits.ptr[1] = their_commit->commit->object.cached.oid;
-				reference_commits.size--;
-			}
-
+			/* disable fast forward after first attempt */
+			ff = 1;
 		}
 
-		/* disable fast forward after first attempt */
-		ff = 1;
+		if ((error = merge_octopus_simple(&temp_tree, &reference_commits, repo, 
+						&bases, reference_tree, their_commit, &opts)) < 0)
+			goto done;
+
+		git_tree_free(reference_tree);
+
+		reference_tree = temp_tree;
+		temp_tree = NULL;
 		
-		/* git_oid_tostr(base_commits[base_count++], GIT_OID_SHA1_HEXSIZE + 1, &base_id); */
-		for (j = 0; j < bases.count; j++) {
-			git_oid_tostr(base_commits[base_count++], GIT_OID_SHA1_HEXSIZE + 1, &bases.ids[j]);
-		}
-		for (j = 0; j < reference_commits.size; j++) {
-			git_oid_tostr(ref_commits[ref_count++], GIT_OID_SHA1_HEXSIZE + 1, &reference_commits.ptr[j]);
-		}
-
-		git_oid_tostr(their_oid, GIT_OID_SHA1_HEXSIZE + 1, git_commit_id(their_commit->commit));
-		git_oid_tostr(base_oid, GIT_OID_SHA1_HEXSIZE + 1, &bases.ids[0]);
-		git_oid_tostr(result_id, GIT_OID_SHA1_HEXSIZE + 1, &result_oid);
-
-		/* Simple merge */
-		/* TODO: git_tree_lookup is failing */
-		if ((error = git_commit_lookup(&commit, repo, (const git_oid*)&bases.ids[0])) < 0 ||
-				(error = git_commit_tree(&base_tree, commit)) < 0 ||
-				(error = git_iterator_for_tree(&base_iter, base_tree, &iter_opts)) < 0 ||
-				(error = git_iterator_for_tree(&our_iter, result_tree, &iter_opts)) < 0 ||
-				(error = iterator_for_annotated_commit(&their_iter, their_commit)) < 0 ||
-				(error = git_merge__iterators(&index, repo, base_iter, our_iter,
-				their_iter, &opts)) < 0)
-			goto done;
-
-		git_tree_free(result_tree);
-
-		/* Update result tree to index*/
-		if ((error = git_tree__write_index(&result_oid, index, repo)) < 0 ||
-				(error = git_tree_lookup(&result_tree, repo, &result_oid)) < 0)
-			goto done;
-
-		/* Append current commit to reference commits */
-		id = git_array_alloc(reference_commits);
-		if (id == NULL) {
-			error = -1;
-			goto done;
-		}
-
-		git_oid_cpy(id, git_commit_id(their_commit->commit));
-
-		git_index_free(index);
-
 		git_oidarray_dispose(&bases);
 	}
 
 	git_index_new(&index);
 
-	git_index_read_tree(index, result_tree);
+	git_index_read_tree(index, reference_tree);
 
 	*index_out = index;
 
@@ -2696,11 +2740,11 @@ static int merge_annotated_commits_octopus(
 	}
 
 done:
+	if (!given_opts || !given_opts->metric)
+		git__free(opts.metric);
 	git_annotated_commit_free(base);
 	git_array_dispose(reference_commits);
-	git_tree_free(base_tree);
-	git_tree_free(result_tree);
-	git_commit_free(commit);
+	git_tree_free(reference_tree);
 	/* TODO: make sure no weird memory effects here */
 	/* git_oidarray_dispose(&bases); */
 	git_iterator_free(base_iter);
