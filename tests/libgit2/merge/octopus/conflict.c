@@ -10,16 +10,16 @@
 static git_repository *repo;
 static git_index *repo_index;
 
-#define TEST_REPO_PATH "merge-octopus-fail"
+#define TEST_REPO_PATH "merge-octopus"
 #define TEST_INDEX_PATH TEST_REPO_PATH "/.git/index"
 
-#define THEIRS_SIMPLE_BRANCHES		{"1", "2", "3"}
-#define THEIRS_SIMPLE_OIDS			{"5b9e238671e7c9ed38a33485d22067627f35ff06", \
-                                     "7264ba67a9dde172fabc107220de0a4595e361ec", \
-                                     "38a54de2588abfef1a68110466c233d63ab0b3dd"}
+#define THEIRS_SIMPLE_BRANCHES		{"f1", "f2", "f3"}
+#define THEIRS_SIMPLE_OIDS			{"39e46a1032fdba5ab3876942af0b1959029c6b68", \
+                                     "56c73e2c30b2a5580821456409b8624ae4442495", \
+                                     "d5340b76365ef4f593a09428fcd155299b5c4523"}
 
 #define OUR_TARGET_BRANCH "t"
-#define OUR_TARGET_OID "814d989bbd2a92142c6655980fc2108b8b6c666e"
+#define OUR_TARGET_OID "ec7080d7b13802e78dc64ef04b4ff218f7f3a06b"
 #define NUM_COMMITS 3
 
 
@@ -43,7 +43,7 @@ void test_merge_octopus_fail__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
-void test_merge_octopus_fail__fail_to_merge(void)
+void test_merge_octopus_conflict__fail_to_merge(void)
 {
 
     int i;
