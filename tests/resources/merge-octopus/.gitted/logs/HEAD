@@ -87,3 +87,6 @@ ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 91a7496439d00cfb4e9f67f52d6a53b8d5bded0
 56c73e2c30b2a5580821456409b8624ae4442495 91a7496439d00cfb4e9f67f52d6a53b8d5bded08 Sam <altier.sam@gmail.com> 1758059757 -0400	checkout: moving from f2 to f3
 91a7496439d00cfb4e9f67f52d6a53b8d5bded08 d5340b76365ef4f593a09428fcd155299b5c4523 Sam <altier.sam@gmail.com> 1758059783 -0400	commit: add non-conflicting file in f3
 d5340b76365ef4f593a09428fcd155299b5c4523 ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam <altier.sam@gmail.com> 1758059956 -0400	checkout: moving from f3 to t
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam Altier <altier.sam@gmail.com> 1758062724 -0400	checkout: moving from t to ff
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 6c9e78d45edf0797f6b5af9a3e3241230c8ce65a Sam Altier <altier.sam@gmail.com> 1758062790 -0400	commit: add fastforwardable file
+6c9e78d45edf0797f6b5af9a3e3241230c8ce65a ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam Altier <altier.sam@gmail.com> 1758062793 -0400	checkout: moving from ff to t
