@@ -2591,13 +2591,9 @@ static int merge_octopus_simple(
 	git_oid_cpy(id, git_commit_id(their_commit->commit));
 
 done:
-
 	git_index_free(index);
-
 	git_tree_free(base_tree);
-
 	git_commit_free(commit);
-
 	git_iterator_free(base_iter);
 	git_iterator_free(reference_iter);
 	git_iterator_free(their_iter);
