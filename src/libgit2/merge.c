@@ -3617,12 +3617,6 @@ int git_merge(
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(their_heads && their_heads_len > 0);
 
-	/* TODO: remove this */
-	/* if (their_heads_len != 1) { */
-	/* 	git_error_set(GIT_ERROR_MERGE, "can only merge a single branch"); */
-	/* 	return -1; */
-	/* } */
-
 	if ((error = git_repository__ensure_not_bare(repo, "merge")) < 0)
 		goto done;
 
@@ -3642,8 +3636,6 @@ int git_merge(
 		(error = git_merge__setup(repo, our_head, their_heads,
 			their_heads_len)) < 0)
 		goto done;
-
-	/* TODO: octopus */
 
 	if (octopus) {
 		if ((error = merge_annotated_commits_octopus(&index, &base, repo, repo_index,
