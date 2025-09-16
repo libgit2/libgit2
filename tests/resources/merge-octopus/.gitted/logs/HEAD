@@ -90,3 +90,14 @@ d5340b76365ef4f593a09428fcd155299b5c4523 ec7080d7b13802e78dc64ef04b4ff218f7f3a06
 ec7080d7b13802e78dc64ef04b4ff218f7f3a06b ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam Altier <altier.sam@gmail.com> 1758062724 -0400	checkout: moving from t to ff
 ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 6c9e78d45edf0797f6b5af9a3e3241230c8ce65a Sam Altier <altier.sam@gmail.com> 1758062790 -0400	commit: add fastforwardable file
 6c9e78d45edf0797f6b5af9a3e3241230c8ce65a ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam Altier <altier.sam@gmail.com> 1758062793 -0400	checkout: moving from ff to t
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 3e25ef4341e1ba0013f2fa65a9bf7298923180c5 Sam Altier <altier.sam@gmail.com> 1758063004 -0400	checkout: moving from t to skippable
+3e25ef4341e1ba0013f2fa65a9bf7298923180c5 ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam Altier <altier.sam@gmail.com> 1758063125 -0400	checkout: moving from skippable to t
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 6c9e78d45edf0797f6b5af9a3e3241230c8ce65a Sam Altier <altier.sam@gmail.com> 1758063145 -0400	merge ff: Fast-forward
+6c9e78d45edf0797f6b5af9a3e3241230c8ce65a ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam Altier <altier.sam@gmail.com> 1758063178 -0400	reset: moving to HEAD~1
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 91a7496439d00cfb4e9f67f52d6a53b8d5bded08 Sam Altier <altier.sam@gmail.com> 1758063192 -0400	checkout: moving from t to unskippable
+91a7496439d00cfb4e9f67f52d6a53b8d5bded08 ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam Altier <altier.sam@gmail.com> 1758063242 -0400	checkout: moving from unskippable to t
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 91a7496439d00cfb4e9f67f52d6a53b8d5bded08 Sam Altier <altier.sam@gmail.com> 1758063264 -0400	checkout: moving from t to unskippable
+91a7496439d00cfb4e9f67f52d6a53b8d5bded08 ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam Altier <altier.sam@gmail.com> 1758063293 -0400	checkout: moving from unskippable to t
+ec7080d7b13802e78dc64ef04b4ff218f7f3a06b 6725e8a0f15658d45215b3c0d53c53f6e1161aae Sam Altier <altier.sam@gmail.com> 1758063306 -0400	merge ff 1: Merge made by the 'octopus' strategy.
+6725e8a0f15658d45215b3c0d53c53f6e1161aae 6c9e78d45edf0797f6b5af9a3e3241230c8ce65a Sam Altier <altier.sam@gmail.com> 1758063601 -0400	reset: moving to HEAD~1
+6c9e78d45edf0797f6b5af9a3e3241230c8ce65a ec7080d7b13802e78dc64ef04b4ff218f7f3a06b Sam Altier <altier.sam@gmail.com> 1758063613 -0400	reset: moving to HEAD~1
