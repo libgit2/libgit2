@@ -2521,7 +2521,7 @@ static int git_merge__octopus_fastforward(
 			goto done;
 
 	/* Fastforward result tree */
-	if ((error = git_index_write_tree(&result_oid, index)) < 0 ||
+	if ((error = git_tree__write_index(&result_oid, index, repo)) < 0 ||
 			(error = git_tree_lookup(tree_out, repo, &result_oid)) < 0)
 		goto done;
 
@@ -2670,7 +2670,6 @@ static int merge_annotated_commits_octopus(
 			goto done;
 
 		if (git_oid_cmp(&bases.ids[0], git_commit_id(their_commit->commit)) == 0) {
-			/* TODO: test this */
 			continue;
 		}
 
