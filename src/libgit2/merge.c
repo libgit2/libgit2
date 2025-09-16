@@ -2706,7 +2706,6 @@ static int merge_annotated_commits_octopus(
 
 	*index_out = index;
 
-	/* TODO :figure out what to do between here and `done` */
 	if (base_out) {
 		*base_out = base;
 		base = NULL;
@@ -2718,8 +2717,6 @@ done:
 	git_annotated_commit_free(base);
 	git_array_dispose(reference_commits);
 	git_tree_free(reference_tree);
-	/* TODO: make sure no weird memory effects here */
-	/* git_oidarray_dispose(&bases); */
 	git_iterator_free(base_iter);
 	git_iterator_free(our_iter);
 	git_iterator_free(their_iter);
