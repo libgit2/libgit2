@@ -514,7 +514,6 @@ done:
 	return error;
 }
 
-/* TODO: error is here */
 int git_merge__bases_many(
 		git_commit_list **out,
 		git_revwalk *walk,
@@ -2410,12 +2409,6 @@ static int compute_base_octopus(
 	if (given_opts)
 		memcpy(&opts, given_opts, sizeof(git_merge_options));
 
-	/* With more than two commits, merge_bases_many finds the base of
-	 * the first commit and a hypothetical merge of the others. Since
-	 * "one" may itself be a virtual commit, which insert_head_ids
-	 * substitutes multiple ancestors for, it needs to be added
-	 * after "two" which is always a single real commit.
-	 */
 	for (i = 0; i < twos_len; i++) {
 		if ((error = insert_head_ids(&head_ids, twos[i])) < 0)
 			goto done;
@@ -2506,7 +2499,7 @@ done:
 	return error;
 }
 
-static int merge_octopus_fastforward(
+static int git_merge__octopus_fastforward(
 		git_tree **tree_out,
 		git_repository *repo,
 		git_array_oid_t *reference_commits,
@@ -2532,7 +2525,7 @@ static int merge_octopus_fastforward(
 			(error = git_tree_lookup(tree_out, repo, &result_oid)) < 0)
 		goto done;
 
-	/* Fastforward base reference commit */ /* TODO: test result annotated commit for multiple parents */
+	/* Fastforward base reference commit */ 
 
 	reference_commits->ptr[1] = their_commit->commit->object.cached.oid;
 	reference_commits->size--;
@@ -2542,9 +2535,9 @@ done:
 	return error;
 }
 
-static int merge_octopus_simple(
+static int git_merge__octopus_simple(
 		git_tree **tree_out, 
-		git_array_oid_t *reference_commits_out, /* TODO: output param? */
+		git_array_oid_t *reference_commits_out,
 		git_repository *repo,
 		git_oidarray *bases,
 		git_tree *reference_tree,
@@ -2601,6 +2594,7 @@ done:
 	return error;
 }
 
+/* Ported from Junio C Hamano's original octopus implmentation in bash. */
 static int merge_annotated_commits_octopus(
 	git_index **index_out,
 	git_annotated_commit **base_out,
@@ -2615,7 +2609,6 @@ static int merge_annotated_commits_octopus(
 	git_iterator *base_iter = NULL, *our_iter = NULL, *their_iter = NULL;
 	git_oid result_oid, *id = NULL, *their_commit_id = NULL;
 	git_index *index;
-	/* git_oid base_id; */ /* TODO: remove this */
 	git_array_oid_t reference_commits = GIT_ARRAY_INIT;
 	git_merge_options opts;
 	int error;
@@ -2672,38 +2665,22 @@ static int merge_annotated_commits_octopus(
 		 * to produce the correct merge ancestor. */
 		git_oid_cpy(their_commit_id, git_commit_id(their_commit->commit));
 
-		/* TODO: issue is here */
 		if ((error = git_merge_bases_many(&bases, repo, reference_commits.size,
 						reference_commits.ptr)) < 0)
 			goto done;
-		
-		/* Check if already up to date */
-		/* for (j = 0; j < bases.count; j++) { */
-		/* 	if (git_oid_cmp(&bases.ids[j], git_commit_id(their_commit->commit)) == 0) { */
-		/* 		skip = 1; /1* TODO: test this *1/ */
-		/* 		break; */
-		/* 	} */
-		/* } */
-
 
 		if (git_oid_cmp(&bases.ids[0], git_commit_id(their_commit->commit)) == 0) {
 			/* TODO: test this */
 			continue;
 		}
 
-		/* TODO: use this if the `= NULL` line breaks something */
-		/* git_tree *temp_tree; */
-
 		if (!ff) {
 			/* Check if fastforward is possible */
-			/* TODO: this might need to be a loope to check that all bases is identical to reference commits */
-			/* TODO: this logic is incorrect; it doesn't execute FF if the oidcmp condition is true */
-			/* TODO: write a test for this case */
 			if (git_oid_cmp(&reference_commits.ptr[1], &bases.ids[0]) == 0) {
 				ff = 1;
 			}
 
-			if (ff && (error = merge_octopus_fastforward(&temp_tree, repo, 
+			if (ff && (error = git_merge__octopus_fastforward(&temp_tree, repo, 
 							&reference_commits, their_commit)) < 0) 
 				goto done;
 
@@ -2711,7 +2688,7 @@ static int merge_annotated_commits_octopus(
 			ff = 1;
 		}
 
-		if ((error = merge_octopus_simple(&temp_tree, &reference_commits, repo, 
+		if ((error = git_merge__octopus_simple(&temp_tree, &reference_commits, repo, 
 						&bases, reference_tree, their_commit, &opts)) < 0)
 			goto done;
 
