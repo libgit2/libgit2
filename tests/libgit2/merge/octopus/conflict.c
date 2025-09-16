@@ -24,7 +24,7 @@ static git_index *repo_index;
 
 
 /* Fixture setup and teardown */
-void test_merge_octopus_fail__initialize(void)
+void test_merge_octopus_conflict__initialize(void)
 {
 	git_config *cfg;
 
@@ -37,7 +37,7 @@ void test_merge_octopus_fail__initialize(void)
 	git_config_free(cfg);
 }
 
-void test_merge_octopus_fail__cleanup(void)
+void test_merge_octopus_conflicconflicteanup(void)
 {
 	git_index_free(repo_index);
 	cl_git_sandbox_cleanup();
