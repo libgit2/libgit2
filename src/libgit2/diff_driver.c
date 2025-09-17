@@ -225,7 +225,7 @@ static int git_diff_driver_load(
 {
 	int error = 0;
 	git_diff_driver_registry *reg;
-	git_diff_driver *drv;
+	git_diff_driver *drv = NULL;
 	size_t namelen;
 	git_config *cfg = NULL;
 	git_str name = GIT_STR_INIT;
