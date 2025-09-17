@@ -1471,9 +1471,9 @@ int git_submodule_update(git_submodule *sm, int init, git_submodule_update_optio
 
 		/* Invalidate the wd flags as the workdir has been updated. */
 		sm->flags = sm->flags &
-			~(GIT_SUBMODULE_STATUS_IN_WD |
-		  	GIT_SUBMODULE_STATUS__WD_OID_VALID |
-		  	GIT_SUBMODULE_STATUS__WD_SCANNED);
+			~((uint32_t)GIT_SUBMODULE_STATUS_IN_WD |
+			  (uint32_t)GIT_SUBMODULE_STATUS__WD_OID_VALID |
+			  (uint32_t)GIT_SUBMODULE_STATUS__WD_SCANNED);
 	}
 
 done:
@@ -1596,9 +1596,9 @@ static int git_submodule__open(
 		return -1;
 
 	sm->flags = sm->flags &
-		~(GIT_SUBMODULE_STATUS_IN_WD |
-		  GIT_SUBMODULE_STATUS__WD_OID_VALID |
-		  GIT_SUBMODULE_STATUS__WD_SCANNED);
+		~((uint32_t)GIT_SUBMODULE_STATUS_IN_WD |
+		  (uint32_t)GIT_SUBMODULE_STATUS__WD_OID_VALID |
+		  (uint32_t)GIT_SUBMODULE_STATUS__WD_SCANNED);
 
 	if (bare)
 		flags |= GIT_REPOSITORY_OPEN_BARE;
@@ -1607,21 +1607,21 @@ static int git_submodule__open(
 
 	/* if we opened the submodule successfully, grab HEAD OID, etc. */
 	if (!error) {
-		sm->flags |= GIT_SUBMODULE_STATUS_IN_WD |
-			GIT_SUBMODULE_STATUS__WD_SCANNED;
+		sm->flags |= (uint32_t)GIT_SUBMODULE_STATUS_IN_WD |
+			(uint32_t)GIT_SUBMODULE_STATUS__WD_SCANNED;
 
 		if (!git_reference_name_to_id(&sm->wd_oid, *subrepo, GIT_HEAD_FILE))
 			sm->flags |= GIT_SUBMODULE_STATUS__WD_OID_VALID;
 		else
 			git_error_clear();
 	} else if (git_fs_path_exists(path.ptr)) {
-		sm->flags |= GIT_SUBMODULE_STATUS__WD_SCANNED |
-			GIT_SUBMODULE_STATUS_IN_WD;
+		sm->flags |= (uint32_t)GIT_SUBMODULE_STATUS__WD_SCANNED |
+			(uint32_t)GIT_SUBMODULE_STATUS_IN_WD;
 	} else {
 		git_str_rtruncate_at_char(&path, '/'); /* remove "/.git" */
 
 		if (git_fs_path_isdir(path.ptr))
-			sm->flags |= GIT_SUBMODULE_STATUS__WD_SCANNED;
+			sm->flags |= (uint32_t)GIT_SUBMODULE_STATUS__WD_SCANNED;
 	}
 
 	git_str_dispose(&path);
@@ -1642,19 +1642,19 @@ int git_submodule_open(git_repository **subrepo, git_submodule *sm)
 static void submodule_update_from_index_entry(
 	git_submodule *sm, const git_index_entry *ie)
 {
-	bool already_found = (sm->flags & GIT_SUBMODULE_STATUS_IN_INDEX) != 0;
+	bool already_found = (sm->flags & (uint32_t)GIT_SUBMODULE_STATUS_IN_INDEX) != 0;
 
 	if (!S_ISGITLINK(ie->mode)) {
 		if (!already_found)
-			sm->flags |= GIT_SUBMODULE_STATUS__INDEX_NOT_SUBMODULE;
+			sm->flags |= (uint32_t)GIT_SUBMODULE_STATUS__INDEX_NOT_SUBMODULE;
 	} else {
 		if (already_found)
-			sm->flags |= GIT_SUBMODULE_STATUS__INDEX_MULTIPLE_ENTRIES;
+			sm->flags |= (uint32_t)GIT_SUBMODULE_STATUS__INDEX_MULTIPLE_ENTRIES;
 		else
 			git_oid_cpy(&sm->index_oid, &ie->id);
 
-		sm->flags |= GIT_SUBMODULE_STATUS_IN_INDEX |
-			GIT_SUBMODULE_STATUS__INDEX_OID_VALID;
+		sm->flags |= (uint32_t)GIT_SUBMODULE_STATUS_IN_INDEX |
+			(uint32_t)GIT_SUBMODULE_STATUS__INDEX_OID_VALID;
 	}
 }
 
@@ -1667,8 +1667,8 @@ static int submodule_update_index(git_submodule *sm)
 		return -1;
 
 	sm->flags = sm->flags &
-		~(GIT_SUBMODULE_STATUS_IN_INDEX |
-		  GIT_SUBMODULE_STATUS__INDEX_OID_VALID);
+		~((uint32_t)GIT_SUBMODULE_STATUS_IN_INDEX |
+		  (uint32_t)GIT_SUBMODULE_STATUS__INDEX_OID_VALID);
 
 	if (!(ie = git_index_get_bypath(index, sm->path, 0)))
 		return 0;
@@ -1686,8 +1686,8 @@ static void submodule_update_from_head_data(
 	else {
 		git_oid_cpy(&sm->head_oid, id);
 
-		sm->flags |= GIT_SUBMODULE_STATUS_IN_HEAD |
-			GIT_SUBMODULE_STATUS__HEAD_OID_VALID;
+		sm->flags |= (uint32_t)GIT_SUBMODULE_STATUS_IN_HEAD |
+			(uint32_t)GIT_SUBMODULE_STATUS__HEAD_OID_VALID;
 	}
 }
 
@@ -1697,8 +1697,8 @@ static int submodule_update_head(git_submodule *submodule)
 	git_tree_entry *te = NULL;
 
 	submodule->flags = submodule->flags &
-		~(GIT_SUBMODULE_STATUS_IN_HEAD |
-		  GIT_SUBMODULE_STATUS__HEAD_OID_VALID);
+		~((uint32_t)GIT_SUBMODULE_STATUS_IN_HEAD |
+		  (uint32_t)GIT_SUBMODULE_STATUS__HEAD_OID_VALID);
 
 	/* if we can't look up file in current head, then done */
 	if (git_repository_head_tree(&head, submodule->repo) < 0 ||
@@ -1737,9 +1737,9 @@ int git_submodule_reload(git_submodule *sm, int force)
 
 	/* refresh wd data */
 	sm->flags &=
-		~(GIT_SUBMODULE_STATUS_IN_WD |
-		  GIT_SUBMODULE_STATUS__WD_OID_VALID |
-		  GIT_SUBMODULE_STATUS__WD_FLAGS);
+		~((uint32_t)GIT_SUBMODULE_STATUS_IN_WD |
+		  (uint32_t)GIT_SUBMODULE_STATUS__WD_OID_VALID |
+		  (uint32_t)GIT_SUBMODULE_STATUS__WD_FLAGS);
 
 	if ((error = submodule_load_from_wd_lite(sm)) < 0 ||
 	    (error = submodule_update_index(sm)) < 0 ||
