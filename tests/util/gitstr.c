@@ -691,16 +691,32 @@ void test_gitstr__puts_escaped(void)
 	git_str a = GIT_STR_INIT;
 
 	git_str_clear(&a);
-	cl_git_pass(git_str_puts_escaped(&a, "this is a test", "", ""));
+	cl_git_pass(git_str_puts_escaped(&a, "this is a test", "", "", ""));
 	cl_assert_equal_s("this is a test", a.ptr);
 
 	git_str_clear(&a);
-	cl_git_pass(git_str_puts_escaped(&a, "this is a test", "t", "\\"));
+	cl_git_pass(git_str_puts_escaped(&a, "this is a test", "", NULL, NULL));
+	cl_assert_equal_s("this is a test", a.ptr);
+
+	git_str_clear(&a);
+	cl_git_pass(git_str_puts_escaped(&a, "this is a test", "t", "\\", ""));
 	cl_assert_equal_s("\\this is a \\tes\\t", a.ptr);
 
 	git_str_clear(&a);
-	cl_git_pass(git_str_puts_escaped(&a, "this is a test", "i ", "__"));
+	cl_git_pass(git_str_puts_escaped(&a, "this is a test", "t", "\\", NULL));
+	cl_assert_equal_s("\\this is a \\tes\\t", a.ptr);
+
+	git_str_clear(&a);
+	cl_git_pass(git_str_puts_escaped(&a, "this is a test", "i ", "__", NULL));
 	cl_assert_equal_s("th__is__ __is__ a__ test", a.ptr);
+
+	git_str_clear(&a);
+	cl_git_pass(git_str_puts_escaped(&a, "this is a test", "i ", "__", "!!"));
+	cl_assert_equal_s("th__i!!s__ !!__i!!s__ !!a__ !!test", a.ptr);
+
+	git_str_clear(&a);
+	cl_git_pass(git_str_puts_escaped(&a, "this' is' an' escape! ", "'!", "'\\", "'"));
+	cl_assert_equal_s("this'\\'' is'\\'' an'\\'' escape'\\!' ", a.ptr);
 
 	git_str_clear(&a);
 	cl_git_pass(git_str_puts_escape_regex(&a, "^match\\s*[A-Z]+.*"));

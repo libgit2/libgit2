@@ -268,21 +268,23 @@ int git_str_splice(
  * @param str String buffer to append data to
  * @param string String to escape and append
  * @param esc_chars Characters to be escaped
- * @param esc_with String to insert in from of each found character
+ * @param esc_prefix String to insert as prefix of each found character
+ * @param esc_suffix String to insert as suffix of each found character
  * @return 0 on success, <0 on failure (probably allocation problem)
  */
 extern int git_str_puts_escaped(
 	git_str *str,
 	const char *string,
 	const char *esc_chars,
-	const char *esc_with);
+	const char *esc_prefix,
+	const char *esc_suffix);
 
 /**
  * Append string escaping characters that are regex special
  */
 GIT_INLINE(int) git_str_puts_escape_regex(git_str *str, const char *string)
 {
-	return git_str_puts_escaped(str, string, "^.[]$()|*+?{}\\", "\\");
+	return git_str_puts_escaped(str, string, "^.[]$()|*+?{}\\", "\\", NULL);
 }
 
 /**
