@@ -189,7 +189,7 @@ static int get_ssh_cmdline(
 
 	if ((error = git_str_puts(&remote_cmd, command)) < 0 ||
 	    (error = git_str_puts(&remote_cmd, " '")) < 0 ||
-	    (error = git_str_puts(&remote_cmd, url->path)) < 0 ||
+	    (error = git_str_puts_escaped(&remote_cmd, url->path, "'!", "'\\", "'")) < 0 ||
 	    (error = git_str_puts(&remote_cmd, "'")) < 0 ||
 	    (error = git_vector_insert(args, git_str_detach(&remote_cmd))) < 0)
 		goto done;
