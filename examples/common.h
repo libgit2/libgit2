@@ -73,6 +73,7 @@ extern int lg2_ls_files(git_repository *repo, int argc, char **argv);
 extern int lg2_ls_remote(git_repository *repo, int argc, char **argv);
 extern int lg2_merge(git_repository *repo, int argc, char **argv);
 extern int lg2_push(git_repository *repo, int argc, char **argv);
+extern int lg2_rebase(git_repository *repo, int argc, char **argv);
 extern int lg2_remote(git_repository *repo, int argc, char **argv);
 extern int lg2_rev_list(git_repository *repo, int argc, char **argv);
 extern int lg2_rev_parse(git_repository *repo, int argc, char **argv);
