@@ -936,7 +936,7 @@ static int merge_conflict_resolve_contents(
 	git_merge_file_result result = {0};
 	git_merge_driver *driver;
 	git_merge_driver__builtin builtin = {{0}};
-	git_index_entry *merge_result;
+	git_index_entry *merge_result = NULL;
 	git_odb *odb = NULL;
 	const char *name;
 	bool fallback = false;

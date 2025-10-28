@@ -2510,7 +2510,7 @@ static int read_entry(
 {
 	size_t path_length, path_offset, entry_size;
 	const char *path_ptr;
-	struct entry_common *source_common;
+	struct entry_common *source_common = NULL;
 	index_entry_short_sha1 source_sha1;
 #ifdef GIT_EXPERIMENTAL_SHA256
 	index_entry_short_sha256 source_sha256;
@@ -2862,7 +2862,7 @@ static int write_disk_entry(
 	const char *last)
 {
 	void *mem = NULL;
-	struct entry_common *ondisk_common;
+	struct entry_common *ondisk_common = NULL;
 	size_t path_len, path_offset, disk_size;
 	int varint_len = 0;
 	char *path;
@@ -2951,7 +2951,7 @@ static int write_disk_entry(
 	path_offset = index_entry_path_offset(index->oid_type, entry->flags);
 
 	if (entry->flags & GIT_INDEX_ENTRY_EXTENDED) {
-		struct entry_common *ondisk_ext;
+		struct entry_common *ondisk_ext = NULL;
 		uint16_t flags_extended = htons(entry->flags_extended &
 			GIT_INDEX_ENTRY_EXTENDED_FLAGS);
 

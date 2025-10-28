@@ -106,7 +106,7 @@ static int fetchhead_ref_write(
 	git_fetchhead_ref *fetchhead_ref)
 {
 	char oid[GIT_OID_MAX_HEXSIZE + 1];
-	const char *type, *name;
+	const char *type = NULL, *name = NULL;
 	int head = 0;
 
 	GIT_ASSERT_ARG(file);
