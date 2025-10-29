@@ -464,7 +464,7 @@ done:
 int git_net_url_parse(git_net_url *url, const char *given)
 {
 	git_net_url_parser parser = GIT_NET_URL_PARSER_INIT;
-	const char *c, *authority, *path;
+	const char *c, *authority = NULL, *path = NULL;
 	size_t authority_len = 0, path_len = 0;
 	int error = 0;
 
