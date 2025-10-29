@@ -184,7 +184,7 @@ static int url_parse_authority(
 	const char *authority,
 	size_t len)
 {
-	const char *c, *hostport_end, *host_end = NULL,
+	const char *c, *hostport_end = NULL, *host_end = NULL,
 	           *userpass_end = NULL, *user_end = NULL;
 
 	enum {
@@ -574,7 +574,7 @@ int git_net_url_parse_http(
 	const char *given)
 {
 	git_net_url_parser parser = GIT_NET_URL_PARSER_INIT;
-	const char *c, *authority = NULL, *path = NULL;
+	const char *c = NULL, *authority = NULL, *path = NULL;
 	size_t authority_len = 0, path_len = 0;
 	int error;
 
