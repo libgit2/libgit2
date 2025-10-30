@@ -253,23 +253,64 @@ static void win32_path_iter_dispose(struct win32_path_iter *iter)
 	iter->current_dir = NULL;
 }
 
+struct executable_suffix {
+	const wchar_t *suffix;
+	size_t len;
+};
+
 int git_win32_path_find_executable(git_win32_path fullpath, wchar_t *exe)
 {
 	struct win32_path_iter path_iter;
 	const wchar_t *dir;
 	size_t dir_len, exe_len = wcslen(exe);
 	bool found = false;
+	static struct executable_suffix suffixes[] = { { NULL, 0 }, { L".exe", 4 }, { L".cmd", 4 } };
+	size_t skip_bare = 1, i;
 
 	if (win32_path_iter_init(&path_iter) < 0)
 		return -1;
 
-	while (win32_path_iter_next(&dir, &dir_len, &path_iter) != GIT_ITEROVER) {
-		if (git_win32_path_join(fullpath, dir, dir_len, exe, exe_len) < 0)
+	/* see if the given executable has an executable suffix; if so we will
+	 * look for the explicit name directly, as well as with added suffixes.
+	 */
+	for (i = 0; i < ARRAY_SIZE(suffixes); i++) {
+		struct executable_suffix *suffix = &suffixes[i];
+
+		if (!suffix->len)
 			continue;
 
-		if (_waccess(fullpath, 0) == 0) {
-			found = true;
+		if (exe_len < suffix->len)
+			continue;
+
+		if (memcmp(&exe[exe_len - suffix->len], suffix->suffix, suffix->len) == 0) {
+			skip_bare = 0;
 			break;
+		}
+	}
+
+	while (win32_path_iter_next(&dir, &dir_len, &path_iter) != GIT_ITEROVER && !found) {
+		/*
+		 * if the given name has an executable suffix, then try looking for it
+		 * directly. in all cases, append executable extensions
+		 * (".exe", ".cmd"...)
+		 */
+		for (i = skip_bare; i < ARRAY_SIZE(suffixes); i++) {
+			struct executable_suffix *suffix = &suffixes[i];
+
+			if (git_win32_path_join(fullpath, dir, dir_len, exe, exe_len) < 0)
+				continue;
+
+			if (suffix->len) {
+				if (dir_len + exe_len + 1 + suffix->len > MAX_PATH)
+					continue;
+
+				wcscat(fullpath, suffix->suffix);
+			}
+
+			if (_waccess(fullpath, 0) == 0) {
+				found = true;
+				break;
+			}
 		}
 	}
 
