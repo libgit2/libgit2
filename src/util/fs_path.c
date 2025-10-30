@@ -611,6 +611,23 @@ bool git_fs_path_isfile(const char *path)
 	return S_ISREG(st.st_mode) != 0;
 }
 
+#ifdef GIT_WIN32
+
+bool git_fs_path_isexecutable(const char *path)
+{
+	struct stat st;
+
+	GIT_ASSERT_ARG_WITH_RETVAL(path, false);
+
+	if (git__suffixcmp_icase(path, ".exe") != 0 &&
+	    git__suffixcmp_icase(path, ".cmd") != 0)
+		return false;
+
+	return (p_stat(path, &st) == 0);
+}
+
+#else
+
 bool git_fs_path_isexecutable(const char *path)
 {
 	struct stat st;
@@ -622,6 +639,8 @@ bool git_fs_path_isexecutable(const char *path)
 	return S_ISREG(st.st_mode) != 0 &&
 	       ((st.st_mode & S_IXUSR) != 0);
 }
+
+#endif
 
 bool git_fs_path_islink(const char *path)
 {
@@ -2032,9 +2051,10 @@ int git_fs_path_owner_is_system(bool *out, const char *path)
 	return git_fs_path_owner_is(out, path, GIT_FS_PATH_OWNER_ADMINISTRATOR);
 }
 
-int git_fs_path_find_executable(git_str *fullpath, const char *executable)
-{
 #ifdef GIT_WIN32
+
+static int find_executable(git_str *fullpath, const char *executable)
+{
 	git_win32_path fullpath_w, executable_w;
 	int error;
 
@@ -2047,19 +2067,16 @@ int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 		error = git_str_put_w(fullpath, fullpath_w, wcslen(fullpath_w));
 
 	return error;
+}
+
 #else
+
+static int find_executable(git_str *fullpath, const char *executable)
+{
 	git_str path = GIT_STR_INIT;
 	const char *current_dir, *term;
 	size_t current_dirlen;
 	bool found = false;
-
-	/* For qualified paths we do not look in PATH */
-	if (strchr(executable, '/') != NULL) {
-		if (!git_fs_path_isexecutable(executable))
-			return GIT_ENOTFOUND;
-
-		return git_str_puts(fullpath, executable);
-	}
 
 	if (git__getenv(&path, "PATH") < 0)
 		return -1;
@@ -2102,5 +2119,19 @@ int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 
 	git_str_clear(fullpath);
 	return GIT_ENOTFOUND;
+}
+
 #endif
+
+int git_fs_path_find_executable(git_str *fullpath, const char *executable)
+{
+	/* For qualified paths we do not look in PATH */
+	if (strchr(executable, '/') != NULL) {
+		if (!git_fs_path_isexecutable(executable))
+			return GIT_ENOTFOUND;
+
+		return git_str_puts(fullpath, executable);
+	}
+
+	return find_executable(fullpath, executable);
 }
