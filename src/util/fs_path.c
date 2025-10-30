@@ -611,6 +611,18 @@ bool git_fs_path_isfile(const char *path)
 	return S_ISREG(st.st_mode) != 0;
 }
 
+bool git_fs_path_isexecutable(const char *path)
+{
+	struct stat st;
+
+	GIT_ASSERT_ARG_WITH_RETVAL(path, false);
+	if (p_stat(path, &st) < 0)
+		return false;
+
+	return S_ISREG(st.st_mode) != 0 &&
+	       ((st.st_mode & S_IXUSR) != 0);
+}
+
 bool git_fs_path_islink(const char *path)
 {
 	struct stat st;
@@ -2038,7 +2050,16 @@ int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 #else
 	git_str path = GIT_STR_INIT;
 	const char *current_dir, *term;
+	size_t current_dirlen;
 	bool found = false;
+
+	/* For qualified paths we do not look in PATH */
+	if (strchr(executable, '/') != NULL) {
+		if (!git_fs_path_isexecutable(executable))
+			return GIT_ENOTFOUND;
+
+		return git_str_puts(fullpath, executable);
+	}
 
 	if (git__getenv(&path, "PATH") < 0)
 		return -1;
@@ -2049,20 +2070,28 @@ int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 		if (! (term = strchr(current_dir, GIT_PATH_LIST_SEPARATOR)))
 			term = strchr(current_dir, '\0');
 
+		current_dirlen = term - current_dir;
 		git_str_clear(fullpath);
-		if (git_str_put(fullpath, current_dir, (term - current_dir)) < 0 ||
-		    git_str_putc(fullpath, '/') < 0 ||
+
+		/* An empty path segment is treated as '.' */
+		if (current_dirlen == 0 && git_str_putc(fullpath, '.'))
+			return -1;
+		else if (current_dirlen != 0 &&
+		         git_str_put(fullpath, current_dir, current_dirlen) < 0)
+			return -1;
+
+		if (git_str_putc(fullpath, '/') < 0 ||
 		    git_str_puts(fullpath, executable) < 0)
 			return -1;
 
-		if (git_fs_path_isfile(fullpath->ptr)) {
+		if (git_fs_path_isexecutable(fullpath->ptr)) {
 			found = true;
 			break;
 		}
 
 		current_dir = term;
 
-		while (*current_dir == GIT_PATH_LIST_SEPARATOR)
+		if (*current_dir == GIT_PATH_LIST_SEPARATOR)
 			current_dir++;
 	}
 
