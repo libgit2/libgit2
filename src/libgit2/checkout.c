@@ -170,14 +170,15 @@ GIT_INLINE(bool) is_workdir_filtered(
 	git_oid oid;
 	git_str full = GIT_STR_INIT;
 
-	if (!git_oid_equal(&baseitem->id, workdir_id) ||
-		!git_oid_equal(&newitem->id, workdir_id))
+	if (!(git_oid_equal(&baseitem->id, workdir_id) &&
+		git_oid_equal(&newitem->id, workdir_id)))
 			goto cleanup;
 
 	if ((error = git_str_joinpath(&full, git_repository_workdir(repo), wditem->path)) < 0 ||
 		(error = git_odb__hashfile(&oid, full.ptr, GIT_OBJECT_BLOB, git_repository_oid_type(repo))) < 0)
 		goto cleanup;
 
+	git_str_dispose(&full);
 	return !git_oid_equal(workdir_id, &oid);
 
 cleanup:
