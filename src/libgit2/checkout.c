@@ -7,6 +7,7 @@
 
 #include "checkout.h"
 
+#include "git2/oid.h"
 #include "git2/repository.h"
 #include "git2/refs.h"
 #include "git2/tree.h"
@@ -18,6 +19,7 @@
 #include "git2/sys/filter.h"
 #include "git2/merge.h"
 
+#include "git2/types.h"
 #include "refs.h"
 #include "repository.h"
 #include "index.h"
@@ -153,8 +155,34 @@ GIT_INLINE(bool) is_workdir_base_or_new(
 	const git_diff_file *baseitem,
 	const git_diff_file *newitem)
 {
-	return (git_oid__cmp(&baseitem->id, workdir_id) == 0 ||
-		git_oid__cmp(&newitem->id, workdir_id) == 0);
+	return (git_oid_equal(&baseitem->id, workdir_id) ||
+		git_oid_equal(&newitem->id, workdir_id));
+}
+
+GIT_INLINE(bool) is_workdir_filtered(
+	const git_oid *workdir_id,
+	git_repository* repo,
+	const git_diff_file *baseitem,
+	const git_diff_file *newitem,
+	const git_index_entry *wditem)
+{
+	int error = 0;
+	git_oid oid;
+	git_str full = GIT_STR_INIT;
+
+	if (!git_oid_equal(&baseitem->id, workdir_id) ||
+		!git_oid_equal(&newitem->id, workdir_id))
+			goto cleanup;
+
+	if ((error = git_str_joinpath(&full, git_repository_workdir(repo), wditem->path)) < 0 ||
+		(error = git_odb__hashfile(&oid, full.ptr, GIT_OBJECT_BLOB, git_repository_oid_type(repo))) < 0)
+		goto cleanup;
+
+	return !git_oid_equal(workdir_id, &oid);
+
+cleanup:
+	git_str_dispose(&full);
+	return false;
 }
 
 GIT_INLINE(bool) is_filemode_changed(git_filemode_t a, git_filemode_t b, int respect_filemode)
@@ -245,7 +273,8 @@ static bool checkout_is_workdir_modified(
 	/* Allow the checkout if the workdir is not modified *or* if the checkout
 	 * target's contents are already in the working directory.
 	 */
-	return !is_workdir_base_or_new(&oid, baseitem, newitem);
+	return !is_workdir_base_or_new(&oid, baseitem, newitem) ||
+		is_workdir_filtered(&oid, data->repo, baseitem, newitem, wditem);
 }
 
 #define CHECKOUT_ACTION_IF(FLAG,YES,NO) \
@@ -503,6 +532,7 @@ static int checkout_action_with_wd(
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED: /* case 14/15 or 33 */
 		if (checkout_is_workdir_modified(data, &delta->old_file, &delta->new_file, wd)) {
+
 			GIT_ERROR_CHECK_ERROR(
 				checkout_notify(data, GIT_CHECKOUT_NOTIFY_DIRTY, delta, wd) );
 			*action = CHECKOUT_ACTION_IF(FORCE, UPDATE_BLOB, NONE);
