@@ -12,6 +12,7 @@
 
 #include "git2_util.h"
 #include "vector.h"
+#include "futils.h"
 #include "process.h"
 #include "strlist.h"
 
@@ -28,7 +29,8 @@ struct git_process {
 
 	char *cwd;
 
-	unsigned int capture_in  : 1,
+	unsigned int use_shell   : 1,
+	             capture_in  : 1,
 	             capture_out : 1,
 	             capture_err : 1;
 
@@ -50,6 +52,53 @@ GIT_INLINE(bool) is_delete_env(const char *env)
 	return *(c+1) == '\0';
 }
 
+GIT_INLINE(int) insert_dup(git_vector *v, const char *s)
+{
+	char *dup = git__strdup(s);
+
+	GIT_ERROR_CHECK_ALLOC(dup);
+
+	return git_vector_insert(v, dup);
+}
+
+static int setup_args(
+	char ***out,
+	const char **args,
+	size_t args_len,
+	bool use_shell)
+{
+	git_vector prefixed = GIT_VECTOR_INIT;
+	git_str first = GIT_STR_INIT;
+	size_t cnt;
+
+	GIT_ASSERT(args && args_len);
+
+	if (use_shell) {
+		if (git_str_puts(&first, args[0]) < 0 ||
+		    git_str_puts(&first, " \"$@\"") < 0 ||
+		    insert_dup(&prefixed, "/bin/sh") < 0 ||
+		    insert_dup(&prefixed, "-c") < 0 ||
+		    git_vector_insert(&prefixed, git_str_detach(&first)) < 0)
+			goto on_error;
+	}
+
+	for (cnt = 0; args && cnt < args_len; cnt++) {
+		if (insert_dup(&prefixed, args[cnt]) < 0)
+			goto on_error;
+	}
+
+	git_vector_insert(&prefixed, NULL);
+
+	*out = (char **)prefixed.contents;
+
+	return 0;
+
+on_error:
+	git_str_dispose(&first);
+	git_vector_dispose_deep(&prefixed);
+	return -1;
+}
+
 static int merge_env(
 	char ***out,
 	const char **env,
@@ -57,7 +106,7 @@ static int merge_env(
 	bool exclude_env)
 {
 	git_vector merged = GIT_VECTOR_INIT;
-	char **kv, *dup;
+	char **kv;
 	size_t max, cnt;
 	int error = 0;
 
@@ -71,10 +120,7 @@ static int merge_env(
 		if (is_delete_env(env[cnt]))
 			continue;
 
-		dup = git__strdup(env[cnt]);
-		GIT_ERROR_CHECK_ALLOC(dup);
-
-		if ((error = git_vector_insert(&merged, dup)) < 0)
+		if (insert_dup(&merged, env[cnt]) < 0)
 			goto on_error;
 	}
 
@@ -83,10 +129,7 @@ static int merge_env(
 			if (env && git_strlist_contains_key(env, env_len, *kv, '='))
 				continue;
 
-			dup = git__strdup(*kv);
-			GIT_ERROR_CHECK_ALLOC(dup);
-
-			if ((error = git_vector_insert(&merged, dup)) < 0)
+			if (insert_dup(&merged, *kv) < 0)
 				goto on_error;
 		}
 	}
@@ -125,13 +168,14 @@ int git_process_new(
 	process = git__calloc(sizeof(git_process), 1);
 	GIT_ERROR_CHECK_ALLOC(process);
 
-	if (git_strlist_copy_with_null(&process->args, args, args_len) < 0 ||
+	if (setup_args(&process->args, args, args_len, opts ? opts->use_shell : false) < 0 ||
 	    merge_env(&process->env, env, env_len, opts ? opts->exclude_env : false) < 0) {
 		git_process_free(process);
 		return -1;
 	}
 
 	if (opts) {
+		process->use_shell = opts->use_shell;
 		process->capture_in = opts->capture_in;
 		process->capture_out = opts->capture_out;
 		process->capture_err = opts->capture_err;
@@ -158,10 +202,12 @@ extern int git_process_new_from_cmdline(
 	size_t env_len,
 	git_process_options *opts)
 {
-	const char *args[] = { "/bin/sh", "-c", cmdline };
+	git_process_options merged_opts = {0};
 
-	return git_process_new(out,
-		args, ARRAY_SIZE(args), env, env_len, opts);
+	memcpy(&merged_opts, opts, sizeof(git_process_options));
+	merged_opts.use_shell = 1;
+
+	return git_process_new(out, &cmdline, 1, env, env_len, &merged_opts);
 }
 
 #define CLOSE_FD(fd) \
@@ -271,12 +317,43 @@ static void write_status(int fd, const char *fn, int error, int os_error)
 		try_write_status(fd, fn, fn_len);
 }
 
+static int resolve_path(git_process *process)
+{
+	git_str full_path = GIT_STR_INIT;
+	int error = 0;
+
+	/* The shell will resolve the path for us */
+	if (process->use_shell)
+		goto done;
+
+	error = git_fs_path_find_executable(&full_path, process->args[0]);
+
+	if (error == GIT_ENOTFOUND) {
+		git_error_set(GIT_ERROR_SSH, "cannot run %s: No such file or directory", process->args[0]);
+		error = -1;
+	}
+
+	if (error)
+		goto done;
+
+	git__free(process->args[0]);
+	process->args[0] = git_str_detach(&full_path);
+
+done:
+	git_str_dispose(&full_path);
+	return error;
+}
+
 int git_process_start(git_process *process)
 {
 	int in[2] = { -1, -1 }, out[2] = { -1, -1 },
 	    err[2] = { -1, -1 }, status[2] = { -1, -1 };
 	int fdflags, state, error;
 	pid_t pid;
+
+	/* Locate the path (unless we're letting the shell do it for us) */
+	if ((error = resolve_path(process)) < 0)
+		goto on_error;
 
 	/* Set up the pipes to read from/write to the process */
 	if ((process->capture_in && pipe(in) < 0) ||
