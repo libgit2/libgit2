@@ -120,7 +120,7 @@ GIT_INLINE(int) ensure_transport_state(
 }
 
 static int get_ssh_cmdline(
-	git_str *out,
+	git_vector *args,
 	ssh_exec_subtransport *transport,
 	git_net_url *url,
 	const char *command)
@@ -128,8 +128,10 @@ static int get_ssh_cmdline(
 	git_remote *remote = ((transport_smart *)transport->owner)->owner;
 	git_repository *repo = remote->repo;
 	git_config *cfg;
-	git_str ssh_cmd = GIT_STR_INIT;
+	git_str ssh_cmd = GIT_STR_INIT, url_and_host = GIT_STR_INIT,
+		remote_cmd = GIT_STR_INIT;
 	const char *default_ssh_cmd = "ssh";
+	char *p, *port;
 	int error;
 
 	/*
@@ -158,17 +160,44 @@ static int get_ssh_cmdline(
 	else if ((error = git_config__get_string_buf(&ssh_cmd, cfg, "core.sshcommand")) < 0 && error != GIT_ENOTFOUND)
 		goto done;
 
-	error = git_str_printf(out, "%s -p %s \"%s%s%s\" \"%s\" \"%s\"",
-		ssh_cmd.size > 0 ? ssh_cmd.ptr : default_ssh_cmd,
-		url->port,
-		url->username ? url->username : "",
-		url->username ? "@" : "",
-		url->host,
-		command,
-		url->path);
+	git_error_clear();
+
+	if (!ssh_cmd.size &&
+	    git_str_puts(&ssh_cmd, default_ssh_cmd) < 0)
+		goto done;
+
+	if ((error = git_vector_insert(args, git_str_detach(&ssh_cmd))) < 0)
+		goto done;
+
+	p = git__strdup("-p");
+	port = git__strdup(url->port);
+
+	if (!p || !port ||
+	    (error = git_vector_insert(args, p)) < 0 ||
+	    (error = git_vector_insert(args, port)) < 0)
+		goto done;
+
+	if (url->username) {
+		if ((error = git_str_puts(&url_and_host, url->username)) < 0 ||
+		    (error = git_str_putc(&url_and_host, '@')) < 0)
+			goto done;
+	}
+
+	if ((error = git_str_puts(&url_and_host, url->host)) < 0 ||
+	    (error = git_vector_insert(args, git_str_detach(&url_and_host))) < 0)
+		goto done;
+
+	if ((error = git_str_puts(&remote_cmd, command)) < 0 ||
+	    (error = git_str_puts(&remote_cmd, " '")) < 0 ||
+	    (error = git_str_puts(&remote_cmd, url->path)) < 0 ||
+	    (error = git_str_puts(&remote_cmd, "'")) < 0 ||
+	    (error = git_vector_insert(args, git_str_detach(&remote_cmd))) < 0)
+		goto done;
 
 done:
 	git_str_dispose(&ssh_cmd);
+	git_str_dispose(&url_and_host);
+	git_str_dispose(&remote_cmd);
 	git_config_free(cfg);
 	return error;
 }
@@ -182,7 +211,7 @@ static int start_ssh(
 
 	git_process_options process_opts = GIT_PROCESS_OPTIONS_INIT;
 	git_net_url url = GIT_NET_URL_INIT;
-	git_str ssh_cmdline = GIT_STR_INIT;
+	git_vector args = GIT_VECTOR_INIT;
 	const char *command;
 	int error;
 
@@ -213,11 +242,12 @@ static int start_ssh(
 	if (error < 0)
 		goto done;
 
-	if ((error = get_ssh_cmdline(&ssh_cmdline, transport, &url, command)) < 0)
+	if ((error = get_ssh_cmdline(&args, transport, &url, command)) < 0)
 		goto done;
 
-	if ((error = git_process_new_from_cmdline(&transport->process,
-	     ssh_cmdline.ptr, env, ARRAY_SIZE(env), &process_opts)) < 0 ||
+	if ((error = git_process_new(&transport->process,
+	     (const char **)args.contents, args.length,
+	     env, ARRAY_SIZE(env), &process_opts)) < 0 ||
 	    (error = git_process_start(transport->process)) < 0) {
 		git_process_free(transport->process);
 		transport->process = NULL;
@@ -225,7 +255,7 @@ static int start_ssh(
 	}
 
 done:
-	git_str_dispose(&ssh_cmdline);
+	git_vector_free_deep(&args);
 	git_net_url_dispose(&url);
 	return error;
 }
