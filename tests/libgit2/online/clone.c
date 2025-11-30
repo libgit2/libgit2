@@ -106,13 +106,13 @@ void test_online_clone__initialize(void)
 	_orig_https_proxy = cl_getenv("HTTPS_PROXY");
 	_orig_no_proxy = cl_getenv("NO_PROXY");
 
-	_orig_ssh_cmd = cl_getenv("GIT_SSH");
+	_orig_ssh_cmd = cl_getenv("GIT_SSH_COMMAND");
 	_ssh_cmd = cl_getenv("GITTEST_SSH_CMD");
 
 	if (_ssh_cmd)
-		cl_setenv("GIT_SSH", _ssh_cmd);
+		cl_setenv("GIT_SSH_COMMAND", _ssh_cmd);
 	else
-		cl_setenv("GIT_SSH", NULL);
+		cl_setenv("GIT_SSH_COMMAND", NULL);
 
 	if (_remote_expectcontinue)
 		git_libgit2_opts(GIT_OPT_ENABLE_HTTP_EXPECT_CONTINUE, 1);
@@ -175,7 +175,7 @@ void test_online_clone__cleanup(void)
 	git__free(_orig_https_proxy);
 	git__free(_orig_no_proxy);
 
-	cl_setenv("GIT_SSH", _orig_ssh_cmd);
+	cl_setenv("GIT_SSH_COMMAND", _orig_ssh_cmd);
 	git__free(_orig_ssh_cmd);
 
 	git__free(_ssh_cmd);
