@@ -121,6 +121,7 @@ GIT_INLINE(int) ensure_transport_state(
 
 static int get_ssh_cmdline(
 	git_vector *args,
+	bool *use_shell,
 	ssh_exec_subtransport *transport,
 	git_net_url *url,
 	const char *command)
@@ -153,8 +154,12 @@ static int get_ssh_cmdline(
 	if ((error = git_repository_config_snapshot(&cfg, repo)) < 0)
 		return error;
 
-	if ((error = git__getenv(&ssh_cmd, "GIT_SSH")) == 0)
-		;
+	if ((error = git__getenv(&ssh_cmd, "GIT_SSH_COMMAND")) == 0)
+		*use_shell = true;
+	else if (error != GIT_ENOTFOUND)
+		goto done;
+	else if ((error = git__getenv(&ssh_cmd, "GIT_SSH")) == 0)
+		*use_shell = false;
 	else if (error != GIT_ENOTFOUND)
 		goto done;
 	else if ((error = git_config__get_string_buf(&ssh_cmd, cfg, "core.sshcommand")) < 0 && error != GIT_ENOTFOUND)
@@ -212,6 +217,7 @@ static int start_ssh(
 	git_process_options process_opts = GIT_PROCESS_OPTIONS_INIT;
 	git_net_url url = GIT_NET_URL_INIT;
 	git_vector args = GIT_VECTOR_INIT;
+	bool use_shell = false;
 	const char *command;
 	int error;
 
@@ -242,8 +248,11 @@ static int start_ssh(
 	if (error < 0)
 		goto done;
 
-	if ((error = get_ssh_cmdline(&args, transport, &url, command)) < 0)
+	if ((error = get_ssh_cmdline(&args, &use_shell,
+			transport, &url, command)) < 0)
 		goto done;
+
+	process_opts.use_shell = use_shell;
 
 	if ((error = git_process_new(&transport->process,
 	     (const char **)args.contents, args.length,
