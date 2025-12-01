@@ -153,6 +153,7 @@ int git_win32_path_canonicalize(git_win32_path path)
 
 static int git_win32_path_join(
 	git_win32_path dest,
+	size_t *dest_len,
 	const wchar_t *one,
 	size_t one_len,
 	const wchar_t *two,
@@ -175,6 +176,9 @@ static int git_win32_path_join(
 
 	memcpy(dest + one_len + backslash, two, two_len * sizeof(wchar_t));
 	dest[one_len + backslash + two_len] = L'\0';
+
+	if (dest_len)
+		*dest_len = one_len + backslash + two_len;
 
 	return 0;
 }
@@ -258,21 +262,12 @@ struct executable_suffix {
 	size_t len;
 };
 
-int git_win32_path_find_executable(git_win32_path fullpath, wchar_t *exe)
+static struct executable_suffix suffixes[] = { { NULL, 0 }, { L".exe", 4 }, { L".cmd", 4 } };
+
+static bool has_executable_suffix(wchar_t *exe, size_t exe_len)
 {
-	struct win32_path_iter path_iter;
-	const wchar_t *dir;
-	size_t dir_len, exe_len = wcslen(exe);
-	bool found = false;
-	static struct executable_suffix suffixes[] = { { NULL, 0 }, { L".exe", 4 }, { L".cmd", 4 } };
-	size_t skip_bare = 1, i;
+	size_t i;
 
-	if (win32_path_iter_init(&path_iter) < 0)
-		return -1;
-
-	/* see if the given executable has an executable suffix; if so we will
-	 * look for the explicit name directly, as well as with added suffixes.
-	 */
 	for (i = 0; i < ARRAY_SIZE(suffixes); i++) {
 		struct executable_suffix *suffix = &suffixes[i];
 
@@ -282,40 +277,80 @@ int git_win32_path_find_executable(git_win32_path fullpath, wchar_t *exe)
 		if (exe_len < suffix->len)
 			continue;
 
-		if (memcmp(&exe[exe_len - suffix->len], suffix->suffix, suffix->len) == 0) {
-			skip_bare = 0;
-			break;
-		}
+		if (memcmp(&exe[exe_len - suffix->len], suffix->suffix, suffix->len) == 0)
+			return true;
 	}
 
-	while (win32_path_iter_next(&dir, &dir_len, &path_iter) != GIT_ITEROVER && !found) {
-		/*
-		 * if the given name has an executable suffix, then try looking for it
-		 * directly. in all cases, append executable extensions
-		 * (".exe", ".cmd"...)
-		 */
-		for (i = skip_bare; i < ARRAY_SIZE(suffixes); i++) {
-			struct executable_suffix *suffix = &suffixes[i];
+	return false;
+}
 
-			if (git_win32_path_join(fullpath, dir, dir_len, exe, exe_len) < 0)
+static int is_executable(git_win32_path path, size_t path_len, bool suffixed)
+{
+	size_t i;
+
+	/*
+	 * if the given name has an executable suffix, then try looking for it
+	 * directly. in all cases, append executable extensions
+	 * (".exe", ".cmd"...)
+	 */
+	for (i = suffixed ? 0 : 1; i < ARRAY_SIZE(suffixes); i++) {
+		struct executable_suffix *suffix = &suffixes[i];
+
+		if (suffix->len) {
+			if (path_len + suffix->len > MAX_PATH)
 				continue;
 
-			if (suffix->len) {
-				if (dir_len + exe_len + 1 + suffix->len > MAX_PATH)
-					continue;
+			wcscat(path, suffix->suffix);
+		}
 
-				wcscat(fullpath, suffix->suffix);
-			}
+		if (_waccess(path, 0) == 0)
+			return true;
 
-			if (_waccess(fullpath, 0) == 0) {
-				found = true;
-				break;
-			}
+		path[path_len] = L'\0';
+	}
+
+	return false;
+}
+
+int git_win32_path_find_executable(git_win32_path fullpath, wchar_t *exe)
+{
+	struct win32_path_iter path_iter;
+	const wchar_t *dir;
+	size_t dir_len, exe_len, fullpath_len;
+	bool suffixed = false, found = false;
+
+	if ((exe_len = wcslen(exe)) > MAX_PATH)
+		goto done;
+
+	/* see if the given executable has an executable suffix; if so we will
+	 * look for the explicit name directly, as well as with added suffixes.
+	 */
+	suffixed = has_executable_suffix(exe, exe_len);
+
+	/* For fully-qualified paths we do not look in PATH */
+	if (wcschr(exe, L'\\') != NULL || wcschr(exe, L'/') != NULL) {
+		if ((found = is_executable(exe, exe_len, suffixed)))
+			wcscpy(fullpath, exe);
+
+		goto done;
+	}
+
+	if (win32_path_iter_init(&path_iter) < 0)
+		return -1;
+
+	while (win32_path_iter_next(&dir, &dir_len, &path_iter) != GIT_ITEROVER && !found) {
+		if (git_win32_path_join(fullpath, &fullpath_len, dir, dir_len, exe, exe_len) < 0)
+			continue;
+
+		if (is_executable(fullpath, fullpath_len, suffixed)) {
+			found = true;
+			break;
 		}
 	}
 
 	win32_path_iter_dispose(&path_iter);
 
+done:
 	if (found)
 		return 0;
 

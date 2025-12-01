@@ -78,6 +78,52 @@ void test_process_start__not_found(void)
 	git_process_free(process);
 }
 
+void test_process_start__finds_in_path(void)
+{
+#ifdef GIT_WIN32
+	const char *args_array[] = { "cmd", "/c", "exit", "0" };
+#else
+	const char *args_array[] = { "true" };
+#endif
+
+	git_process *process;
+	git_process_options opts = GIT_PROCESS_OPTIONS_INIT;
+	git_process_result result = GIT_PROCESS_RESULT_INIT;
+
+	cl_git_pass(git_process_new(&process, args_array, ARRAY_SIZE(args_array), NULL, 0, &opts));
+	cl_git_pass(git_process_start(process));
+	cl_git_pass(git_process_wait(&result, process));
+
+	cl_assert_equal_i(GIT_PROCESS_STATUS_NORMAL, result.status);
+	cl_assert_equal_i(0, result.exitcode);
+	cl_assert_equal_i(0, result.signal);
+
+	git_process_free(process);
+}
+
+void test_process_start__adds_suffix(void)
+{
+#ifdef GIT_WIN32
+	const char *args_array[] = { "C:\\Windows\\System32\\cmd", "/c", "exit", "0" };
+
+	git_process *process;
+	git_process_options opts = GIT_PROCESS_OPTIONS_INIT;
+	git_process_result result = GIT_PROCESS_RESULT_INIT;
+
+	cl_git_pass(git_process_new(&process, args_array, ARRAY_SIZE(args_array), NULL, 0, &opts));
+	cl_git_pass(git_process_start(process));
+	cl_git_pass(git_process_wait(&result, process));
+
+	cl_assert_equal_i(GIT_PROCESS_STATUS_NORMAL, result.status);
+	cl_assert_equal_i(0, result.exitcode);
+	cl_assert_equal_i(0, result.signal);
+
+	git_process_free(process);
+#else
+	cl_skip();
+#endif
+}
+
 static void write_all(git_process *process, char *buf)
 {
 	size_t buf_len = strlen(buf);
