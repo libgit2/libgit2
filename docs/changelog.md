@@ -1,3 +1,17 @@
+v1.9.2
+------
+
+This is a security release with multiple changes.
+
+* A bug in the external SSH execution is fixed that could cause
+  arbitrary command execution. Remote repository names were improperly
+  sent to the shell without quoting. Arguments to the external SSH
+  command are now sent parameterized.
+
+* A bug in SSH credential creation is fixed that could cause a
+  buffer overflow. Public keys that are not NUL terminated were
+  improperly zeroed. The given length of public keys is now honored.
+
 v1.9.1
 ------
 
