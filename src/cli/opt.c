@@ -50,7 +50,7 @@ GIT_INLINE(const cli_opt_spec *) spec_for_long(
 	const char *arg)
 {
 	const cli_opt_spec *spec;
-	char *eql;
+	const char *eql;
 	size_t eql_pos;
 
 	eql = strchr(arg, '=');
