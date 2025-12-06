@@ -682,7 +682,7 @@ static int validate_ownership_path(bool *is_safe, const char *path)
 
 static int validate_ownership(git_repository *repo)
 {
-	const char *validation_paths[3] = { NULL }, *path;
+	const char *validation_paths[3] = { NULL }, *path = NULL;
 	size_t validation_len = 0, i;
 	bool is_safe = false;
 	int error = 0;
@@ -1448,7 +1448,7 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_str xdg_buf = GIT_STR_INIT;
 		git_str programdata_buf = GIT_STR_INIT;
 		bool use_env = repo->use_env;
-		git_config *config;
+		git_config *config = NULL;
 
 		if (!(error = config_path_system(&system_buf, use_env)) &&
 		    !(error = config_path_global(&global_buf, use_env))) {

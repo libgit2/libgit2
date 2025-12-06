@@ -184,8 +184,8 @@ static int url_parse_authority(
 	const char *authority,
 	size_t len)
 {
-	const char *c, *hostport_end, *host_end = NULL,
-	           *userpass_end, *user_end = NULL;
+	const char *c, *hostport_end = NULL, *host_end = NULL,
+	           *userpass_end = NULL, *user_end = NULL;
 
 	enum {
 		HOSTPORT, HOST, IPV6, HOST_END, USERPASS, USER
@@ -464,7 +464,7 @@ done:
 int git_net_url_parse(git_net_url *url, const char *given)
 {
 	git_net_url_parser parser = GIT_NET_URL_PARSER_INIT;
-	const char *c, *authority, *path;
+	const char *c, *authority = NULL, *path = NULL;
 	size_t authority_len = 0, path_len = 0;
 	int error = 0;
 
@@ -574,7 +574,7 @@ int git_net_url_parse_http(
 	const char *given)
 {
 	git_net_url_parser parser = GIT_NET_URL_PARSER_INIT;
-	const char *c, *authority, *path = NULL;
+	const char *c = NULL, *authority = NULL, *path = NULL;
 	size_t authority_len = 0, path_len = 0;
 	int error;
 
@@ -661,7 +661,7 @@ static bool has_at(const char *str)
 int git_net_url_parse_scp(git_net_url *url, const char *given)
 {
 	const char *default_port = default_port_for_scheme("ssh");
-	const char *c, *user, *host, *port = NULL, *path = NULL;
+	const char *c, *user = NULL, *host = NULL, *port = NULL, *path = NULL;
 	size_t user_len = 0, host_len = 0, port_len = 0;
 	unsigned short bracket = 0;
 
