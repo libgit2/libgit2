@@ -540,6 +540,7 @@ Here are the bindings to libgit2 that are currently available:
     * git2-rs <https://github.com/rust-lang/git2-rs>
 * Swift
     * SwiftGit2 <https://github.com/SwiftGit2/SwiftGit2>
+    * SwiftGitX <https://github.com/ibrahimcetin/SwiftGitX>
 * Tcl
     * lg2 <https://github.com/apnadkarni/tcl-libgit2>
 * Vala
