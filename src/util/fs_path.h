@@ -205,6 +205,12 @@ extern bool git_fs_path_isdir(const char *path);
 extern bool git_fs_path_isfile(const char *path);
 
 /**
+ * Check if the given path points to an executable.
+ * @return true or false
+ */
+extern bool git_fs_path_isexecutable(const char *path);
+
+/**
  * Check if the given path points to a symbolic link.
  * @return true or false
  */

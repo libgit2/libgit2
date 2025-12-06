@@ -698,12 +698,20 @@ static void fix_path(git_str *s)
 #endif
 }
 
+#ifdef GIT_WIN32
+# define PATH_DELIMITER "\\"
+#else
+# define PATH_DELIMITER "/"
+#endif
+
 void test_path_core__find_exe_in_path(void)
 {
 	char *orig_path;
 	git_str sandbox_path = GIT_STR_INIT;
 	git_str new_path = GIT_STR_INIT, full_path = GIT_STR_INIT,
-	        dummy_path = GIT_STR_INIT;
+		dummy_path_one = GIT_STR_INIT,
+		dummy_path_two = GIT_STR_INIT,
+		dummy_path_three = GIT_STR_INIT;
 
 #ifdef GIT_WIN32
 	static const char *bogus_path_1 = "c:\\does\\not\\exist\\";
@@ -716,28 +724,84 @@ void test_path_core__find_exe_in_path(void)
 	orig_path = cl_getenv("PATH");
 
 	git_str_puts(&sandbox_path, clar_sandbox_path());
-	git_str_joinpath(&dummy_path, sandbox_path.ptr, "dummmmmmmy_libgit2_file");
-	cl_git_rewritefile(dummy_path.ptr, "this is a dummy file");
+
+	git_str_joinpath(&dummy_path_one, sandbox_path.ptr, "dummmmmmmy_libgit2_file_one");
+	cl_git_rewritefile(dummy_path_one.ptr, "this is a dummy file");
+
+	git_str_joinpath(&dummy_path_two, sandbox_path.ptr, "dummmmmmmy_libgit2_file_two.exe");
+	cl_git_rewritefile(dummy_path_two.ptr, "this is a dummy file");
+	cl_must_pass(p_chmod("dummmmmmmy_libgit2_file_two.exe", 0777));
+
+	cl_must_pass(p_mkdir("sub", 0777));
+	cl_must_pass(p_mkdir("sub/dir", 0777));
+	git_str_joinpath(&dummy_path_three, sandbox_path.ptr, "sub/dir/dummmmmmmy_libgit2_file_three.exe");
+	cl_git_rewritefile(dummy_path_three.ptr, "this is a dummy file");
+	cl_must_pass(p_chmod("sub/dir/dummmmmmmy_libgit2_file_three.exe", 0777));
 
 	fix_path(&sandbox_path);
-	fix_path(&dummy_path);
+	fix_path(&dummy_path_one);
+	fix_path(&dummy_path_two);
+	fix_path(&dummy_path_three);
 
 	cl_git_pass(git_str_printf(&new_path, "%s%c%s%c%s%c%s",
 		bogus_path_1, GIT_PATH_LIST_SEPARATOR,
 		orig_path, GIT_PATH_LIST_SEPARATOR,
 		sandbox_path.ptr, GIT_PATH_LIST_SEPARATOR,
 		bogus_path_2));
-
 	check_setenv("PATH", new_path.ptr);
 
+	/* ensure that we cannot find a nonexistent file */
 	cl_git_fail_with(GIT_ENOTFOUND, git_fs_path_find_executable(&full_path, "this_file_does_not_exist"));
-	cl_git_pass(git_fs_path_find_executable(&full_path, "dummmmmmmy_libgit2_file"));
 
-	cl_assert_equal_s(full_path.ptr, dummy_path.ptr);
+	/* ensure that non-executable files are ignored */
+	cl_git_fail_with(GIT_ENOTFOUND, git_fs_path_find_executable(&full_path, "dummmmmmmy_libgit2_file_one"));
+
+	/* find an executable in the path */
+	git_str_clear(&full_path);
+	cl_git_pass(git_fs_path_find_executable(&full_path, "dummmmmmmy_libgit2_file_two.exe"));
+	cl_assert_equal_s(full_path.ptr, dummy_path_two.ptr);
+
+	/* find an executable in the current directory */
+	git_str_clear(&new_path);
+	cl_git_pass(git_str_printf(&new_path, "%s%c%s%c%s%c%s",
+		bogus_path_1, GIT_PATH_LIST_SEPARATOR,
+		orig_path, GIT_PATH_LIST_SEPARATOR,
+		".", GIT_PATH_LIST_SEPARATOR,
+		bogus_path_2));
+	check_setenv("PATH", new_path.ptr);
+
+	git_str_clear(&full_path);
+	cl_git_pass(git_fs_path_find_executable(&full_path, "dummmmmmmy_libgit2_file_two.exe"));
+	cl_assert_equal_s(full_path.ptr, "." PATH_DELIMITER "dummmmmmmy_libgit2_file_two.exe");
+
+	/* empty path is the same as current directory on POSIX */
+#ifndef GIT_WIN32
+	git_str_clear(&new_path);
+	cl_git_pass(git_str_printf(&new_path, "%s%c%s%c%s%c%s",
+		bogus_path_1, GIT_PATH_LIST_SEPARATOR,
+		orig_path, GIT_PATH_LIST_SEPARATOR,
+		"", GIT_PATH_LIST_SEPARATOR,
+		bogus_path_2));
+	check_setenv("PATH", new_path.ptr);
+
+	git_str_clear(&full_path);
+	cl_git_pass(git_fs_path_find_executable(&full_path, "dummmmmmmy_libgit2_file_two.exe"));
+	cl_assert_equal_s(full_path.ptr, "." PATH_DELIMITER "dummmmmmmy_libgit2_file_two.exe");
+#endif
+
+	/* don't look for qualified paths in PATH */
+	cl_git_fail_with(GIT_ENOTFOUND, git_fs_path_find_executable(&full_path, "dir/dummmmmmmy_libgit2_file_three.exe"));
+
+	/* but do allow users to use paths relative to current dir */
+	git_str_clear(&full_path);
+	cl_git_pass(git_fs_path_find_executable(&full_path, "sub/dir/dummmmmmmy_libgit2_file_three.exe"));
+	cl_assert_equal_s(full_path.ptr, "sub/dir/dummmmmmmy_libgit2_file_three.exe");
 
 	git_str_dispose(&full_path);
 	git_str_dispose(&new_path);
-	git_str_dispose(&dummy_path);
+	git_str_dispose(&dummy_path_one);
+	git_str_dispose(&dummy_path_two);
+	git_str_dispose(&dummy_path_three);
 	git_str_dispose(&sandbox_path);
 	git__free(orig_path);
 }

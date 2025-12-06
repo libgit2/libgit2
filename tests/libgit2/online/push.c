@@ -376,13 +376,13 @@ void test_online_push__initialize(void)
 	_remote_push_options = cl_getenv("GITTEST_PUSH_OPTIONS");
 	_remote = NULL;
 
-	_orig_ssh_cmd = cl_getenv("GIT_SSH");
+	_orig_ssh_cmd = cl_getenv("GIT_SSH_COMMAND");
 	_ssh_cmd = cl_getenv("GITTEST_SSH_CMD");
 
 	if (_ssh_cmd)
-		cl_setenv("GIT_SSH", _ssh_cmd);
+		cl_setenv("GIT_SSH_COMMAND", _ssh_cmd);
 	else
-		cl_setenv("GIT_SSH", NULL);
+		cl_setenv("GIT_SSH_COMMAND", NULL);
 
 	/* Skip the test if we're missing the remote URL */
 	if (!_remote_url)
@@ -439,6 +439,7 @@ void test_online_push__cleanup(void)
 	git__free(_remote_expectcontinue);
 	git__free(_remote_push_options);
 
+	cl_setenv("GIT_SSH_COMMAND", _orig_ssh_cmd);
 	git__free(_orig_ssh_cmd);
 	git__free(_ssh_cmd);
 
