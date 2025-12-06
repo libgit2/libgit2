@@ -15,7 +15,7 @@ RUN yum install -y \
 	openssl-devel \
 	openssh-server \
 	git-daemon \
-	java-1.8.0-openjdk-headless \
+	java-21-openjdk-headless \
 	sudo \
 	python3 \
 	valgrind \
@@ -46,7 +46,7 @@ RUN if [ "${UID}" != "" ]; then USER_ARG="--uid ${UID}"; fi && \
     useradd ${USER_ARG} --gid libgit2 --shell /bin/bash --create-home libgit2
 
 FROM adduser AS configure
-ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
-RUN mkdir /var/run/sshd
+ENV PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
+RUN mkdir -p /var/run/sshd
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local && \
     ldconfig
