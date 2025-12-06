@@ -10,6 +10,7 @@
 #include <ctype.h>
 
 #include "git2/object.h"
+#include "git2/sys/refdb_backend.h"
 #include "git2/sys/repository.h"
 
 #include "buf.h"
@@ -69,6 +70,7 @@ static int check_repositoryformatversion(int *version, git_config *config);
 static int check_extensions(git_config *config, int version);
 static int load_global_config(git_config **config, bool use_env);
 static int load_objectformat(git_repository *repo, git_config *config);
+static int load_refstorage_format(git_repository *repo, git_config *config);
 
 #define GIT_COMMONDIR_FILE "commondir"
 #define GIT_GITDIR_FILE "gitdir"
@@ -349,6 +351,17 @@ int git_repository_new_ext(
 	repo->is_worktree = 0;
 	repo->oid_type = opts && opts->oid_type ? opts->oid_type :
 		GIT_OID_DEFAULT;
+
+	/*
+	 * This is a bit dirty, as this repository doesn't really have a refdb
+	 * in the first place. But we do expect that we can create an "empty"
+	 * ref iterator from such a repository, and things keep on working like
+	 * this.
+	 *
+	 * It might make sense to eventually create an "in-memory" refdb type
+	 * to serve this purpose.
+	 */
+	repo->refdb_type = GIT_REFDB_FILES;
 
 	return 0;
 }
@@ -983,20 +996,28 @@ done:
 	return error;
 }
 
-static int obtain_config_and_set_oid_type(
-	git_config **config_ptr,
-	git_repository *repo)
+static int read_repository_format(git_repository *repo)
 {
 	int error;
+	git_str config_path = GIT_STR_INIT;
 	git_config *config = NULL;
 	int version = 0;
+
+	if ((error = git_repository__item_path(&config_path, repo,
+					       GIT_REPOSITORY_ITEM_CONFIG)) < 0)
+		goto out;
 
 	/*
 	 * We'd like to have the config, but git doesn't particularly
 	 * care if it's not there, so we need to deal with that.
+	 *
+	 * Further note that we only read the repository's own configuration.
+	 * No other configuration should play a role here. Most importantly, we
+	 * ignore conditional includes as those may cause a cyclic dependency
+	 * between reading the format and evaluating the conditionals. This is
+	 * for example the case with "onbranch" conditions.
 	 */
-
-	error = git_repository_config_snapshot(&config, repo);
+	error = git_config_open_ondisk(&config, config_path.ptr);
 	if (error < 0 && error != GIT_ENOTFOUND)
 		goto out;
 
@@ -1008,14 +1029,17 @@ static int obtain_config_and_set_oid_type(
 		goto out;
 
 	if (version > 0) {
-		if ((error = load_objectformat(repo, config)) < 0)
+		if ((error = load_objectformat(repo, config)) < 0 ||
+		    (error = load_refstorage_format(repo, config)) < 0)
 			goto out;
 	} else {
 		repo->oid_type = GIT_OID_DEFAULT;
+		repo->refdb_type = GIT_REFDB_FILES;
 	}
 
 out:
-	*config_ptr = config;
+	git_str_dispose(&config_path);
+	git_config_free(config);
 
 	return error;
 }
@@ -1028,7 +1052,6 @@ int git_repository_open_bare(
 	git_repository *repo = NULL;
 	bool is_valid;
 	int error;
-	git_config *config;
 
 	if ((error = git_fs_path_prettify_dir(&path, bare_path, NULL)) < 0 ||
 	    (error = is_valid_repository_path(&is_valid, &path, &common_path, 0)) < 0)
@@ -1054,14 +1077,12 @@ int git_repository_open_bare(
 	repo->is_worktree = 0;
 	repo->workdir = NULL;
 
-	if ((error = obtain_config_and_set_oid_type(&config, repo)) < 0)
+	if ((error = read_repository_format(repo)) < 0)
 		goto cleanup;
 
 	*repo_ptr = repo;
 
 cleanup:
-	git_config_free(config);
-
 	return error;
 }
 
@@ -1148,7 +1169,7 @@ int git_repository_open_ext(
 
 	repo->is_worktree = is_worktree;
 
-	error = obtain_config_and_set_oid_type(&config, repo);
+	error = read_repository_format(repo);
 	if (error < 0)
 		goto cleanup;
 
@@ -1158,6 +1179,10 @@ int git_repository_open_ext(
 	if ((flags & GIT_REPOSITORY_OPEN_BARE) != 0) {
 		repo->is_bare = 1;
 	} else {
+		error = git_repository_config_snapshot(&config, repo);
+		if (error < 0 && error != GIT_ENOTFOUND)
+			goto cleanup;
+
 		if (config &&
 		    ((error = load_config_data(repo, config)) < 0 ||
 		     (error = load_workdir(repo, config, &paths.workdir)) < 0))
@@ -1234,6 +1259,17 @@ int git_repository_wrap_odb(git_repository **out, git_odb *odb)
 
 	GIT_ASSERT(git_oid_type_is_valid(odb->options.oid_type));
 	repo->oid_type = odb->options.oid_type;
+
+	/*
+	 * This is a bit dirty, as this repository doesn't really have a refdb
+	 * in the first place. But we do expect that we can create an "empty"
+	 * ref iterator from such a repository, and things keep on working like
+	 * this.
+	 *
+	 * It might make sense to eventually create an "in-memory" refdb type
+	 * to serve this purpose.
+	 */
+	repo->refdb_type = GIT_REFDB_FILES;
 
 	git_repository_set_odb(repo, odb);
 	*out = repo;
@@ -1869,7 +1905,8 @@ static const char *builtin_extensions[] = {
 	"noop",
 	"objectformat",
 	"worktreeconfig",
-	"preciousobjects"
+	"preciousobjects",
+	"refstorage",
 };
 
 static git_vector user_extensions = { 0, git__strcmp_cb };
@@ -2006,6 +2043,32 @@ int git_repository__set_objectformat(
 	return 0;
 }
 
+static int load_refstorage_format(git_repository *repo, git_config *config)
+{
+	git_config_entry *entry = NULL;
+	int error;
+
+	if ((error = git_config_get_entry(&entry, config, "extensions.refstorage")) < 0) {
+		if (error == GIT_ENOTFOUND) {
+			repo->refdb_type = GIT_REFDB_FILES;
+			git_error_clear();
+			error = 0;
+		}
+
+		goto done;
+	}
+
+	if ((repo->refdb_type = git_refdb_type_fromstr(entry->value)) == 0) {
+		git_error_set(GIT_ERROR_REPOSITORY,
+			      "unknown refstorage format '%s'", entry->value);
+		error = GIT_EINVALID;
+	}
+
+done:
+	git_config_entry_free(entry);
+	return error;
+}
+
 int git_repository__extensions(char ***out, size_t *out_len)
 {
 	git_vector extensions;
@@ -2096,32 +2159,6 @@ int git_repository__set_extensions(const char **extensions, size_t len)
 void git_repository__free_extensions(void)
 {
 	git_vector_dispose_deep(&user_extensions);
-}
-
-int git_repository_create_head(const char *git_dir, const char *ref_name)
-{
-	git_str ref_path = GIT_STR_INIT;
-	git_filebuf ref = GIT_FILEBUF_INIT;
-	const char *fmt;
-	int error;
-
-	if ((error = git_str_joinpath(&ref_path, git_dir, GIT_HEAD_FILE)) < 0 ||
-	    (error = git_filebuf_open(&ref, ref_path.ptr, 0, GIT_REFS_FILE_MODE)) < 0)
-		goto out;
-
-	if (git__prefixcmp(ref_name, GIT_REFS_DIR) == 0)
-		fmt = "ref: %s\n";
-	else
-		fmt = "ref: " GIT_REFS_HEADS_DIR "%s\n";
-
-	if ((error = git_filebuf_printf(&ref, fmt, ref_name)) < 0 ||
-	    (error = git_filebuf_commit(&ref)) < 0)
-		goto out;
-
-out:
-	git_str_dispose(&ref_path);
-	git_filebuf_cleanup(&ref);
-	return error;
 }
 
 static bool is_chmod_supported(const char *file_path)
@@ -2317,7 +2354,8 @@ static int repo_init_config(
 	const char *work_dir,
 	uint32_t flags,
 	uint32_t mode,
-	git_oid_t oid_type)
+	git_oid_t oid_type,
+	git_refdb_t refdb_type)
 {
 	int error = 0;
 	git_str cfg_path = GIT_STR_INIT, worktree_path = GIT_STR_INIT;
@@ -2379,6 +2417,11 @@ static int repo_init_config(
 	if (oid_type != GIT_OID_DEFAULT) {
 		SET_REPO_CONFIG(int32, "core.repositoryformatversion", 1);
 		SET_REPO_CONFIG(string, "extensions.objectformat", git_oid_type_name(oid_type));
+	}
+
+	if (refdb_type != GIT_REFDB_FILES) {
+		SET_REPO_CONFIG(int32, "core.repositoryformatversion", 1);
+		SET_REPO_CONFIG(string, "extensions.refstorage", git_refdb_type_name(refdb_type));
 	}
 
 cleanup:
@@ -2792,27 +2835,19 @@ static int repo_init_directories(
 	return error;
 }
 
-static int repo_init_head(const char *repo_dir, const char *given)
+static int get_initial_head(char **out, uint32_t *flags,
+			    git_repository_init_options *opts)
 {
-	git_config *cfg = NULL;
-	git_str head_path = GIT_STR_INIT, cfg_branch = GIT_STR_INIT;
+	git_str cfg_branch = GIT_STR_INIT, prefixed = GIT_STR_INIT;
 	const char *initial_head = NULL;
+	git_config *cfg = NULL;
 	int error;
 
-	if ((error = git_str_joinpath(&head_path, repo_dir, GIT_HEAD_FILE)) < 0)
-		goto out;
-
-	/*
-	 * A template may have set a HEAD; use that unless it's been
-	 * overridden by the caller's given initial head setting.
-	 */
-	if (git_fs_path_exists(head_path.ptr) && !given)
-		goto out;
-
-	if (given) {
-		initial_head = given;
-	} else if ((error = git_config_open_default(&cfg)) >= 0 &&
-	           (error = git_config__get_string_buf(&cfg_branch, cfg, "init.defaultbranch")) >= 0 &&
+	if (opts->initial_head) {
+		initial_head = opts->initial_head;
+		*flags |= GIT_REFDB_BACKEND_INIT_FORCE_HEAD;
+	} else if (git_config_open_default(&cfg) >= 0 &&
+	           git_config__get_string_buf(&cfg_branch, cfg, "init.defaultbranch") >= 0 &&
 	           *cfg_branch.ptr) {
 		initial_head = cfg_branch.ptr;
 	}
@@ -2820,12 +2855,22 @@ static int repo_init_head(const char *repo_dir, const char *given)
 	if (!initial_head)
 		initial_head = GIT_BRANCH_DEFAULT;
 
-	error = git_repository_create_head(repo_dir, initial_head);
+	if (git__prefixcmp(initial_head, GIT_REFS_DIR) != 0) {
+		git_str_printf(&prefixed, GIT_REFS_HEADS_DIR "%s", initial_head);
+		initial_head = prefixed.ptr;
+	}
+
+	if ((*out = git__strdup(initial_head)) == NULL) {
+		error = -1;
+		goto out;
+	}
+
+	error = 0;
 
 out:
-	git_config_free(cfg);
-	git_str_dispose(&head_path);
 	git_str_dispose(&cfg_branch);
+	git_str_dispose(&prefixed);
+	git_config_free(cfg);
 
 	return error;
 }
@@ -2860,10 +2905,14 @@ int git_repository_init_ext(
 	git_repository_init_options *opts)
 {
 	git_str repo_path = GIT_STR_INIT, wd_path = GIT_STR_INIT,
-		common_path = GIT_STR_INIT;
+		common_path = GIT_STR_INIT, path = GIT_STR_INIT;
 	const char *wd;
+	git_refdb *refdb;
 	bool is_valid;
 	git_oid_t oid_type = GIT_OID_DEFAULT;
+	git_refdb_t refdb_type = GIT_REFDB_FILES;
+	char *initial_head = NULL;
+	uint32_t refdb_init_flags = 0;
 	int error;
 
 	GIT_ASSERT_ARG(out);
@@ -2876,6 +2925,8 @@ int git_repository_init_ext(
 	if (opts->oid_type)
 		oid_type = opts->oid_type;
 #endif
+	if (opts->refdb_type)
+		refdb_type = opts->refdb_type;
 
 	if ((error = repo_init_directories(&repo_path, &wd_path, given_repo, opts)) < 0)
 		goto out;
@@ -2895,18 +2946,77 @@ int git_repository_init_ext(
 
 		opts->flags |= GIT_REPOSITORY_INIT__IS_REINIT;
 
-		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode, oid_type)) < 0)
+		if ((error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode,
+					      oid_type, refdb_type)) < 0)
+			goto out;
+
+		/*
+		 * If we are re-initializing an existing repository we only
+		 * want to reset HEAD in case the user explicitly provided a
+		 * new target.
+		 */
+		if (opts->initial_head &&
+		    (error = get_initial_head(&initial_head, &refdb_init_flags, opts)) < 0)
 			goto out;
 
 		/* TODO: reinitialize the templates */
 	} else {
+		git_str content = GIT_STR_INIT_CONST("ref: " GIT_INVALID_HEAD,
+						     strlen("ref: " GIT_INVALID_HEAD));
+		mode_t dmode = pick_dir_mode(opts);
+
 		if ((error = repo_init_structure(repo_path.ptr, wd, opts)) < 0 ||
-		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode, oid_type)) < 0 ||
-		    (error = repo_init_head(repo_path.ptr, opts->initial_head)) < 0)
+		    (error = repo_init_config(repo_path.ptr, wd, opts->flags, opts->mode,
+					      oid_type, refdb_type)) < 0)
+			goto out;
+
+		/*
+		 * Both HEAD and "refs/" must exist in a repository regardless
+		 * of its ref format, otherwise it won't be recognized as a Git
+		 * repository. As such, we create these now so that we can open
+		 * the repository and properly initialize its refdb.
+		 */
+		if ((error = git_str_joinpath(&path, repo_path.ptr, GIT_HEAD_FILE)) < 0)
+			goto out;
+
+		/* Only overwrite HEAD if it wasn't created by the template. */
+		if (!git_fs_path_exists(path.ptr)) {
+			if ((error = git_futils_writebuffer(&content, path.ptr, 0,
+							    GIT_REFS_FILE_MODE)) < 0)
+				goto out;
+
+			/*
+			 * Ask the backend to force-overwrite the invalid HEAD
+			 * we have just written.
+			 */
+			refdb_init_flags |= GIT_REFDB_BACKEND_INIT_FORCE_HEAD;
+		}
+
+		if ((error = git_str_joinpath(&path, repo_path.ptr, GIT_REFS_DIR)) < 0 ||
+		    (error = git_futils_mkdir(path.ptr, dmode, 0)) < 0)
+			goto out;
+
+		/*
+		 * Note that we also compute the initial HEAD in case the file
+		 * already exists. This is done because the file HEAD may not
+		 * actually be relevant to the backend. E.g. reftables do not
+		 * care for this file at all, so we would end up with no HEAD
+		 * at all if we didn't ask the backend to write one in that
+		 * case.
+		 *
+		 * That being said, we don't force-overwrite HEAD so that the
+		 * backends can first check whether the templates have already
+		 * created a HEAD.
+		 */
+		if ((error = get_initial_head(&initial_head, &refdb_init_flags, opts)) < 0)
 			goto out;
 	}
 
 	if ((error = git_repository_open(out, repo_path.ptr)) < 0)
+		goto out;
+
+	if ((error = git_repository_refdb__weakptr(&refdb, *out)) < 0 ||
+	    (error = git_refdb_init(refdb, initial_head, opts->mode, refdb_init_flags)) < 0)
 		goto out;
 
 	if (opts->origin_url &&
@@ -2917,6 +3027,8 @@ out:
 	git_str_dispose(&common_path);
 	git_str_dispose(&repo_path);
 	git_str_dispose(&wd_path);
+	git_str_dispose(&path);
+	git__free(initial_head);
 
 	return error;
 }
@@ -2930,7 +3042,7 @@ int git_repository_head_detached(git_repository *repo)
 	if (git_repository_odb__weakptr(&odb, repo) < 0)
 		return -1;
 
-	if (git_reference_lookup(&ref, repo, GIT_HEAD_FILE) < 0)
+	if (git_reference_lookup(&ref, repo, GIT_HEAD_REF) < 0)
 		return -1;
 
 	if (git_reference_type(ref) == GIT_REFERENCE_SYMBOLIC) {
@@ -2969,7 +3081,7 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 
 	GIT_ASSERT_ARG(head_out);
 
-	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if (git_reference_type(head) == GIT_REFERENCE_DIRECT) {
@@ -2998,7 +3110,7 @@ int git_repository_head_for_worktree(git_reference **out, git_repository *repo, 
 
 	if ((error = git_worktree_lookup(&worktree, repo, name)) < 0 ||
 	    (error = git_repository_open_from_worktree(&worktree_repo, worktree)) < 0 ||
-	    (error = git_reference_lookup(&head, worktree_repo, GIT_HEAD_FILE)) < 0)
+	    (error = git_reference_lookup(&head, worktree_repo, GIT_HEAD_REF)) < 0)
 		goto out;
 
 	if (git_reference_type(head) != GIT_REFERENCE_DIRECT) {
@@ -3146,7 +3258,7 @@ int git_repository_is_empty(git_repository *repo)
 	git_str initialbranch = GIT_STR_INIT;
 	int result = 0;
 
-	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0 ||
+	if ((result = git_reference_lookup(&head, repo, GIT_HEAD_REF)) < 0 ||
 	    (result = git_repository_initialbranch(&initialbranch, repo)) < 0)
 		goto done;
 
@@ -3386,23 +3498,15 @@ cleanup:
 
 int git_repository__set_orig_head(git_repository *repo, const git_oid *orig_head)
 {
-	git_filebuf file = GIT_FILEBUF_INIT;
-	git_str file_path = GIT_STR_INIT;
-	char orig_head_str[GIT_OID_MAX_HEXSIZE];
+	git_reference *ref = NULL;
 	int error = 0;
 
-	git_oid_fmt(orig_head_str, orig_head);
+	if ((error = git_reference_create(&ref, repo, GIT_ORIG_HEAD_REF,
+					  orig_head, 1, NULL)) < 0)
+		goto out;
 
-	if ((error = git_str_joinpath(&file_path, repo->gitdir, GIT_ORIG_HEAD_FILE)) == 0 &&
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_MERGE_FILE_MODE)) == 0 &&
-		(error = git_filebuf_printf(&file, "%.*s\n", (int)git_oid_hexsize(repo->oid_type), orig_head_str)) == 0)
-		error = git_filebuf_commit(&file);
-
-	if (error < 0)
-		git_filebuf_cleanup(&file);
-
-	git_str_dispose(&file_path);
-
+out:
+	git_reference_free(ref);
 	return error;
 }
 
@@ -3559,7 +3663,7 @@ static int detach(git_repository *repo, const git_oid *id, const char *new)
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(id);
 
-	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = git_object_lookup(&object, repo, id, GIT_OBJECT_ANY)) < 0)
@@ -3577,7 +3681,7 @@ static int detach(git_repository *repo, const git_oid *id, const char *new)
 	if ((error = checkout_message(&log_message, current, new)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_object_id(peeled), true, git_str_cstr(&log_message));
+	error = git_reference_create(&new_head, repo, GIT_HEAD_REF, git_object_id(peeled), true, git_str_cstr(&log_message));
 
 cleanup:
 	git_str_dispose(&log_message);
@@ -3599,7 +3703,7 @@ int git_repository_set_head(
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(refname);
 
-	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = checkout_message(&log_message, current, refname)) < 0)
@@ -3619,14 +3723,14 @@ int git_repository_set_head(
 
 	if (!error) {
 		if (git_reference_is_branch(ref)) {
-			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE,
+			error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_REF,
 					git_reference_name(ref), true, git_str_cstr(&log_message));
 		} else {
 			error = detach(repo, git_reference_target(ref),
 				git_reference_is_tag(ref) || git_reference_is_remote(ref) ? refname : NULL);
 		}
 	} else if (git_reference__is_branch(refname)) {
-		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_FILE, refname,
+		error = git_reference_symbolic_create(&new_head, repo, GIT_HEAD_REF, refname,
 				true, git_str_cstr(&log_message));
 	}
 
@@ -3665,7 +3769,7 @@ int git_repository_detach_head(git_repository *repo)
 
 	GIT_ASSERT_ARG(repo);
 
-	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&current, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = git_repository_head(&old_head, repo)) < 0)
@@ -3682,7 +3786,7 @@ int git_repository_detach_head(git_repository *repo)
 	if ((error = checkout_message(&log_message, current, idstr)) < 0)
 		goto cleanup;
 
-	error = git_reference_create(&new_head, repo, GIT_HEAD_FILE, git_reference_target(old_head),
+	error = git_reference_create(&new_head, repo, GIT_HEAD_REF, git_reference_target(old_head),
 			1, git_str_cstr(&log_message));
 
 cleanup:
@@ -3702,6 +3806,7 @@ int git_repository_state(git_repository *repo)
 {
 	git_str repo_path = GIT_STR_INIT;
 	int state = GIT_REPOSITORY_STATE_NONE;
+	git_reference *ref = NULL;
 
 	GIT_ASSERT_ARG(repo);
 
@@ -3720,12 +3825,12 @@ int git_repository_state(git_repository *repo)
 		state = GIT_REPOSITORY_STATE_APPLY_MAILBOX_OR_REBASE;
 	else if (git_fs_path_contains_file(&repo_path, GIT_MERGE_HEAD_FILE))
 		state = GIT_REPOSITORY_STATE_MERGE;
-	else if (git_fs_path_contains_file(&repo_path, GIT_REVERT_HEAD_FILE)) {
+	else if (git_reference_lookup(&ref, repo, GIT_REVERT_HEAD_REF) == 0) {
 		state = GIT_REPOSITORY_STATE_REVERT;
 		if (git_fs_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
 			state = GIT_REPOSITORY_STATE_REVERT_SEQUENCE;
 		}
-	} else if (git_fs_path_contains_file(&repo_path, GIT_CHERRYPICK_HEAD_FILE)) {
+	} else if (git_reference_lookup(&ref, repo, GIT_CHERRYPICK_HEAD_REF) == 0) {
 		state = GIT_REPOSITORY_STATE_CHERRYPICK;
 		if (git_fs_path_contains_file(&repo_path, GIT_SEQUENCER_TODO_FILE)) {
 			state = GIT_REPOSITORY_STATE_CHERRYPICK_SEQUENCE;
@@ -3734,6 +3839,7 @@ int git_repository_state(git_repository *repo)
 		state = GIT_REPOSITORY_STATE_BISECT;
 
 	git_str_dispose(&repo_path);
+	git_reference_free(ref);
 	return state;
 }
 
@@ -3770,19 +3876,37 @@ static const char *state_files[] = {
 	GIT_MERGE_HEAD_FILE,
 	GIT_MERGE_MODE_FILE,
 	GIT_MERGE_MSG_FILE,
-	GIT_REVERT_HEAD_FILE,
-	GIT_CHERRYPICK_HEAD_FILE,
 	GIT_BISECT_LOG_FILE,
 	GIT_REBASE_MERGE_DIR,
 	GIT_REBASE_APPLY_DIR,
 	GIT_SEQUENCER_DIR,
 };
 
+static const char *state_refs[] = {
+	GIT_REVERT_HEAD_REF,
+	GIT_CHERRYPICK_HEAD_REF,
+};
+
 int git_repository_state_cleanup(git_repository *repo)
 {
+	int error;
+	size_t i;
+
 	GIT_ASSERT_ARG(repo);
 
-	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+	if ((error = git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files))) < 0)
+		goto out;
+
+	for (i = 0; i < ARRAY_SIZE(state_refs); i++) {
+		if ((error = git_reference_remove(repo, state_refs[i])) < 0) {
+			if (error != GIT_ENOTFOUND)
+				goto out;
+			error = 0;
+		}
+	}
+
+out:
+	return error;
 }
 
 int git_repository__shallow_roots(

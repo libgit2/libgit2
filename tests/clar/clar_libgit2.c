@@ -172,13 +172,42 @@ static git_repository *_cl_repo = NULL;
 
 git_repository *cl_git_sandbox_init(const char *sandbox)
 {
-	/* Get the name of the sandbox folder which will be created */
-	const char *basename = cl_fixture_basename(sandbox);
+	const char *basename;
+	char *ref_format;
 
-	/* Copy the whole sandbox folder from our fixtures to our test sandbox
-	 * area.  After this it can be accessed with `./sandbox`
-	 */
-	cl_fixture_sandbox(sandbox);
+	/* Get the name of the sandbox folder which will be created */
+	basename = cl_fixture_basename(sandbox);
+
+	ref_format = cl_getenv("CLAR_REF_FORMAT");
+	if (!ref_format || !strcmp(ref_format, "files")) {
+		/*
+		 * Copy the whole sandbox folder from our fixtures to our
+		 * test sandbox area. After this it can be accessed with
+		 * `./sandbox`
+		 */
+		cl_fixture_sandbox(sandbox);
+	} else if (!strcmp(ref_format, "reftable")) {
+		struct git_str reftable_sandbox = GIT_STR_INIT;
+
+		cl_git_pass(git_str_joinpath(&reftable_sandbox, "reftable", sandbox));
+		if (!git_fs_path_isdir(cl_fixture(reftable_sandbox.ptr))) {
+			git_str_dispose(&reftable_sandbox);
+			_cl_sandbox = NULL;
+			_cl_repo = NULL;
+			cl_fail("no seed for reftable repository");
+		}
+
+		/*
+		 * Copy over the sandbox and rename it so that the basename
+		 * matches the originally requested basename.
+		 */
+		cl_fixture_sandbox(reftable_sandbox.ptr);
+		git_str_dispose(&reftable_sandbox);
+	} else {
+		cl_fail("Unexpected ref format");
+	}
+
+	git__free(ref_format);
 	_cl_sandbox = sandbox;
 
 	cl_git_pass(p_chdir(basename));
@@ -502,6 +531,26 @@ void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value
 	cl_git_pass(git_repository_config(&config, repo));
 	cl_git_pass(git_config_set_string(config, cfg, value));
 	git_config_free(config);
+}
+
+int cl_repo_has_ref_format(git_repository *repo, const char *format)
+{
+	const char *configured_format;
+	git_config *config;
+	int result;
+
+	cl_git_pass(git_repository_config_snapshot(&config, repo));
+	result = git_config_get_string(&configured_format, config,
+				       "extensions.refStorage");
+	if (result < 0 && result != GIT_ENOTFOUND)
+		cl_fail("cannot read extensions.refStorage");
+	if (result < 0)
+		configured_format = "files";
+
+	result = !strcmp(configured_format, format);
+
+	git_config_free(config);
+	return result;
 }
 
 /* this is essentially the code from git__unescape modified slightly */

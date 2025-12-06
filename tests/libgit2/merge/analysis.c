@@ -63,7 +63,7 @@ static void analysis_from_branch(
 		cl_git_pass(git_str_printf(&our_refname, "%s%s", GIT_REFS_HEADS_DIR, our_branchname));
 		cl_git_pass(git_reference_lookup(&our_ref, repo, git_str_cstr(&our_refname)));
 	} else {
-		cl_git_pass(git_reference_lookup(&our_ref, repo, GIT_HEAD_FILE));
+		cl_git_pass(git_reference_lookup(&our_ref, repo, GIT_HEAD_REF));
 	}
 
 	cl_git_pass(git_str_printf(&their_refname, "%s%s", GIT_REFS_HEADS_DIR, their_branchname));
@@ -120,15 +120,11 @@ void test_merge_analysis__unborn(void)
 {
 	git_merge_analysis_t merge_analysis;
 	git_merge_preference_t merge_pref;
-	git_str master = GIT_STR_INIT;
 
-	cl_git_pass(git_str_joinpath(&master, git_repository_path(repo), "refs/heads/master"));
-	cl_must_pass(p_unlink(git_str_cstr(&master)));
+	cl_git_pass(git_reference_remove(repo, "refs/heads/master"));
 
 	analysis_from_branch(&merge_analysis, &merge_pref, NULL, NOFASTFORWARD_BRANCH);
 	cl_assert_equal_i(GIT_MERGE_ANALYSIS_FASTFORWARD|GIT_MERGE_ANALYSIS_UNBORN, merge_analysis);
-
-	git_str_dispose(&master);
 }
 
 void test_merge_analysis__fastforward_with_config_noff(void)

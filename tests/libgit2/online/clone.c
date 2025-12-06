@@ -219,7 +219,7 @@ void test_online_clone__empty_repository(void)
 	cl_assert_equal_i(true, git_repository_is_empty(g_repo));
 	cl_assert_equal_i(true, git_repository_head_unborn(g_repo));
 
-	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_REF));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
@@ -1325,7 +1325,7 @@ void test_online_clone__namespace_bare(void)
 
 	cl_git_pass(git_clone(&g_repo, _remote_url, "./namespaced.git", &options));
 
-	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_REF));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(head));
 
@@ -1344,7 +1344,7 @@ void test_online_clone__namespace_with_specified_branch(void)
 
 	cl_git_pass(git_clone(&g_repo, _remote_url, "./namespaced", &options));
 
-	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_REF));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 	cl_assert_equal_strn("refs/heads/", git_reference_symbolic_target(head), 11);
 	cl_assert_equal_s(_remote_branch, git_reference_symbolic_target(head) + 11);
@@ -1364,7 +1364,7 @@ void test_online_clone__sha256(void)
 		cl_skip();
 
 	cl_git_pass(git_clone(&g_repo, _remote_url, "./sha256", &options));
-	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&head, g_repo, GIT_HEAD_REF));
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 
 	git_reference_free(head);

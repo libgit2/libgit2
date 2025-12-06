@@ -122,6 +122,43 @@ jobs:
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
 
+        # All builds: reftable
+        - name: "Linux (Noble, GCC, OpenSSL, libssh2, reftable)"
+          id: noble-gcc-openssl-reftable
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: gcc
+            CLAR_REF_FORMAT: reftable
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+        - name: "macOS (reftable)"
+          id: macos-reftable
+          os: macos-13
+          setup-script: osx
+          env:
+            CC: clang
+            CLAR_REF_FORMAT: reftable
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
+            CMAKE_GENERATOR: Ninja
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (amd64, Visual Studio, Schannel, reftable)"
+          id: windows-amd64-vs-reftable
+          os: windows-2022
+          setup-script: win32
+          env:
+            ARCH: amd64
+            CLAR_REF_FORMAT: reftable
+            CMAKE_GENERATOR: Visual Studio 17 2022
+            CMAKE_OPTIONS: -A x64 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
+            BUILD_TEMP: D:\Temp
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+
         # All builds: sanitizers
         - name: "Sanitizer (Memory)"
           id: sanitizer-memory

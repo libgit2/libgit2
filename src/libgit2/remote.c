@@ -1554,7 +1554,7 @@ static int git_remote_write_fetchhead(git_remote *remote, git_refspec *spec, git
 
 	/* Determine what to merge: if refspec was a wildcard, just use HEAD */
 	if (git_refspec_is_wildcard(spec)) {
-		if ((error = git_reference_lookup(&head_ref, remote->repo, GIT_HEAD_FILE)) < 0 ||
+		if ((error = git_reference_lookup(&head_ref, remote->repo, GIT_HEAD_REF)) < 0 ||
 			(error = remote_head_for_ref(&merge_remote_ref, remote, spec, update_heads, head_ref)) < 0)
 				goto cleanup;
 	} else {
@@ -2912,7 +2912,7 @@ int git_remote__default_branch(git_str *out, git_remote *remote)
 	if ((error = git_remote_ls(&heads, &heads_len, remote)) < 0)
 		goto done;
 
-	if (heads_len == 0 || strcmp(heads[0]->name, GIT_HEAD_FILE)) {
+	if (heads_len == 0 || strcmp(heads[0]->name, GIT_HEAD_REF)) {
 		error = GIT_ENOTFOUND;
 		goto done;
 	}

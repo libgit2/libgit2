@@ -61,11 +61,8 @@ typedef struct refdb_fs_backend {
 
 	git_oid_t oid_type;
 
-	unsigned int fsync : 1,
-	             sorted : 1;
+	unsigned int sorted : 1;
 	int peeling_mode;
-	git_iterator_flag_t iterator_flags;
-	uint32_t direach_flags;
 	git_sortedcache *refcache;
 	git_map packed_refs_map;
 	git_mutex prlock; /* protect packed_refs_map */
@@ -95,7 +92,7 @@ GIT_INLINE(int) reflog_path(
 	const char *base;
 	int error;
 
-	base = (strcmp(refname, GIT_HEAD_FILE) == 0) ? repo->gitdir :
+	base = (strcmp(refname, GIT_HEAD_REF) == 0) ? repo->gitdir :
 		repo->commondir;
 
 	if ((error = git_str_joinpath(out, base, GIT_REFLOG_DIR)) < 0)
@@ -292,6 +289,43 @@ done:
 	return error;
 }
 
+static git_iterator_flag_t refdb_fs_get_iterator_flags(refdb_fs_backend *backend)
+{
+	git_iterator_flag_t flags = GIT_ITERATOR_DESCEND_SYMLINKS;
+	int t;
+
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_IGNORECASE) && t)
+		flags |= GIT_ITERATOR_IGNORE_CASE;
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_PRECOMPOSE) && t)
+		flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
+
+	return flags;
+}
+
+static uint32_t refdb_fs_get_direach_flags(refdb_fs_backend *backend)
+{
+	uint32_t flags = 0;
+	int t;
+
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_IGNORECASE) && t)
+		flags |= GIT_FS_PATH_DIR_IGNORE_CASE;
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_PRECOMPOSE) && t)
+		flags |= GIT_FS_PATH_DIR_PRECOMPOSE_UNICODE;
+
+	return flags;
+}
+
+static bool refdb_fs_should_fsync(refdb_fs_backend *backend)
+{
+	int t;
+
+	if ((!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_FSYNCOBJECTFILES) && t) ||
+	     git_repository__fsync_gitdir)
+		return true;
+
+	return false;
+}
+
 static int _dirent_loose_load(void *payload, git_str *full_path)
 {
 	refdb_fs_backend *backend = payload;
@@ -302,7 +336,7 @@ static int _dirent_loose_load(void *payload, git_str *full_path)
 
 	if (git_fs_path_isdir(full_path->ptr)) {
 		int error = git_fs_path_direach(
-			full_path, backend->direach_flags, _dirent_loose_load, backend);
+			full_path, refdb_fs_get_direach_flags(backend), _dirent_loose_load, backend);
 		/* Race with the filesystem, ignore it */
 		if (error == GIT_ENOTFOUND) {
 			git_error_clear();
@@ -337,9 +371,63 @@ static int packed_loadloose(refdb_fs_backend *backend)
 	 * updated loose versions
 	 */
 	error = git_fs_path_direach(
-		&refs_path, backend->direach_flags, _dirent_loose_load, backend);
+		&refs_path, refdb_fs_get_direach_flags(backend), _dirent_loose_load, backend);
 
 	git_str_dispose(&refs_path);
+
+	return error;
+}
+
+static int refdb_fs_backend__init(struct git_refdb_backend *_backend,
+				  const char *head_target,
+				  mode_t mode,
+				  uint32_t flags)
+{
+	refdb_fs_backend *backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
+	git_str path = GIT_STR_INIT, content = GIT_STR_INIT;
+	int error;
+
+	/*
+	 * As most references are per repository and not per worktree we don't
+	 * want to set up the typical "refs/" hierarchy in worktrees.
+	 */
+	if ((flags & GIT_REFDB_BACKEND_INIT_IS_WORKTREE) == 0) {
+		mode_t dmode;
+
+		if (mode == GIT_REPOSITORY_INIT_SHARED_UMASK)
+			dmode = 0777;
+		else if (mode == GIT_REPOSITORY_INIT_SHARED_GROUP)
+			dmode = (0775 | S_ISGID);
+		else if (mode == GIT_REPOSITORY_INIT_SHARED_ALL)
+			dmode = (0777 | S_ISGID);
+		else
+			dmode = mode;
+
+		if ((error = git_str_joinpath(&path, backend->gitpath, GIT_REFS_HEADS_DIR)) < 0 ||
+		    (error = git_futils_mkdir(path.ptr, dmode, 0) < 0) ||
+		    (error = git_str_joinpath(&path, backend->gitpath, GIT_REFS_TAGS_DIR)) < 0 ||
+		    (error = git_futils_mkdir(path.ptr, dmode, 0) < 0))
+			goto out;
+	}
+
+	if (head_target) {
+		if ((error = git_str_joinpath(&path, backend->gitpath, GIT_HEAD_FILE)) < 0)
+			goto out;
+
+		if ((flags & GIT_REFDB_BACKEND_INIT_FORCE_HEAD) == 0 &&
+		    git_fs_path_exists(path.ptr))
+			goto out;
+
+		if ((error = git_str_printf(&content, GIT_SYMREF "%s\n", head_target)) < 0 ||
+		    (error = git_futils_writebuffer(&content, path.ptr, 0, mode)) < 0)
+			goto out;
+	}
+
+	error = 0;
+
+out:
+	git_str_dispose(&content);
+	git_str_dispose(&path);
 
 	return error;
 }
@@ -414,44 +502,55 @@ static bool is_per_worktree_ref(const char *ref_name)
 	       git__prefixcmp(ref_name, "refs/rewritten/") == 0;
 }
 
-static int loose_lookup(
+int git_reference__lookup_loose(
 	git_reference **out,
-	refdb_fs_backend *backend,
-	const char *ref_name)
+	const char *ref_dir,
+	const char *ref_name,
+	git_oid_t oid_type)
 {
-	git_str ref_file = GIT_STR_INIT;
+	git_str buf = GIT_STR_INIT;
 	int error = 0;
-	const char *ref_dir;
 
 	if (out)
 		*out = NULL;
 
-	if (is_per_worktree_ref(ref_name))
-		ref_dir = backend->gitpath;
-	else
-		ref_dir = backend->commonpath;
-
-	if ((error = loose_readbuffer(&ref_file, ref_dir, ref_name)) < 0)
+	if ((error = git_str_joinpath(&buf, ref_dir, ref_name)) < 0 ||
+	    (error = git_futils_readbuffer(&buf, buf.ptr)) < 0)
 		/* cannot read loose ref file - gah */;
-	else if (git__prefixcmp(git_str_cstr(&ref_file), GIT_SYMREF) == 0) {
+	else if (git__prefixcmp(git_str_cstr(&buf), GIT_SYMREF) == 0) {
 		const char *target;
 
-		git_str_rtrim(&ref_file);
+		git_str_rtrim(&buf);
 
-		if (!(target = loose_parse_symbolic(&ref_file)))
+		if (!(target = loose_parse_symbolic(&buf)))
 			error = -1;
 		else if (out != NULL)
 			*out = git_reference__alloc_symbolic(ref_name, target);
 	} else {
 		git_oid oid;
 
-		if (!(error = loose_parse_oid(&oid, ref_name, &ref_file, backend->oid_type)) &&
+		if (!(error = loose_parse_oid(&oid, ref_name, &buf, oid_type)) &&
 			out != NULL)
 			*out = git_reference__alloc(ref_name, &oid, NULL);
 	}
 
-	git_str_dispose(&ref_file);
+	git_str_dispose(&buf);
 	return error;
+}
+
+static int loose_lookup(
+	git_reference **out,
+	refdb_fs_backend *backend,
+	const char *ref_name)
+{
+	const char *ref_dir;
+
+	if (is_per_worktree_ref(ref_name))
+		ref_dir = backend->gitpath;
+	else
+		ref_dir = backend->commonpath;
+
+	return git_reference__lookup_loose(out, ref_dir, ref_name, backend->oid_type);
 }
 
 static int ref_error_notfound(const char *name)
@@ -862,13 +961,11 @@ static int iter_load_paths(
 	const git_index_entry *entry;
 	int error = 0;
 
-	fsit_opts.flags = ctx->backend->iterator_flags;
-
 	git_str_clear(&ctx->path);
 	git_str_puts(&ctx->path, root_path);
 	git_str_put(&ctx->path, ctx->ref_prefix, ctx->ref_prefix_len);
 
-	fsit_opts.flags = ctx->backend->iterator_flags;
+	fsit_opts.flags = refdb_fs_get_iterator_flags(ctx->backend);
 	fsit_opts.oid_type = ctx->backend->oid_type;
 
 	if ((error = git_iterator_for_filesystem(&fsit, ctx->path.ptr, &fsit_opts)) < 0) {
@@ -1173,7 +1270,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 		return error;
 
 	filebuf_flags = GIT_FILEBUF_CREATE_LEADING_DIRS;
-	if (backend->fsync)
+	if (refdb_fs_should_fsync(backend))
 		filebuf_flags |= GIT_FILEBUF_FSYNC;
 
 	error = git_filebuf_open(file, ref_path.ptr, filebuf_flags, GIT_REFS_FILE_MODE);
@@ -1429,7 +1526,7 @@ static int packed_write(refdb_fs_backend *backend)
 	if ((error = git_sortedcache_wlock(refcache)) < 0)
 		return error;
 
-	if (backend->fsync)
+	if (refdb_fs_should_fsync(backend))
 		open_flags = GIT_FILEBUF_FSYNC;
 
 	/* Open the file! */
@@ -1581,7 +1678,7 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 	if (git_reference_name_to_id(&old_id, backend->repo, ref->name) < 0)
 		memset(&old_id, 0, sizeof(old_id));
 
-	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0 ||
+	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_REF)) < 0 ||
 	    (error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message)) < 0)
 		goto out;
 
@@ -2298,7 +2395,7 @@ static int reflog_append(
 
 	/* "normal" symbolic updates do not write */
 	if (is_symbolic &&
-	    strcmp(ref->name, GIT_HEAD_FILE) &&
+	    strcmp(ref->name, GIT_HEAD_REF) &&
 	    !(old && new))
 		return 0;
 
@@ -2362,7 +2459,7 @@ static int reflog_append(
 
 	open_flags = O_WRONLY | O_CREAT | O_APPEND;
 
-	if (backend->fsync)
+	if (refdb_fs_should_fsync(backend))
 		open_flags |= O_FSYNC;
 
 	error = git_futils_writebuffer(&buf, git_str_cstr(&path), open_flags, GIT_REFLOG_FILE_MODE);
@@ -2492,7 +2589,6 @@ int git_refdb_backend_fs(
 	git_refdb_backend **backend_out,
 	git_repository *repository)
 {
-	int t = 0;
 	git_str gitpath = GIT_STR_INIT;
 	refdb_fs_backend *backend;
 
@@ -2532,19 +2628,7 @@ int git_refdb_backend_fs(
 
 	git_str_dispose(&gitpath);
 
-	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_IGNORECASE) && t) {
-		backend->iterator_flags |= GIT_ITERATOR_IGNORE_CASE;
-		backend->direach_flags  |= GIT_FS_PATH_DIR_IGNORE_CASE;
-	}
-	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_PRECOMPOSE) && t) {
-		backend->iterator_flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
-		backend->direach_flags  |= GIT_FS_PATH_DIR_PRECOMPOSE_UNICODE;
-	}
-	if ((!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_FSYNCOBJECTFILES) && t) ||
-		git_repository__fsync_gitdir)
-		backend->fsync = 1;
-	backend->iterator_flags |= GIT_ITERATOR_DESCEND_SYMLINKS;
-
+	backend->parent.init = &refdb_fs_backend__init;
 	backend->parent.exists = &refdb_fs_backend__exists;
 	backend->parent.lookup = &refdb_fs_backend__lookup;
 	backend->parent.iterator = &refdb_fs_backend__iterator;

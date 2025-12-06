@@ -76,7 +76,10 @@ void test_refs_basic__longpaths(void)
 
 	/* Adding one more character gives us a path that is too long. */
 	cl_git_pass(git_str_putc(&refname, 'z'));
-	cl_git_fail(git_reference_create(&two, g_repo, refname.ptr, &id, 0, NULL));
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_git_fail(git_reference_create(&two, g_repo, refname.ptr, &id, 0, NULL));
+	else
+		cl_git_pass(git_reference_create(&two, g_repo, refname.ptr, &id, 0, NULL));
 
 	git_reference_free(one);
 	git_reference_free(two);
