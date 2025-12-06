@@ -33,7 +33,7 @@ static int git_message__prettify(
 
 	int consecutive_empty_lines = 0;
 	size_t i, line_length, rtrimmed_line_length;
-	char *next_newline;
+	const char *next_newline;
 
 	for (i = 0; i < strlen(message); i += line_length) {
 		next_newline = memchr(message + i, '\n', message_len - i);
