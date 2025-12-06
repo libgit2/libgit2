@@ -56,9 +56,47 @@ struct git_reference_iterator {
 		git_reference_iterator *iter);
 };
 
+typedef enum {
+	/**
+	 * The refdb that is to be initialized is for a worktree.
+	 */
+	GIT_REFDB_BACKEND_INIT_IS_WORKTREE = (1u << 0),
+
+	/*
+	 * Force-overwrite HEAD in case the refdb is already (partially)
+	 * initialized.
+	 */
+	GIT_REFDB_BACKEND_INIT_FORCE_HEAD = (1u << 1)
+} git_refdb_backend_init_flag_t;
+
 /** An instance for a custom backend */
 struct git_refdb_backend {
 	unsigned int version; /**< The backend API version */
+
+	/**
+	 * Create a new refdb and initialize its structures.
+	 *
+	 * A refdb implementation may provide this function; if it is not
+	 * provided, no data structures will be initialized for the refdb when
+	 * a new repository is created.
+	 *
+	 * @param path The path of the Git directory that shall be initialized.
+	 * @param initial_head The target that HEAD should point to. This value
+	 *             should only be applied when there isn't yet a HEAD
+	 *             reference, or when `GIT_REFDB_BACKEND_INIT_FORCE_HEAD`
+	 *             is passed. Optional, if unset the backend should not set
+	 *             up HEAD, either.
+	 * @param mode The mode that shall be used to create files and
+	 *             directories. May be one of `git_repository_init_mode_t`
+	 *             or normal Unix permission bits.
+	 * @param flags A combination of `git_refdb_backend_init_flag_t` flags.
+	 * @return `0` on success, a negative error value code.
+	 */
+	int GIT_CALLBACK(init)(
+		git_refdb_backend *backend,
+		const char *head_target,
+		mode_t mode,
+		uint32_t flags);
 
 	/**
 	 * Queries the refdb backend for the existence of a reference.
