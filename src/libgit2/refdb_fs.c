@@ -61,11 +61,8 @@ typedef struct refdb_fs_backend {
 
 	git_oid_t oid_type;
 
-	unsigned int fsync : 1,
-	             sorted : 1;
+	unsigned int sorted : 1;
 	int peeling_mode;
-	git_iterator_flag_t iterator_flags;
-	uint32_t direach_flags;
 	git_sortedcache *refcache;
 	git_map packed_refs_map;
 	git_mutex prlock; /* protect packed_refs_map */
@@ -292,6 +289,43 @@ done:
 	return error;
 }
 
+static git_iterator_flag_t refdb_fs_get_iterator_flags(refdb_fs_backend *backend)
+{
+	git_iterator_flag_t flags = GIT_ITERATOR_DESCEND_SYMLINKS;
+	int t;
+
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_IGNORECASE) && t)
+		flags |= GIT_ITERATOR_IGNORE_CASE;
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_PRECOMPOSE) && t)
+		flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
+
+	return flags;
+}
+
+static uint32_t refdb_fs_get_direach_flags(refdb_fs_backend *backend)
+{
+	uint32_t flags = 0;
+	int t;
+
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_IGNORECASE) && t)
+		flags |= GIT_FS_PATH_DIR_IGNORE_CASE;
+	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_PRECOMPOSE) && t)
+		flags |= GIT_FS_PATH_DIR_PRECOMPOSE_UNICODE;
+
+	return flags;
+}
+
+static bool refdb_fs_should_fsync(refdb_fs_backend *backend)
+{
+	int t;
+
+	if ((!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_FSYNCOBJECTFILES) && t) ||
+	     git_repository__fsync_gitdir)
+		return true;
+
+	return false;
+}
+
 static int _dirent_loose_load(void *payload, git_str *full_path)
 {
 	refdb_fs_backend *backend = payload;
@@ -302,7 +336,7 @@ static int _dirent_loose_load(void *payload, git_str *full_path)
 
 	if (git_fs_path_isdir(full_path->ptr)) {
 		int error = git_fs_path_direach(
-			full_path, backend->direach_flags, _dirent_loose_load, backend);
+			full_path, refdb_fs_get_direach_flags(backend), _dirent_loose_load, backend);
 		/* Race with the filesystem, ignore it */
 		if (error == GIT_ENOTFOUND) {
 			git_error_clear();
@@ -337,7 +371,7 @@ static int packed_loadloose(refdb_fs_backend *backend)
 	 * updated loose versions
 	 */
 	error = git_fs_path_direach(
-		&refs_path, backend->direach_flags, _dirent_loose_load, backend);
+		&refs_path, refdb_fs_get_direach_flags(backend), _dirent_loose_load, backend);
 
 	git_str_dispose(&refs_path);
 
@@ -916,13 +950,11 @@ static int iter_load_paths(
 	const git_index_entry *entry;
 	int error = 0;
 
-	fsit_opts.flags = ctx->backend->iterator_flags;
-
 	git_str_clear(&ctx->path);
 	git_str_puts(&ctx->path, root_path);
 	git_str_put(&ctx->path, ctx->ref_prefix, ctx->ref_prefix_len);
 
-	fsit_opts.flags = ctx->backend->iterator_flags;
+	fsit_opts.flags = refdb_fs_get_iterator_flags(ctx->backend);
 	fsit_opts.oid_type = ctx->backend->oid_type;
 
 	if ((error = git_iterator_for_filesystem(&fsit, ctx->path.ptr, &fsit_opts)) < 0) {
@@ -1227,7 +1259,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 		return error;
 
 	filebuf_flags = GIT_FILEBUF_CREATE_LEADING_DIRS;
-	if (backend->fsync)
+	if (refdb_fs_should_fsync(backend))
 		filebuf_flags |= GIT_FILEBUF_FSYNC;
 
 	error = git_filebuf_open(file, ref_path.ptr, filebuf_flags, GIT_REFS_FILE_MODE);
@@ -1483,7 +1515,7 @@ static int packed_write(refdb_fs_backend *backend)
 	if ((error = git_sortedcache_wlock(refcache)) < 0)
 		return error;
 
-	if (backend->fsync)
+	if (refdb_fs_should_fsync(backend))
 		open_flags = GIT_FILEBUF_FSYNC;
 
 	/* Open the file! */
@@ -2416,7 +2448,7 @@ static int reflog_append(
 
 	open_flags = O_WRONLY | O_CREAT | O_APPEND;
 
-	if (backend->fsync)
+	if (refdb_fs_should_fsync(backend))
 		open_flags |= O_FSYNC;
 
 	error = git_futils_writebuffer(&buf, git_str_cstr(&path), open_flags, GIT_REFLOG_FILE_MODE);
@@ -2546,7 +2578,6 @@ int git_refdb_backend_fs(
 	git_refdb_backend **backend_out,
 	git_repository *repository)
 {
-	int t = 0;
 	git_str gitpath = GIT_STR_INIT;
 	refdb_fs_backend *backend;
 
@@ -2585,19 +2616,6 @@ int git_refdb_backend_fs(
 		goto fail;
 
 	git_str_dispose(&gitpath);
-
-	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_IGNORECASE) && t) {
-		backend->iterator_flags |= GIT_ITERATOR_IGNORE_CASE;
-		backend->direach_flags  |= GIT_FS_PATH_DIR_IGNORE_CASE;
-	}
-	if (!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_PRECOMPOSE) && t) {
-		backend->iterator_flags |= GIT_ITERATOR_PRECOMPOSE_UNICODE;
-		backend->direach_flags  |= GIT_FS_PATH_DIR_PRECOMPOSE_UNICODE;
-	}
-	if ((!git_repository__configmap_lookup(&t, backend->repo, GIT_CONFIGMAP_FSYNCOBJECTFILES) && t) ||
-		git_repository__fsync_gitdir)
-		backend->fsync = 1;
-	backend->iterator_flags |= GIT_ITERATOR_DESCEND_SYMLINKS;
 
 	backend->parent.init = &refdb_fs_backend__init;
 	backend->parent.exists = &refdb_fs_backend__exists;
