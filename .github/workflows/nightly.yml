@@ -65,7 +65,7 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
         - name: "macOS"
           id: macos
-          os: macos-13
+          os: macos-14
           setup-script: osx
           env:
             CC: clang
@@ -76,7 +76,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "iOS"
           id: ios
-          os: macos-13
+          os: macos-14
           setup-script: ios
           env:
             CC: clang
@@ -356,7 +356,7 @@ jobs:
           os: ubuntu-latest
         - name: "macOS (SHA256)"
           id: macos-sha256
-          os: macos-13
+          os: macos-14
           setup-script: osx
           env:
             CC: clang
