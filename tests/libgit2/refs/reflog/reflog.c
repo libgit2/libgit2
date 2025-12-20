@@ -244,7 +244,7 @@ void test_refs_reflog_reflog__reading_a_reflog_with_invalid_format_succeeds(void
 	 */
 	cl_git_pass(git_str_join_n(&logpath, '/', 3, git_repository_path(g_repo), GIT_REFLOG_DIR, refname));
 	cl_git_pass(git_futils_readbuffer(&logcontents, git_str_cstr(&logpath)));
-	cl_assert((star = strchr(git_str_cstr(&logcontents), '*')) != NULL);
+	cl_assert((star = strchr(logcontents.ptr, '*')) != NULL);
 	*star = '\n';
 	cl_git_rewritefile(git_str_cstr(&logpath), git_str_cstr(&logcontents));
 
