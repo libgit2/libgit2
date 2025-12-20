@@ -1018,6 +1018,7 @@ int git_reference__normalize_name(
 			goto cleanup;
 
 	if ((segments_count > 1)
+		&& !(flags & GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND)
 		&& (is_valid_normalized_name(name, strchr(name, '/') - name)))
 			goto cleanup;
 
