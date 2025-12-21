@@ -224,7 +224,7 @@ void test_worktree_refs__renaming_reference_updates_worktree_heads(void)
 		    "testrepo-worktree", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_reference_rename(&renamed, branch, "refs/heads/renamed", 0, NULL));
 
-	cl_git_pass(git_reference_lookup(&head, fixture.worktree, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&head, fixture.worktree, GIT_HEAD_REF));
 	cl_assert_equal_i(git_reference_type(head), GIT_REFERENCE_SYMBOLIC);
 	cl_assert_equal_s(git_reference_symbolic_target(head), "refs/heads/renamed");
 

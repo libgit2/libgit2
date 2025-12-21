@@ -121,7 +121,7 @@ static int fetchhead_ref_write(
 		GIT_REFS_TAGS_DIR) == 0) {
 		type = "tag ";
 		name = fetchhead_ref->ref_name + strlen(GIT_REFS_TAGS_DIR);
-	} else if (!git__strcmp(fetchhead_ref->ref_name, GIT_HEAD_FILE)) {
+	} else if (!git__strcmp(fetchhead_ref->ref_name, GIT_HEAD_REF)) {
 		head = 1;
 	} else {
 		type = "";

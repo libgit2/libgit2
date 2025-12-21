@@ -1610,7 +1610,7 @@ static int git_submodule__open(
 		sm->flags |= GIT_SUBMODULE_STATUS_IN_WD |
 			GIT_SUBMODULE_STATUS__WD_SCANNED;
 
-		if (!git_reference_name_to_id(&sm->wd_oid, *subrepo, GIT_HEAD_FILE))
+		if (!git_reference_name_to_id(&sm->wd_oid, *subrepo, GIT_HEAD_REF))
 			sm->flags |= GIT_SUBMODULE_STATUS__WD_OID_VALID;
 		else
 			git_error_clear();
