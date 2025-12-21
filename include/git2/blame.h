@@ -10,6 +10,7 @@
 
 #include "common.h"
 #include "oid.h"
+#include "types.h"
 
 /**
  * @file git2/blame.h
