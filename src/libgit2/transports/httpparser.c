@@ -102,10 +102,7 @@ size_t git_http_parser_execute(
 	 * code.
 	 */
 
-	if (data == NULL || len == 0)
-		error = llhttp_finish(parser);
-	else
-		error = llhttp_execute(parser, data, len);
+	error = llhttp_execute(parser, data, len);
 
 	parsed_len = len;
 
