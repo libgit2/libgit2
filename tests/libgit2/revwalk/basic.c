@@ -170,6 +170,9 @@ void test_revwalk_basic__glob_heads_with_invalid(void)
 
 	revwalk_basic_setup_walk("testrepo");
 
+	if (!cl_repo_has_ref_format(_repo, "files"))
+		cl_skip();
+
 	cl_git_mkfile("testrepo/.git/refs/heads/garbage", "not-a-ref");
 	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
 
@@ -182,12 +185,13 @@ void test_revwalk_basic__glob_heads_with_invalid(void)
 
 void test_revwalk_basic__glob_invalid_symbolic_ref(void)
 {
+	git_reference *ref;
 	int i;
 	git_oid oid;
 
 	revwalk_basic_setup_walk("testrepo");
-
-	cl_git_mkfile("testrepo/.git/refs/heads/broken-sym-ref", "ref: refs/heads/does-not-exist");
+	cl_git_pass(git_reference_symbolic_create(&ref, _repo, "refs/heads/broken-sym-ref",
+						  "refs/heads/does-not-exist", 1, NULL));
 	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
 
 	for (i = 0; !git_revwalk_next(&oid, _walk); ++i)
@@ -195,6 +199,8 @@ void test_revwalk_basic__glob_invalid_symbolic_ref(void)
 
 	/* git log --branches --oneline | wc -l => 16 */
 	cl_assert_equal_i(20, i);
+
+	git_reference_free(ref);
 }
 
 void test_revwalk_basic__push_head(void)
