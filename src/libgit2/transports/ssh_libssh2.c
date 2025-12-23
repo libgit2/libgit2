@@ -366,7 +366,7 @@ static int _git_ssh_authenticate_session(
 		default:
 			rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}
-	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	} while (LIBSSH2_ERROR_EAGAIN == rc);
 
 	if (rc == LIBSSH2_ERROR_PASSWORD_EXPIRED ||
 		rc == LIBSSH2_ERROR_AUTHENTICATION_FAILED ||
@@ -556,7 +556,7 @@ static int _git_ssh_session_create(
 	if (git_str_len(&prefs) > 0) {
 		do {
 			rc = libssh2_session_method_pref(s, LIBSSH2_METHOD_HOSTKEY, git_str_cstr(&prefs));
-		} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+		} while (LIBSSH2_ERROR_EAGAIN == rc);
 		if (rc != LIBSSH2_ERROR_NONE) {
 			ssh_error(s, "failed to set hostkey preference");
 			goto on_error;
@@ -566,7 +566,7 @@ static int _git_ssh_session_create(
 
 	do {
 		rc = libssh2_session_handshake(s, socket->s);
-	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	} while (LIBSSH2_ERROR_EAGAIN == rc);
 
 	if (rc != LIBSSH2_ERROR_NONE) {
 		ssh_error(s, "failed to start SSH session");
