@@ -138,9 +138,14 @@ int git_diff_file_content__init_from_src(
 	const git_diff_file_content_src *src,
 	git_diff_file *as_file)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
+
 	memset(fc, 0, sizeof(*fc));
 	fc->repo = repo;
 	fc->file = as_file;
+
+	id_opts.object_type = GIT_OBJECT_BLOB;
+	id_opts.oid_type = opts->oid_type;
 
 	if (!src->blob && !src->buf) {
 		fc->flags |= GIT_DIFF_FLAG__NO_DATA;
@@ -162,7 +167,11 @@ int git_diff_file_content__init_from_src(
 			fc->flags |= GIT_DIFF_FLAG__FREE_BLOB;
 		} else {
 			int error;
-			if ((error = git_odb__hash(&fc->file->id, src->buf, src->buflen, GIT_OBJECT_BLOB, opts->oid_type)) < 0)
+
+			if ((error = git_object_id_from_buffer(
+					&fc->file->id,
+					src->buf, src->buflen,
+					&id_opts)) < 0)
 				return error;
 			fc->file->size = src->buflen;
 			fc->file->id_abbrev = (uint16_t)git_oid_hexsize(opts->oid_type);
@@ -399,8 +408,12 @@ static int diff_file_content_load_workdir(
 	git_diff_file_content *fc,
 	git_diff_options *diff_opts)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 	int error = 0;
 	git_str path = GIT_STR_INIT;
+
+	id_opts.object_type = GIT_OBJECT_BLOB;
+	id_opts.oid_type = diff_opts->oid_type;
 
 	if (fc->file->mode == GIT_FILEMODE_COMMIT)
 		return diff_file_content_commit_to_str(fc, true);
@@ -418,9 +431,8 @@ static int diff_file_content_load_workdir(
 
 	/* once data is loaded, update OID if we didn't have it previously */
 	if (!error && (fc->file->flags & GIT_DIFF_FLAG_VALID_ID) == 0) {
-		error = git_odb__hash(
-			&fc->file->id, fc->map.data, fc->map.len,
-			GIT_OBJECT_BLOB, diff_opts->oid_type);
+		error = git_object_id_from_buffer(&fc->file->id,
+			fc->map.data, fc->map.len, &id_opts);
 		fc->file->flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
 
