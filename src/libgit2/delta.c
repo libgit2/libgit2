@@ -477,8 +477,12 @@ static int hdr_sz(
 			return -1;
 		}
 
+		if (shift >= (sizeof(size_t) * 8)) {
+			git_error_set(GIT_ERROR_INVALID, "delta header overflow");
+			return -1;
+		}
 		c = *d++;
-		r |= (c & 0x7f) << shift;
+		r |= ((size_t)(c & 0x7f)) << shift;
 		shift += 7;
 	} while (c & 0x80);
 	*delta = d;
