@@ -260,6 +260,19 @@ GIT_EXTERN(int) git_transport_local(
 	/* NULL */ void *payload);
 
 /**
+ * Create an instance of the bundle transport.
+ *
+ * @param out The newly created transport (out)
+ * @param owner The git_remote which will own this transport
+ * @param payload You must pass NULL for this parameter.
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_transport_bundle(
+        git_transport **out,
+        git_remote *owner,
+        /* NULL */ void *payload);
+
+/**
  * Create an instance of the smart transport.
  *
  * @param out The newly created transport (out)
