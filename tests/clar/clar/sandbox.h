@@ -164,7 +164,7 @@ static int build_tempdir_path(void)
 
 	if (mkdir(_clar_tempdir, 0700) != 0)
 		return -1;
-#elif defined(__sun) || defined(__TANDEM)
+#elif defined(__sun) || defined(__TANDEM) || defined(__hpux)
 	if (mktemp(_clar_tempdir) == NULL)
 		return -1;
 
@@ -191,7 +191,7 @@ static void clar_tempdir_init(void)
 #if !defined(CLAR_SANDBOX_TEST_NAMES) && defined(_WIN32)
 	srand(clock() ^ (unsigned int)time(NULL) ^ GetCurrentProcessId() ^ GetCurrentThreadId());
 #elif !defined(CLAR_SANDBOX_TEST_NAMES)
-	srand(clock() ^ time(NULL) ^ (getpid() << 16));
+	srand(clock() ^ time(NULL) ^ ((unsigned)getpid() << 16));
 #endif
 }
 
