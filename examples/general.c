@@ -374,7 +374,7 @@ static void commit_parsing(git_repository *repo)
 	/**
 	 * Each of the properties of the commit object are accessible via methods,
 	 * including commonly needed variations, such as `git_commit_time` which
-	 * returns the author time and `git_commit_message` which gives you the
+	 * returns the committer time and `git_commit_message` which gives you the
 	 * commit message (as a NUL-terminated string).
 	 */
 	message  = git_commit_message(commit);
