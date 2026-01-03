@@ -579,8 +579,7 @@ int git_midx_writer_add(
 	if (error < 0)
 		return error;
 
-	/* TODO: SHA256 */
-	error = git_mwindow_get_pack(&p, git_str_cstr(&idx_path_buf), 0);
+	error = git_mwindow_get_pack(&p, git_str_cstr(&idx_path_buf), w->oid_type);
 	git_str_dispose(&idx_path_buf);
 	if (error < 0)
 		return error;
