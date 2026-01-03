@@ -1437,12 +1437,10 @@ int git_packbuilder_write(
 	opts.progress_cb = progress_cb;
 	opts.progress_cb_payload = progress_cb_payload;
 
-	/* TODO: SHA256 */
-
 #ifdef GIT_EXPERIMENTAL_SHA256
 	opts.mode = mode;
 	opts.odb = pb->odb;
-	opts.oid_type = GIT_OID_SHA1;
+	opts.oid_type = pb->oid_type;
 
 	error = git_indexer_new(&indexer, path, &opts);
 #else
