@@ -90,8 +90,10 @@ int checkout_count_callback(
 		if (ct->debug) {
 			if (workdir)
 				fprintf(stderr, "M %s\n", workdir->path);
-			else
+			else if (baseline)
 				fprintf(stderr, "D %s\n", baseline->path);
+			else
+				fprintf(stderr, "invalid notification - no workdir or baseline path\n");
 		}
 	}
 
