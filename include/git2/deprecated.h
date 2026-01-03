@@ -503,7 +503,7 @@ GIT_EXTERN(int) git_diff_format_email_options_init(
 GIT_EXTERN(const git_error *) giterr_last(void);
 
 /**
- * Clear the last error.  This is an alias of `git_error_last` and is
+ * Clear the last error.  This is an alias of `git_error_clear` and is
  * preserved for backward compatibility.
  *
  * This function is deprecated, but there is no plan to remove this
