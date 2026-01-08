@@ -817,8 +817,7 @@ int git_commit_graph_writer_add_index_file(
 	if (error < 0)
 		goto cleanup;
 
-	/* TODO: SHA256 */
-	error = git_mwindow_get_pack(&p, idx_path, 0);
+	error = git_mwindow_get_pack(&p, idx_path, repo->oid_type);
 	if (error < 0)
 		goto cleanup;
 
