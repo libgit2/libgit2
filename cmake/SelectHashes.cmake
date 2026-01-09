@@ -29,6 +29,9 @@ endif()
 if(USE_SHA1 STREQUAL "builtin")
 	set(GIT_SHA1_BUILTIN 1)
 	add_feature_info(SHA1 ON "using bundled collision detection implementation")
+elseif(USE_SHA1 STREQUAL "sha1collisiondetection")
+	set(GIT_SHA1_COLLISIONDETECTION 1)
+	add_feature_info(SHA1 ON "using sha1collisiondetection")
 elseif(USE_SHA1 STREQUAL "openssl")
 	set(GIT_SHA1_OPENSSL 1)
 	add_feature_info(SHA1 ON "using OpenSSL")
@@ -101,6 +104,12 @@ else()
 endif()
 
 # add library requirements
+
+if(USE_SHA1 STREQUAL "sha1collisiondetection")
+	list(APPEND LIBGIT2_SYSTEM_LIBS "-lsha1detectcoll")
+	list(APPEND LIBGIT2_PC_LIBS "-lsha1detectcoll")
+endif()
+
 if(USE_SHA1 STREQUAL "openssl" OR USE_SHA256 STREQUAL "openssl" OR
    USE_SHA1 STREQUAL "openssl-fips" OR USE_SHA256 STREQUAL "openssl-fips")
 	if(CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
@@ -121,7 +130,7 @@ endif()
 
 # warn for users who do not use sha1dc
 
-if(NOT "${USE_SHA1}" STREQUAL "builtin")
+if(NOT "${USE_SHA1}" STREQUAL "builtin" AND NOT "${USE_SHA1}" STREQUAL "sha1collisiondetection")
 	list(APPEND WARNINGS "SHA1 support is set to ${USE_SHA1} which is not recommended - git's hash algorithm is sha1dc, it is *not* SHA1. Using SHA1 may leave you and your users susceptible to SHAttered-style attacks.")
 	set(WARNINGS ${WARNINGS} PARENT_SCOPE)
 endif()
