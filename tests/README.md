@@ -2,8 +2,6 @@
 
 These are the unit and integration tests for the libgit2 projects.
 
-* `benchmarks`
-  These are benchmark tests that excercise the CLI.
 * `headertest`  
   This is a simple project that ensures that our public headers are
   compatible with extremely strict compilation options.
