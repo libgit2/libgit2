@@ -48,7 +48,7 @@ static void clar_print_clap_error(int num, const struct clar_report *report, con
 		error->file,
 		error->line_number);
 
-	clar_print_indented(error->error_msg, 2);
+	clar_print_indented(error->message, 2);
 
 	if (error->description != NULL)
 		clar_print_indented(error->description, 2);
@@ -57,9 +57,8 @@ static void clar_print_clap_error(int num, const struct clar_report *report, con
 	fflush(stdout);
 }
 
-static void clar_print_clap_ontest(const char *suite_name, const char *test_name, int test_number, enum cl_test_status status)
+static void clar_print_clap_test_start(const char *suite_name, const char *test_name, int test_number)
 {
-	(void)test_name;
 	(void)test_number;
 
 	if (_clar.verbosity < 0)
@@ -67,15 +66,18 @@ static void clar_print_clap_ontest(const char *suite_name, const char *test_name
 
 	if (_clar.verbosity > 1) {
 		printf("%s::%s: ", suite_name, test_name);
+		fflush(stdout);
+	}
+}
 
-		switch (status) {
-		case CL_TEST_OK: printf("ok\n"); break;
-		case CL_TEST_FAILURE: printf("fail\n"); break;
-		case CL_TEST_SKIP: printf("skipped\n"); break;
-		case CL_TEST_NOTRUN: printf("notrun\n"); break;
-		}
-	} else {
-		switch (status) {
+static void clar_print_clap_test_finish(const char *suite_name, const char *test_name, int test_number, const struct clar_report *report)
+{
+	(void)suite_name;
+	(void)test_name;
+	(void)test_number;
+
+	if (_clar.verbosity == 0) {
+		switch (report->status) {
 		case CL_TEST_OK: printf("."); break;
 		case CL_TEST_FAILURE: printf("F"); break;
 		case CL_TEST_SKIP: printf("S"); break;
@@ -83,10 +85,17 @@ static void clar_print_clap_ontest(const char *suite_name, const char *test_name
 		}
 
 		fflush(stdout);
+	} else if (_clar.verbosity > 1) {
+		switch (report->status) {
+		case CL_TEST_OK: printf("ok\n"); break;
+		case CL_TEST_FAILURE: printf("fail\n"); break;
+		case CL_TEST_SKIP: printf("skipped\n"); break;
+		case CL_TEST_NOTRUN: printf("notrun\n"); break;
+		}
 	}
 }
 
-static void clar_print_clap_onsuite(const char *suite_name, int suite_index)
+static void clar_print_clap_suite_start(const char *suite_name, int suite_index)
 {
 	if (_clar.verbosity < 0)
 		return;
@@ -127,7 +136,7 @@ static void clar_print_tap_error(int num, const struct clar_report *report, cons
 
 static void print_escaped(const char *str)
 {
-	const char *c;
+	char *c;
 
 	while ((c = strchr(str, '\'')) != NULL) {
 		printf("%.*s", (int)(c - str), str);
@@ -138,14 +147,21 @@ static void print_escaped(const char *str)
 	printf("%s", str);
 }
 
-static void clar_print_tap_ontest(const char *suite_name, const char *test_name, int test_number, enum cl_test_status status)
+static void clar_print_tap_test_start(const char *suite_name, const char *test_name, int test_number)
+{
+	(void)suite_name;
+	(void)test_name;
+	(void)test_number;
+}
+
+static void clar_print_tap_test_finish(const char *suite_name, const char *test_name, int test_number, const struct clar_report *report)
 {
 	const struct clar_error *error = _clar.last_report->errors;
 
 	(void)test_name;
 	(void)test_number;
 
-	switch(status) {
+	switch(report->status) {
 	case CL_TEST_OK:
 		printf("ok %d - %s::%s\n", test_number, suite_name, test_name);
 		break;
@@ -155,7 +171,7 @@ static void clar_print_tap_ontest(const char *suite_name, const char *test_name,
 		if (_clar.verbosity >= 0) {
 			printf("    ---\n");
 			printf("    reason: |\n");
-			clar_print_indented(error->error_msg, 6);
+			clar_print_indented(error->message, 6);
 
 			if (error->description)
 				clar_print_indented(error->description, 6);
@@ -177,7 +193,7 @@ static void clar_print_tap_ontest(const char *suite_name, const char *test_name,
 	fflush(stdout);
 }
 
-static void clar_print_tap_onsuite(const char *suite_name, int suite_index)
+static void clar_print_tap_suite_start(const char *suite_name, int suite_index)
 {
 	if (_clar.verbosity < 0)
 		return;
@@ -191,6 +207,114 @@ static void clar_print_tap_onabort(const char *fmt, va_list arg)
 	fflush(stdout);
 }
 
+/* timings format: useful for benchmarks */
+
+static void clar_print_timing_init(int test_count, int suite_count)
+{
+	(void)test_count;
+	(void)suite_count;
+
+	printf("Started benchmarks (mean time ± stddev / min time … max time):\n\n");
+}
+
+static void clar_print_timing_shutdown(int test_count, int suite_count, int error_count)
+{
+	(void)test_count;
+	(void)suite_count;
+	(void)error_count;
+}
+
+static void clar_print_timing_error(int num, const struct clar_report *report, const struct clar_error *error)
+{
+	(void)num;
+	(void)report;
+	(void)error;
+}
+
+static void clar_print_timing_test_start(const char *suite_name, const char *test_name, int test_number)
+{
+	(void)test_number;
+
+	printf("%s::%s:  ", suite_name, test_name);
+	fflush(stdout);
+}
+
+static void clar_print_timing_time(double t)
+{
+	static const char *units[] = { "sec", "ms", "μs", "ns" };
+	static const int units_len = sizeof(units) / sizeof(units[0]);
+	int unit = 0, exponent = 0, digits;
+
+	while (t < 1.0 && unit < units_len - 1) {
+		t *= 1000.0;
+		unit++;
+	}
+
+	while (t > 0.0 && t < 1.0 && exponent < 10) {
+		t *= 10.0;
+		exponent++;
+	}
+
+	digits = (t < 10.0) ? 3 : ((t < 100.0) ? 2 : 1);
+
+	printf("%.*f", digits, t);
+
+	if (exponent > 0)
+		printf("e-%d", exponent);
+
+	printf(" %s", units[unit]);
+}
+
+static void clar_print_timing_test_finish(const char *suite_name, const char *test_name, int test_number, const struct clar_report *report)
+{
+	const struct clar_error *error = _clar.last_report->errors;
+
+	(void)suite_name;
+	(void)test_name;
+	(void)test_number;
+
+	switch(report->status) {
+	case CL_TEST_OK:
+		clar_print_timing_time(report->time_mean);
+
+		if (report->runs > 1) {
+			printf(" ± ");
+			clar_print_timing_time(report->time_stddev);
+
+			printf(" / range: ");
+			clar_print_timing_time(report->time_min);
+			printf(" … ");
+			clar_print_timing_time(report->time_max);
+			printf("  (%d runs)", report->runs);
+		}
+
+		printf("\n");
+		break;
+	case CL_TEST_FAILURE:
+		printf("failed: %s\n", error->message);
+		break;
+	case CL_TEST_SKIP:
+	case CL_TEST_NOTRUN:
+		printf("skipped\n");
+		break;
+	}
+
+	fflush(stdout);
+}
+
+static void clar_print_timing_suite_start(const char *suite_name, int suite_index)
+{
+	if (_clar.verbosity == 1)
+		printf("\n%s", suite_name);
+
+	(void)suite_index;
+}
+
+static void clar_print_timing_onabort(const char *fmt, va_list arg)
+{
+	vfprintf(stderr, fmt, arg);
+}
+
 /* indirection between protocol output selection */
 
 #define PRINT(FN, ...) do { \
@@ -200,6 +324,9 @@ static void clar_print_tap_onabort(const char *fmt, va_list arg)
 				break; \
 			case CL_OUTPUT_TAP: \
 				clar_print_tap_##FN (__VA_ARGS__); \
+				break; \
+			case CL_OUTPUT_TIMING: \
+				clar_print_timing_##FN (__VA_ARGS__); \
 				break; \
 			default: \
 				abort(); \
@@ -221,14 +348,19 @@ static void clar_print_error(int num, const struct clar_report *report, const st
 	PRINT(error, num, report, error);
 }
 
-static void clar_print_ontest(const char *suite_name, const char *test_name, int test_number, enum cl_test_status status)
+static void clar_print_test_start(const char *suite_name, const char *test_name, int test_number)
 {
-	PRINT(ontest, suite_name, test_name, test_number, status);
+	PRINT(test_start, suite_name, test_name, test_number);
 }
 
-static void clar_print_onsuite(const char *suite_name, int suite_index)
+static void clar_print_test_finish(const char *suite_name, const char *test_name, int test_number, const struct clar_report *report)
 {
-	PRINT(onsuite, suite_name, suite_index);
+	PRINT(test_finish, suite_name, test_name, test_number, report);
+}
+
+static void clar_print_suite_start(const char *suite_name, int suite_index)
+{
+	PRINT(suite_start, suite_name, suite_index);
 }
 
 static void clar_print_onabortv(const char *msg, va_list argp)
