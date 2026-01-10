@@ -4,8 +4,6 @@ These are the unit and integration tests for the libgit2 projects.
 
 * `benchmarks`
   These are benchmark tests that excercise the CLI.
-* `clar`  
-  This is [clar](https://github.com/clar-test/clar) the common test framework.
 * `headertest`  
   This is a simple project that ensures that our public headers are
   compatible with extremely strict compilation options.
