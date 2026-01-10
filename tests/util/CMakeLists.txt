@@ -10,7 +10,7 @@ find_package(PythonInterp)
 if(NOT PYTHONINTERP_FOUND)
 	message(FATAL_ERROR "Could not find a python interpeter, which is needed to build the tests. "
 	                     "Make sure python is available, or pass -DBUILD_TESTS=OFF to skip building the tests")
-ENDIF()
+endif()
 
 set(CLAR_PATH "${libgit2_SOURCE_DIR}/deps/clar")
 set(CLAR_FIXTURES "${libgit2_SOURCE_DIR}/tests/resources/")
@@ -48,7 +48,11 @@ set_target_properties(util_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${libgit2_B
 
 target_include_directories(util_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 target_include_directories(util_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
+
 target_link_libraries(util_tests ${LIBGIT2_SYSTEM_LIBS})
+if(NOT MSVC_IDE)
+	target_link_libraries(util_tests m)
+endif()
 
 ide_split_sources(util_tests)
 
