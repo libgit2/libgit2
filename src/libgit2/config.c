@@ -1442,14 +1442,12 @@ int git_config_parse_bool(int *out, const char *value)
 	if (git__parse_bool(out, value) == 0)
 		return 0;
 
-	/* git__parse_bool returns 0 for NULL, so this assertion should be correct */
-	GIT_ASSERT_ARG(value);
 	if (git_config_parse_int32(out, value) == 0) {
 		*out = !!(*out);
 		return 0;
 	}
 
-	git_error_set(GIT_ERROR_CONFIG, "failed to parse '%s' as a boolean value", value);
+	git_error_set(GIT_ERROR_CONFIG, "failed to parse '%s' as a boolean", value ? value : "(null)");
 	return -1;
 }
 
