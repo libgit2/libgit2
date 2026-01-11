@@ -64,13 +64,13 @@ GIT_INLINE(int) git_smart__reset_stream(transport_smart *t, bool close_subtransp
 
 		if (t->wrapped->close(t->wrapped) < 0)
 			return -1;
+
+		git__free(t->caps.object_format);
+		t->caps.object_format = NULL;
+
+		git__free(t->caps.agent);
+		t->caps.agent = NULL;
 	}
-
-	git__free(t->caps.object_format);
-	t->caps.object_format = NULL;
-
-	git__free(t->caps.agent);
-	t->caps.agent = NULL;
 
 	return 0;
 }
