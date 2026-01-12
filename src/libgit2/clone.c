@@ -193,7 +193,7 @@ static int update_remote_head(
 		"%s%s/%s",
 		GIT_REFS_REMOTES_DIR,
 		git_remote_name(remote),
-		GIT_HEAD_FILE)) < 0)
+		GIT_HEAD_REF)) < 0)
 		goto cleanup;
 
 	error = git_reference_symbolic_create(
@@ -226,7 +226,7 @@ static int update_head_to_remote(
 		return error;
 
 	/* We cloned an empty repository or one with an unborn HEAD */
-	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_FILE))
+	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_REF))
 		return update_head_to_default(repo);
 
 	/* We know we have HEAD, let's see where it points */

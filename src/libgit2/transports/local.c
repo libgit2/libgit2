@@ -77,7 +77,7 @@ static int add_ref(transport_local *t, const char *name)
 	error = git_reference_resolve(&resolved, ref);
 	if (error < 0) {
 		git_reference_free(ref);
-		if (!strcmp(name, GIT_HEAD_FILE) && error == GIT_ENOTFOUND) {
+		if (!strcmp(name, GIT_HEAD_REF) && error == GIT_ENOTFOUND) {
 			/* This is actually okay.  Empty repos often have a HEAD that
 			 * points to a nonexistent "refs/heads/master". */
 			git_error_clear();
@@ -169,7 +169,7 @@ static int store_refs(transport_local *t)
 	git__tsort((void **)ref_names.strings, ref_names.count, &git__strcmp_cb);
 
 	/* Add HEAD iff direction is fetch */
-	if (t->direction == GIT_DIRECTION_FETCH && add_ref(t, GIT_HEAD_FILE) < 0)
+	if (t->direction == GIT_DIRECTION_FETCH && add_ref(t, GIT_HEAD_REF) < 0)
 		goto on_error;
 
 	for (i = 0; i < ref_names.count; ++i) {

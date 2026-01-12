@@ -163,10 +163,10 @@ static int retrieve_previously_checked_out_branch_or_revision(git_object **out, 
 	if (build_regex(&preg, "checkout: moving from (.*) to .*") < 0)
 		return -1;
 
-	if (git_reference_lookup(&ref, repo, GIT_HEAD_FILE) < 0)
+	if (git_reference_lookup(&ref, repo, GIT_HEAD_REF) < 0)
 		goto cleanup;
 
-	if (git_reflog_read(&reflog, repo, GIT_HEAD_FILE) < 0)
+	if (git_reflog_read(&reflog, repo, GIT_HEAD_REF) < 0)
 		goto cleanup;
 
 	numentries  = git_reflog_entrycount(reflog);
@@ -279,8 +279,8 @@ static int retrieve_revobject_from_reflog(git_object **out, git_reference **base
 		 * When HEAD@{n} is specified, do not use dwim, which would resolve the
 		 * reference (to the current branch that HEAD is pointing to).
 		 */
-		if (position > 0 && strcmp(identifier, GIT_HEAD_FILE) == 0)
-			error = git_reference_lookup(&ref, repo, GIT_HEAD_FILE);
+		if (position > 0 && strcmp(identifier, GIT_HEAD_REF) == 0)
+			error = git_reference_lookup(&ref, repo, GIT_HEAD_REF);
 		else
 			error = git_reference_dwim(&ref, repo, identifier);
 
