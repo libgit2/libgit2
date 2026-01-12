@@ -39,7 +39,7 @@ typedef struct {
  *
  * This is a public structure that represents a file entry in the index.
  * The meaning of the fields corresponds to core Git's documentation (in
- * "Documentation/technical/index-format.txt").
+ * "Documentation/gitformat-index.adoc").
  *
  * The `flags` field consists of a number of bit fields which can be
  * accessed via the first set of `GIT_INDEX_ENTRY_...` bitmasks below.
