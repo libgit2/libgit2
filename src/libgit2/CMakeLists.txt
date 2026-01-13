@@ -55,6 +55,12 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 # Compile and link libgit2
 #
 
+if (NOT BUILD_SHARED_LIBS AND XCODE_VERSION)
+	# This is required for Xcode to actually create the static libgit2 library
+	file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dummy.c "")
+	list(APPEND LIBGIT2_OBJECTS ${CMAKE_CURRENT_BINARY_DIR}/dummy.c)
+endif()
+
 add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
 target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
