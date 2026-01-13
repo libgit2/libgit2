@@ -2029,34 +2029,6 @@ done:
 	return out;
 }
 
-static int reflog_alloc(
-	git_reflog **reflog,
-	const char *name,
-	git_oid_t oid_type)
-{
-	git_reflog *log;
-
-	*reflog = NULL;
-
-	log = git__calloc(1, sizeof(git_reflog));
-	GIT_ERROR_CHECK_ALLOC(log);
-
-	log->ref_name = git__strdup(name);
-	GIT_ERROR_CHECK_ALLOC(log->ref_name);
-
-	log->oid_type = oid_type;
-
-	if (git_vector_init(&log->entries, 0, NULL) < 0) {
-		git__free(log->ref_name);
-		git__free(log);
-		return -1;
-	}
-
-	*reflog = log;
-
-	return 0;
-}
-
 static int reflog_parse(git_reflog *log, const char *buf, size_t buf_size)
 {
 	git_parse_ctx parser = GIT_PARSE_CTX_INIT;
@@ -2194,7 +2166,7 @@ static int refdb_reflog_fs__read(
 	backend = GIT_CONTAINER_OF(_backend, refdb_fs_backend, parent);
 	repo = backend->repo;
 
-	if (reflog_alloc(&log, name, backend->oid_type) < 0)
+	if (git_reflog__alloc(&log, name, backend->oid_type) < 0)
 		return -1;
 
 	if (reflog_path(&log_path, repo, name) < 0)
