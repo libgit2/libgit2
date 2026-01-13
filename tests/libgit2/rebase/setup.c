@@ -23,6 +23,18 @@ void test_rebase_setup__cleanup(void)
 	cl_git_sandbox_cleanup();
 }
 
+static void cl_assert_equal_ref(const char *oid_str, const char *refname)
+{
+	git_reference *ref;
+	git_oid oid;
+
+	cl_git_pass(git_oid_from_string(&oid, oid_str, GIT_OID_SHA1));
+	cl_git_pass(git_reference_lookup(&ref, repo, refname));
+	cl_assert_equal_oid(&oid, git_reference_target(ref));
+
+	git_reference_free(ref);
+}
+
 /* git checkout beef ; git rebase --merge master
  * git checkout beef ; git rebase --merge master */
 void test_rebase_setup__blocked_when_in_progress(void)
@@ -79,7 +91,7 @@ void test_rebase_setup__merge(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("b146bd7608eac53d9bf9e1a6963543588b555c64\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("b146bd7608eac53d9bf9e1a6963543588b555c64", "ORIG_HEAD");
 
 	cl_assert_equal_file("da9c51a23d02d931a486f45ad18cda05cf5d2b94\n", 41, "rebase/.git/rebase-merge/cmt.1");
 	cl_assert_equal_file("8d1f13f93c4995760ac07d129246ac1ff64c0be9\n", 41, "rebase/.git/rebase-merge/cmt.2");
@@ -125,7 +137,7 @@ void test_rebase_setup__merge_root(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("b146bd7608eac53d9bf9e1a6963543588b555c64\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("b146bd7608eac53d9bf9e1a6963543588b555c64", "ORIG_HEAD");
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -175,7 +187,7 @@ void test_rebase_setup__merge_onto_and_upstream(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("d616d97082eb7bb2dc6f180a7cca940993b7a56f\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("d616d97082eb7bb2dc6f180a7cca940993b7a56f", "ORIG_HEAD");
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -229,7 +241,7 @@ void test_rebase_setup__merge_onto_upstream_and_branch(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("f87d14a4a236582a0278a916340a793714256864\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("f87d14a4a236582a0278a916340a793714256864", "ORIG_HEAD");
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -287,7 +299,7 @@ void test_rebase_setup__merge_onto_upstream_and_branch_by_id(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("d616d97082eb7bb2dc6f180a7cca940993b7a56f\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("d616d97082eb7bb2dc6f180a7cca940993b7a56f", "ORIG_HEAD");
 
 	cl_assert_equal_i(GIT_REPOSITORY_STATE_REBASE_MERGE, git_repository_state(repo));
 
@@ -333,7 +345,7 @@ void test_rebase_setup__branch_with_merges(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("f87d14a4a236582a0278a916340a793714256864\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("f87d14a4a236582a0278a916340a793714256864", "ORIG_HEAD");
 
 	cl_assert_equal_file("4bed71df7017283cac61bbf726197ad6a5a18b84\n", 41, "rebase/.git/rebase-merge/cmt.1");
 	cl_assert_equal_file("2aa3ce842094e08ebac152b3d6d5b0fff39f9c6e\n", 41, "rebase/.git/rebase-merge/cmt.2");
@@ -381,7 +393,7 @@ void test_rebase_setup__orphan_branch(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("12c084412b952396962eb420716df01022b847cc\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("12c084412b952396962eb420716df01022b847cc", "ORIG_HEAD");
 
 	cl_assert_equal_file("aa4c42aecdfc7cd989bbc3209934ea7cda3f4d88\n", 41, "rebase/.git/rebase-merge/cmt.1");
 	cl_assert_equal_file("e4f809f826c1a9fc929874bc0e4644dd2f2a1af4\n", 41, "rebase/.git/rebase-merge/cmt.2");
@@ -432,7 +444,7 @@ void test_rebase_setup__merge_null_branch_uses_HEAD(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("b146bd7608eac53d9bf9e1a6963543588b555c64\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("b146bd7608eac53d9bf9e1a6963543588b555c64", "ORIG_HEAD");
 
 	cl_assert_equal_file("da9c51a23d02d931a486f45ad18cda05cf5d2b94\n", 41, "rebase/.git/rebase-merge/cmt.1");
 	cl_assert_equal_file("8d1f13f93c4995760ac07d129246ac1ff64c0be9\n", 41, "rebase/.git/rebase-merge/cmt.2");
@@ -479,7 +491,7 @@ void test_rebase_setup__merge_from_detached(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("b146bd7608eac53d9bf9e1a6963543588b555c64\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("b146bd7608eac53d9bf9e1a6963543588b555c64", "ORIG_HEAD");
 
 	cl_assert_equal_file("da9c51a23d02d931a486f45ad18cda05cf5d2b94\n", 41, "rebase/.git/rebase-merge/cmt.1");
 	cl_assert_equal_file("8d1f13f93c4995760ac07d129246ac1ff64c0be9\n", 41, "rebase/.git/rebase-merge/cmt.2");
@@ -527,7 +539,7 @@ void test_rebase_setup__merge_branch_by_id(void)
 	cl_git_pass(git_reference_peel((git_object **)&head_commit, head, GIT_OBJECT_COMMIT));
 	cl_assert_equal_oid(&head_id, git_commit_id(head_commit));
 
-	cl_assert_equal_file("b146bd7608eac53d9bf9e1a6963543588b555c64\n", 41, "rebase/.git/ORIG_HEAD");
+	cl_assert_equal_ref("b146bd7608eac53d9bf9e1a6963543588b555c64", "ORIG_HEAD");
 
 	cl_assert_equal_file("da9c51a23d02d931a486f45ad18cda05cf5d2b94\n", 41, "rebase/.git/rebase-merge/cmt.1");
 	cl_assert_equal_file("8d1f13f93c4995760ac07d129246ac1ff64c0be9\n", 41, "rebase/.git/rebase-merge/cmt.2");

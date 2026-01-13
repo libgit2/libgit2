@@ -504,6 +504,26 @@ void cl_repo_set_string(git_repository *repo, const char *cfg, const char *value
 	git_config_free(config);
 }
 
+int cl_repo_has_ref_format(git_repository *repo, const char *format)
+{
+	const char *configured_format;
+	git_config *config;
+	int result;
+
+	cl_git_pass(git_repository_config_snapshot(&config, repo));
+	result = git_config_get_string(&configured_format, config,
+				       "extensions.refStorage");
+	if (result < 0 && result != GIT_ENOTFOUND)
+		cl_fail("cannot read extensions.refStorage");
+	if (result < 0)
+		configured_format = "files";
+
+	result = !strcmp(configured_format, format);
+
+	git_config_free(config);
+	return result;
+}
+
 /* this is essentially the code from git__unescape modified slightly */
 static size_t strip_cr_from_buf(char *start, size_t len)
 {
