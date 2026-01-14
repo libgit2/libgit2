@@ -167,14 +167,9 @@ void test_remote_insteadof__detached_remote_fetch_insteadof(void)
 	cl_git_pass(git_remote_create_detached(&g_remote,
 	    "http://example.com/url/fetch/libgit2"));
 
-	/*
-	 * TODO: this should be "http://github.com/url/fetch/libgit2" once
-	 * git_remote_create_detached applies insteadOf from global config.
-	 * See: https://github.com/libgit2/libgit2/issues/5469
-	 */
 	cl_assert_equal_s(
 	    git_remote_url(g_remote),
-	    "http://example.com/url/fetch/libgit2");
+	    "http://github.com/url/fetch/libgit2");
 	cl_assert_equal_p(git_remote_pushurl(g_remote), NULL);
 }
 
@@ -195,12 +190,9 @@ void test_remote_insteadof__detached_remote_push_insteadof(void)
 	cl_assert_equal_s(
 	    git_remote_url(g_remote),
 	    "http://example.com/url/push/libgit2");
-	/*
-	 * TODO: this should be "git@github.com:url/push/libgit2" once
-	 * git_remote_create_detached applies pushInsteadOf from global config.
-	 * See: https://github.com/libgit2/libgit2/issues/5469
-	 */
-	cl_assert_equal_p(git_remote_pushurl(g_remote), NULL);
+	cl_assert_equal_s(
+	    git_remote_pushurl(g_remote),
+	    "git@github.com:url/push/libgit2");
 }
 
 void test_remote_insteadof__detached_remote_both_insteadof(void)
@@ -219,13 +211,10 @@ void test_remote_insteadof__detached_remote_both_insteadof(void)
 	cl_git_pass(git_remote_create_detached(&g_remote,
 	    "http://example.com/url/both/libgit2"));
 
-	/*
-	 * TODO: these should be the rewritten URLs once
-	 * git_remote_create_detached applies insteadOf from global config.
-	 * See: https://github.com/libgit2/libgit2/issues/5469
-	 */
 	cl_assert_equal_s(
 	    git_remote_url(g_remote),
-	    "http://example.com/url/both/libgit2");
-	cl_assert_equal_p(git_remote_pushurl(g_remote), NULL);
+	    "http://github.com/url/both/libgit2");
+	cl_assert_equal_s(
+	    git_remote_pushurl(g_remote),
+	    "git@github.com:url/both/libgit2");
 }
