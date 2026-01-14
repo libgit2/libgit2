@@ -101,10 +101,9 @@ typedef enum {
 
 /** Unique identity of any object (commit, tree, blob, tag). */
 typedef struct git_oid {
-
 #ifdef GIT_EXPERIMENTAL_SHA256
 	/** type of object id */
-	unsigned char type;
+	uint8_t type;
 #endif
 
 	/** raw binary formatted id */

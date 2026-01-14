@@ -22,7 +22,11 @@ const git_oid git_oid__empty_tree_sha1 =
 	  { 0x4b, 0x82, 0x5d, 0xc6, 0x42, 0xcb, 0x6e, 0xb9, 0xa0, 0x60,
 	    0xe5, 0x4b, 0xf8, 0xd6, 0x92, 0x88, 0xfb, 0xee, 0x49, 0x04 });
 
-static const unsigned char git_oid_zero[GIT_OID_MAX_SIZE] = {0};
+static const git_oid git_oid_sha1_zero = GIT_OID_SHA1_ZERO;
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+static const git_oid git_oid_sha256_zero = GIT_OID_SHA256_ZERO;
+#endif
 
 static int oid_error_invalid(const char *msg)
 {
@@ -231,16 +235,18 @@ int git_oid_fromraw(git_oid *out, const unsigned char *raw)
 
 int git_oid_cpy(git_oid *out, const git_oid *src)
 {
-	size_t size;
-
-	if (!(size = git_oid_size(git_oid_type(src))))
-		return oid_error_invalid("unknown type");
-
 #ifdef GIT_EXPERIMENTAL_SHA256
-	out->type = src->type;
+	switch (src->type) {
+	case GIT_OID_SHA1:
+	case GIT_OID_SHA256:
+		break;
+	default:
+		git_error_set(GIT_ERROR_INVALID, "invalid object ID type");
+		return -1;
+	}
 #endif
-
-	return git_oid_raw_cpy(out->id, src->id, size);
+	memcpy(out, src, sizeof(git_oid));
+	return 0;
 }
 
 int git_oid_cmp(const git_oid *a, const git_oid *b)
@@ -293,17 +299,20 @@ int git_oid_streq(const git_oid *oid_a, const char *str)
 
 int git_oid_is_zero(const git_oid *oid_a)
 {
-	const unsigned char *a = oid_a->id;
-	size_t size = git_oid_size(git_oid_type(oid_a));
-
 #ifdef GIT_EXPERIMENTAL_SHA256
-	if (!oid_a->type)
+	switch (oid_a->type) {
+	case 0:
 		return 1;
-	else if (!size)
+	case GIT_OID_SHA1:
+		return memcmp(oid_a->id, &git_oid_sha1_zero.id, 40);
+	case GIT_OID_SHA256:
+		return memcmp(oid_a->id, &git_oid_sha256_zero.id, 64);
+	default:
 		return 0;
+	}
+#else
+	return git_oid__cmp(oid_a, &git_oid_sha1_zero);
 #endif
-
-	return git_oid_raw_cmp(a, git_oid_zero, size) == 0 ? 1 : 0;
 }
 
 #ifndef GIT_DEPRECATE_HARD
