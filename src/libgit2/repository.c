@@ -3566,6 +3566,7 @@ int git_repository_hashfile(
 	git_object_t type,
 	const char *as_path)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 	int error;
 	git_filter_list *fl = NULL;
 	git_file fd = -1;
@@ -3620,7 +3621,11 @@ int git_repository_hashfile(
 		goto cleanup;
 	}
 
-	error = git_odb__hashfd_filtered(out, fd, (size_t)len, type, repo->oid_type, fl);
+	id_opts.object_type = type;
+	id_opts.oid_type = repo->oid_type;
+	id_opts.filters = fl;
+
+	error = git_object_id_from_fd(out, fd, (size_t)len, &id_opts);
 
 cleanup:
 	if (fd >= 0)

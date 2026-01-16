@@ -105,49 +105,6 @@ int git_odb__format_object_header(
 	return 0;
 }
 
-int git_odb__hashobj(git_oid *id, git_rawobj *obj, git_oid_t oid_type)
-{
-	git_str_vec vec[2];
-	char header[64];
-	size_t hdrlen;
-	git_hash_algorithm_t algorithm;
-	int error;
-
-	GIT_ASSERT_ARG(id);
-	GIT_ASSERT_ARG(obj);
-
-	if (!git_object_type_is_valid(obj->type)) {
-		git_error_set(GIT_ERROR_INVALID, "invalid object type");
-		return -1;
-	}
-
-	if (!(algorithm = git_oid_algorithm(oid_type))) {
-		git_error_set(GIT_ERROR_INVALID, "unknown oid type");
-		return -1;
-	}
-
-	if (!obj->data && obj->len != 0) {
-		git_error_set(GIT_ERROR_INVALID, "invalid object");
-		return -1;
-	}
-
-	if ((error = git_odb__format_object_header(&hdrlen,
-		header, sizeof(header), obj->len, obj->type)) < 0)
-		return error;
-
-	vec[0].data = header;
-	vec[0].len = hdrlen;
-	vec[1].data = obj->data;
-	vec[1].len = obj->len;
-
-#ifdef GIT_EXPERIMENTAL_SHA256
-	id->type = oid_type;
-#endif
-
-	return git_hash_vec(id->id, vec, 2, algorithm);
-}
-
-
 static git_odb_object *odb_object__alloc(const git_oid *oid, git_rawobj *source)
 {
 	git_odb_object *object = git__calloc(1, sizeof(git_odb_object));
@@ -205,231 +162,37 @@ void git_odb_object_free(git_odb_object *object)
 	git_cached_obj_decref(object);
 }
 
-int git_odb__hashfd(
-	git_oid *out,
-	git_file fd,
-	size_t size,
-	git_object_t object_type,
-	git_oid_t oid_type)
-{
-	size_t hdr_len;
-	char hdr[64], buffer[GIT_BUFSIZE_FILEIO];
-	git_hash_ctx ctx;
-	git_hash_algorithm_t algorithm;
-	ssize_t read_len = 0;
-	int error = 0;
+#ifndef GIT_DEPRECATE_HARD
 
-	if (!git_object_type_is_valid(object_type)) {
-		git_error_set(GIT_ERROR_INVALID, "invalid object type for hash");
-		return -1;
-	}
-
-	if (!(algorithm = git_oid_algorithm(oid_type))) {
-		git_error_set(GIT_ERROR_INVALID, "unknown oid type");
-		return -1;
-	}
-
-	if ((error = git_hash_ctx_init(&ctx, algorithm)) < 0)
-		return error;
-
-	if ((error = git_odb__format_object_header(&hdr_len, hdr,
-		sizeof(hdr), size, object_type)) < 0)
-		goto done;
-
-	if ((error = git_hash_update(&ctx, hdr, hdr_len)) < 0)
-		goto done;
-
-	while (size > 0 && (read_len = p_read(fd, buffer, sizeof(buffer))) > 0) {
-		if ((error = git_hash_update(&ctx, buffer, read_len)) < 0)
-			goto done;
-
-		size -= read_len;
-	}
-
-	/* If p_read returned an error code, the read obviously failed.
-	 * If size is not zero, the file was truncated after we originally
-	 * stat'd it, so we consider this a read failure too */
-	if (read_len < 0 || size > 0) {
-		git_error_set(GIT_ERROR_OS, "error reading file for hashing");
-		error = -1;
-
-		goto done;
-	}
-
-	error = git_hash_final(out->id, &ctx);
-
-#ifdef GIT_EXPERIMENTAL_SHA256
-	out->type = oid_type;
-#endif
-
-done:
-	git_hash_ctx_cleanup(&ctx);
-	return error;
-}
-
-int git_odb__hashfd_filtered(
-	git_oid *out,
-	git_file fd,
-	size_t size,
-	git_object_t object_type,
-	git_oid_t oid_type,
-	git_filter_list *fl)
-{
-	int error;
-	git_str raw = GIT_STR_INIT;
-
-	if (!fl)
-		return git_odb__hashfd(out, fd, size, object_type, oid_type);
-
-	/* size of data is used in header, so we have to read the whole file
-	 * into memory to apply filters before beginning to calculate the hash
-	 */
-
-	if (!(error = git_futils_readbuffer_fd(&raw, fd, size))) {
-		git_str post = GIT_STR_INIT;
-
-		error = git_filter_list__convert_buf(&post, fl, &raw);
-
-		if (!error)
-			error = git_odb__hash(out, post.ptr, post.size, object_type, oid_type);
-
-		git_str_dispose(&post);
-	}
-
-	return error;
-}
-
-int git_odb__hashlink(git_oid *out, const char *path, git_oid_t oid_type)
-{
-	struct stat st;
-	int size;
-	int result;
-
-	if (git_fs_path_lstat(path, &st) < 0)
-		return -1;
-
-	if (!git__is_int(st.st_size) || (int)st.st_size < 0) {
-		git_error_set(GIT_ERROR_FILESYSTEM, "file size overflow for 32-bit systems");
-		return -1;
-	}
-
-	size = (int)st.st_size;
-
-	if (S_ISLNK(st.st_mode)) {
-		char *link_data;
-		int read_len;
-		size_t alloc_size;
-
-		GIT_ERROR_CHECK_ALLOC_ADD(&alloc_size, size, 1);
-		link_data = git__malloc(alloc_size);
-		GIT_ERROR_CHECK_ALLOC(link_data);
-
-		read_len = p_readlink(path, link_data, size);
-		if (read_len == -1) {
-			git_error_set(GIT_ERROR_OS, "failed to read symlink data for '%s'", path);
-			git__free(link_data);
-			return -1;
-		}
-		GIT_ASSERT(read_len <= size);
-		link_data[read_len] = '\0';
-
-		result = git_odb__hash(out, link_data, read_len, GIT_OBJECT_BLOB, oid_type);
-		git__free(link_data);
-	} else {
-		int fd = git_futils_open_ro(path);
-		if (fd < 0)
-			return -1;
-		result = git_odb__hashfd(out, fd, size, GIT_OBJECT_BLOB, oid_type);
-		p_close(fd);
-	}
-
-	return result;
-}
-
-int git_odb__hashfile(
-	git_oid *out,
-	const char *path,
-	git_object_t object_type,
-	git_oid_t oid_type)
-{
-	uint64_t size;
-	int fd, error = 0;
-
-	if ((fd = git_futils_open_ro(path)) < 0)
-		return fd;
-
-	if ((error = git_futils_filesize(&size, fd)) < 0)
-		goto done;
-
-	if (!git__is_sizet(size)) {
-		git_error_set(GIT_ERROR_OS, "file size overflow for 32-bit systems");
-		error = -1;
-		goto done;
-	}
-
-	error = git_odb__hashfd(out, fd, (size_t)size, object_type, oid_type);
-
-done:
-	p_close(fd);
-	return error;
-}
-
-#ifdef GIT_EXPERIMENTAL_SHA256
-int git_odb_hashfile(
-	git_oid *out,
-	const char *path,
-	git_object_t object_type,
-	git_oid_t oid_type)
-{
-	return git_odb__hashfile(out, path, object_type, oid_type);
-}
-#else
 int git_odb_hashfile(
 	git_oid *out,
 	const char *path,
 	git_object_t object_type)
 {
-	return git_odb__hashfile(out, path, object_type, GIT_OID_SHA1);
-}
-#endif
+	git_object_id_options opts = GIT_OBJECT_ID_OPTIONS_INIT;
 
-int git_odb__hash(
+	GIT_ASSERT_ARG(object_type);
+
+	opts.object_type = object_type;
+
+	return git_object_id_from_file(out, path, &opts);
+}
+
+int git_odb_hash(
 	git_oid *id,
 	const void *data,
 	size_t len,
-	git_object_t object_type,
-	git_oid_t oid_type)
+	git_object_t object_type)
 {
-	git_rawobj raw;
+	git_object_id_options opts = GIT_OBJECT_ID_OPTIONS_INIT;
 
-	GIT_ASSERT_ARG(id);
+	GIT_ASSERT_ARG(object_type);
 
-	raw.data = (void *)data;
-	raw.len = len;
-	raw.type = object_type;
+	opts.object_type = object_type;
 
-	return git_odb__hashobj(id, &raw, oid_type);
+	return git_object_id_from_buffer(id, data, len, &opts);
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-int git_odb_hash(
-	git_oid *out,
-	const void *data,
-	size_t len,
-	git_object_t object_type,
-	git_oid_t oid_type)
-{
-	return git_odb__hash(out, data, len, object_type, oid_type);
-}
-#else
-int git_odb_hash(
-	git_oid *out,
-	const void *data,
-	size_t len,
-	git_object_t type)
-{
-	return git_odb__hash(out, data, len, type, GIT_OID_SHA1);
-}
 #endif
 
 /**
@@ -1358,7 +1121,13 @@ static int odb_read_1(
 		return GIT_ENOTFOUND;
 
 	if (git_odb__strict_hash_verification) {
-		if ((error = git_odb__hash(&hashed, raw.data, raw.len, raw.type, db->options.oid_type)) < 0)
+		git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
+
+		id_opts.object_type = raw.type;
+		id_opts.oid_type = db->options.oid_type;
+
+		if ((error = git_object_id_from_buffer(&hashed,
+				raw.data, raw.len, &id_opts)) < 0)
 			goto out;
 
 		if (!git_oid_equal(id, &hashed)) {
@@ -1502,9 +1271,14 @@ static int read_prefix_1(git_odb_object **out, git_odb *db,
 		return GIT_ENOTFOUND;
 
 	if (git_odb__strict_hash_verification) {
+		git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 		git_oid hash;
 
-		if ((error = git_odb__hash(&hash, raw.data, raw.len, raw.type, db->options.oid_type)) < 0)
+		id_opts.object_type = raw.type;
+		id_opts.oid_type = db->options.oid_type;
+
+		if ((error = git_object_id_from_buffer(&hash,
+				raw.data, raw.len, &id_opts)) < 0)
 			goto out;
 
 		if (!git_oid_equal(&found_full_oid, &hash)) {
@@ -1598,14 +1372,18 @@ cleanup:
 int git_odb_write(
 	git_oid *oid, git_odb *db, const void *data, size_t len, git_object_t type)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
+	git_odb_stream *stream;
 	size_t i;
 	int error;
-	git_odb_stream *stream;
+
+	id_opts.object_type = type;
+	id_opts.oid_type = db->options.oid_type;
 
 	GIT_ASSERT_ARG(oid);
 	GIT_ASSERT_ARG(db);
 
-	if ((error = git_odb__hash(oid, data, len, type, db->options.oid_type)) < 0)
+	if ((error = git_object_id_from_buffer(oid, data, len, &id_opts)) < 0)
 		return error;
 
 	if (git_oid_is_zero(oid))

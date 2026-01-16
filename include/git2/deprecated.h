@@ -677,6 +677,56 @@ GIT_EXTERN(int) git_object_typeisloose(git_object_t type);
 
 /**@}*/
 
+/** @name Deprecated Object Database Functions
+ *
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these functions should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility functions at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Generate the SHA1 object ID for a given data buffer.
+ *
+ * @deprecated use `git_object_id_from_buffer`
+ *
+ * @param[out] oid the resulting object ID.
+ * @param data data to hash
+ * @param len size of the data
+ * @param object_type of the data to hash
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_hash(
+	git_oid *oid,
+	const void *data,
+	size_t len,
+	git_object_t object_type);
+
+/**
+ * Read a file from disk and fill a git_oid with the object id
+ * that the file would have if it were written to the Object
+ * Database as an object of the given type (w/o applying filters).
+ * Similar functionality to git.git's `git hash-object` without
+ * the `-w` flag, however, with the --no-filters flag.
+ * If you need filters, see `git_repository_hashfile` or
+ * `git_object_id_from_file.
+ *
+ * @deprecated use `git_object_id_from_file`
+ *
+ * @param[out] oid oid structure the result is written into.
+ * @param path file to read and determine object id for
+ * @param object_type of the data to hash
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_hashfile(
+	git_oid *oid,
+	const char *path,
+	git_object_t object_type);
+
+/**@}*/
+
 /** @name Deprecated Remote Functions
  *
  * These functions are retained for backward compatibility.  The newer
