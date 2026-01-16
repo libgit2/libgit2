@@ -53,6 +53,16 @@ void test_merge_workdir_submodules__automerge(void)
 
 	cl_git_pass(git_repository_index(&index, repo));
 	cl_assert(merge_test_index(index, merge_index_entries, 6));
+	cl_assert_equal_i(true, git_index_has_conflicts(index));
+
+	/* Put an actual Git repository into the submodule path on disk.
+	 * Add it to the index and assert that the conflict is resolved.
+	 */
+	cl_fixture_sandbox("testrepo");
+	p_rename("testrepo", TEST_REPO_PATH "/submodule");
+	p_rename(TEST_REPO_PATH "/submodule/.gitted", TEST_REPO_PATH "/submodule/.git");
+	cl_git_pass(git_index_add_bypath(index, "submodule"));
+	cl_assert_equal_i(false, git_index_has_conflicts(index));
 
 	git_index_free(index);
 	git_annotated_commit_free(their_head);
