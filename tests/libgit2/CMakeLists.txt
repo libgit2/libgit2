@@ -12,7 +12,7 @@ if(NOT PYTHONINTERP_FOUND)
 	                     "Make sure python is available, or pass -DBUILD_TESTS=OFF to skip building the tests")
 ENDIF()
 
-set(CLAR_PATH "${PROJECT_SOURCE_DIR}/tests/clar")
+set(CLAR_PATH "${PROJECT_SOURCE_DIR}/deps/clar")
 set(CLAR_FIXTURES "${PROJECT_SOURCE_DIR}/tests/resources/")
 set(TEST_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
