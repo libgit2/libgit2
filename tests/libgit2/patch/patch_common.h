@@ -924,6 +924,15 @@
 	"index 0000000..9e0f96a\n" \
 	"Binary files /dev/null and b/test.bin differ\n"
 
+#define PATCH_ORIGINAL_NEW_FILE_NO_SPACES \
+	"diff --git a/no_space.txt b/no_space.txt\n" \
+	"new file mode 100644\n" \
+	"index 000000000..789819226\n" \
+	"--- /dev/null\n" \
+	"+++ b/no_space.txt\n" \
+	"@@ -0,0 +1 @@\n" \
+	"+a\n"
+
 #define PATCH_ORIGINAL_NEW_FILE_WITH_SPACE \
 	"diff --git a/sp ace.txt b/sp ace.txt\n" \
 	"new file mode 100644\n" \
@@ -990,6 +999,31 @@
 	"--- \n" \
 	"+++ \n" \
 	"Binary files a b c and d e f differ"
+
+#define PATCH_BINARY_NEW_FILE_PATH_WITH_SPACES \
+	"diff --git a/new image.png b/new image.png\n" \
+	"new file mode 100644\n" \
+	"index 000000000..4ef673d95\n" \
+	"Binary files /dev/null and b/new image.png differ\n"
+
+#define PATCH_BINARY_RENAMED_FILE_PATH_WITH_SPACES \
+	"diff --git a/some image.png b/some image 2.png\n" \
+	"similarity index 100%\n" \
+	"rename from some image.png\n" \
+	"rename to some image 2.png\n"
+
+#define PATCH_BINARY_MODIFIED_FILE_PATH_WITH_SPACES \
+	"diff --git a/some image.png b/some image.png\n" \
+	"index 4ef673d95..4ba67b99f 100644\n" \
+	"Binary files a/some image.png and b/some image.png differ\n"
+
+#define PATCH_BINARY_RENAMED_AND_MODIFIED_FILE_PATH_WITH_SPACES \
+	"diff --git a/some image.png b/some image 2.png\n" \
+	"similarity index 99%\n" \
+	"rename from some image.png\n" \
+	"rename to some image 2.png\n" \
+	"index 4ef673d95..341f984f4 100644\n" \
+	"Binary files a/some image.png and b/some image 2.png differ\n"
 
 #define PATCH_BINARY_FILE_WITH_TRUNCATED_DELTA \
 	"diff --git a/file b/file\n" \

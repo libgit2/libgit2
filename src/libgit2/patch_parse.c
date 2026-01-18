@@ -89,18 +89,31 @@ static int parse_header_path_buf(git_str *path, git_patch_parse_ctx *ctx, size_t
 	return 0;
 }
 
-static int parse_header_path(char **out, git_patch_parse_ctx *ctx)
+static int parse_header_path_up_to_len(
+	char **out,
+	git_patch_parse_ctx *ctx,
+	size_t header_path_len)
 {
 	git_str path = GIT_STR_INIT;
 	int error;
 
-	if ((error = parse_header_path_buf(&path, ctx, header_path_len(ctx))) < 0)
+	if ((error = parse_header_path_buf(&path, ctx, header_path_len)) < 0)
 		goto out;
 	*out = git_str_detach(&path);
 
 out:
 	git_str_dispose(&path);
 	return error;
+}
+
+static int parse_header_path(char **out, git_patch_parse_ctx *ctx)
+{
+	return parse_header_path_up_to_len(out, ctx, header_path_len(ctx));
+}
+
+static int parse_header_path_to_end_of_line(char **out, git_patch_parse_ctx *ctx)
+{
+	return parse_header_path_up_to_len(out, ctx, ctx->parse_ctx.line_len - 1);
 }
 
 static int parse_header_git_oldpath(
@@ -263,7 +276,7 @@ static int parse_header_rename(
 {
 	git_str path = GIT_STR_INIT;
 
-	if (parse_header_path_buf(&path, ctx, header_path_len(ctx)) < 0)
+	if (parse_header_path_buf(&path, ctx, ctx->parse_ctx.line_len - 1) < 0)
 		return -1;
 
 	/* Note: the `rename from` and `rename to` lines include the literal
@@ -342,23 +355,276 @@ static int parse_header_dissimilarity(
 	return 0;
 }
 
-static int parse_header_start(git_patch_parsed *patch, git_patch_parse_ctx *ctx)
+static int check_prefix_len(
+	size_t *out_len,
+	git_patch_parsed *patch,
+	const char *path_start);
+
+static int parse_header_unquoted_pathnames_guessing_split_point(
+	char **out_old_path,
+	char **out_new_path,
+	git_patch_parsed *patch,
+	git_patch_parse_ctx *ctx)
 {
-	if (parse_header_path(&patch->header_old_path, ctx) < 0)
-		return git_parse_err("corrupt old path in git diff header at line %"PRIuZ,
+	/*
+	 If the file hasn't been renamed, it is still possible to unambiguously
+	 parse unquoted pathnames with spaces from the header line.
+
+	 If there are two equal pathnames taking up the rest of the line, with
+	 different prefixes and separated by one whitespace, then those are
+	 definitely the pathnames.
+
+	 If the file has been renamed it's impossible to unambiguously parse the
+	 pathnames from the header's first line. But it's ok because we can still
+	 get them un-prefixed from the "rename from/to" lines.
+	 */
+	char *both_paths = NULL;
+	size_t both_paths_len = 0;
+
+	size_t offset = 0;
+	bool did_parse_paths = false;
+	bool stop_path_matching_loop = false;
+
+	if (parse_header_path_to_end_of_line(&both_paths, ctx) < 0)
+		return git_parse_err("corrupt paths in git diff header at line %"PRIuZ,
 			ctx->parse_ctx.line_num);
 
-	if (git_parse_advance_ws(&ctx->parse_ctx) < 0 ||
-		parse_header_path(&patch->header_new_path, ctx) < 0)
+	both_paths_len = strlen(both_paths);
+
+	/* Try to determine which space is the separator between old/new paths. */
+	for (offset = 0;
+		 offset < both_paths_len && !stop_path_matching_loop;
+		 offset++) {
+		switch (both_paths[offset]) {
+			case '\n':
+				stop_path_matching_loop = true;
+				break;
+
+			case ' ':
+			case '\t':
+			{
+				/* +/-1 for the space character itself. */
+				const char *old_path_base = both_paths;
+				const char *new_path_base = both_paths + offset + 1;
+
+				size_t old_path_len = offset;
+				size_t new_path_len = both_paths_len - old_path_len - 1;
+
+				size_t old_prefix_len = 0, new_prefix_len = 0;
+
+				size_t old_path_minus_prefix_len = 0;
+				size_t new_path_minus_prefix_len = 0;
+
+				if (check_prefix_len(&old_prefix_len,
+									 patch,
+									 old_path_base) < 0 ||
+					check_prefix_len(&new_prefix_len,
+									 patch,
+									 new_path_base) < 0)
+					continue;
+
+				old_path_minus_prefix_len = old_path_len - old_prefix_len;
+				new_path_minus_prefix_len = new_path_len - new_prefix_len;
+
+				if (old_path_minus_prefix_len == new_path_minus_prefix_len &&
+					strncmp(old_path_base + old_prefix_len,
+							new_path_base + new_prefix_len,
+							old_path_minus_prefix_len) == 0)
+				{
+					*out_old_path = git__strndup(old_path_base, old_path_len);
+					*out_new_path = git__strndup(new_path_base, new_path_len);
+					did_parse_paths = true;
+					stop_path_matching_loop = true;
+				}
+			}
+				break;
+
+			default:
+				break;
+		}
+	}
+
+	git__free(both_paths);
+
+	if (!did_parse_paths) {
+		*out_old_path = NULL;
+		*out_new_path = NULL;
+	}
+	return 0;
+}
+
+static int parse_header_pathnames_heuristically(
+	char **out_old_path,
+	char **out_new_path,
+	git_patch_parsed *patch,
+	git_patch_parse_ctx *ctx)
+{
+	/*
+	 Parses header pathnames in a more elaborate manner that works even when
+	 one of the pathnames is unquoted and contains spaces, as long as it's
+	 possible to unambiguously identify where the old pathname ends and the
+	 new one begins.
+	 */
+	if (ctx->parse_ctx.line[0] == '"') {
+		
+		/* Parse the quoted OLD path. */
+		if (parse_header_path(out_old_path, ctx) < 0)
+			return git_parse_err("corrupt old path in git diff header at line %"PRIuZ,
+				ctx->parse_ctx.line_num);
+
+		if (git_parse_advance_ws(&ctx->parse_ctx) < 0)
+			return git_parse_err("missing expected separator space in git diff header at line %"PRIuZ,
+				ctx->parse_ctx.line_num);
+
+		/* Is the NEW path also quoted? */
+		if (ctx->parse_ctx.line[0] == '"') {
+			if (parse_header_path(out_new_path, ctx) < 0)
+				return git_parse_err("corrupt new path in git diff header at line %"PRIuZ,
+					ctx->parse_ctx.line_num);
+		} else {
+			if (parse_header_path_to_end_of_line(out_new_path, ctx) < 0)
+				return git_parse_err("corrupt new path in git diff header at line %"PRIuZ,
+					ctx->parse_ctx.line_num);
+		}
+	}
+	else {
+		/*
+		 The OLD path is unquoted. Maybe the NEW path is quoted though?
+		 That would give us an unambiguous split point.
+		 */
+		long dquote_offset = git_parse_unescaped_char_offset_in_line(&ctx->parse_ctx, '"');
+
+		/* `dquote_offset` can't possibly be 0 at this point, since we would
+		 have not fallen into this 'else' if that was the case. */
+
+		if (dquote_offset > 0) {
+			/* The NEW path is quoted.
+			 That gives us an unambiguous split point, which is just before
+			 the opening '"' of the NEW path. */
+			
+			if (ctx->parse_ctx.line[dquote_offset - 1] != ' ' &&
+				ctx->parse_ctx.line[dquote_offset - 1] != '\t')
+			{
+				return git_parse_err("missing expected separator space in git diff header at line %"PRIuZ,
+					ctx->parse_ctx.line_num);
+			}
+			
+			/* The OLD path must then be everything up to that double-quote
+			 minus the preceding space. */
+			if (parse_header_path_up_to_len(out_old_path, ctx, dquote_offset - 1) < 0)
+				return git_parse_err("corrupt old path in git diff header at line %"PRIuZ,
+					ctx->parse_ctx.line_num);
+
+			git_parse_advance_ws(&ctx->parse_ctx);
+			
+			/* Parse the double-quoted NEW path. */
+			if (parse_header_path(out_new_path, ctx) < 0)
+				return git_parse_err("corrupt new path in git diff header at line %"PRIuZ,
+					ctx->parse_ctx.line_num);
+		}
+		else if (dquote_offset < 0) {
+			/*
+			 No double-quotes at all in the whole line.
+			 Try to determine where the split between the old/new paths should
+			 be, which is still possible to do unambiguously if the file was not
+			 renamed, since the paths (minus their prefixes) must be equal.
+			 */
+			return parse_header_unquoted_pathnames_guessing_split_point(
+				out_old_path,
+				out_new_path,
+				patch,
+				ctx);
+		}
+	}
+	
+	return 0;
+}
+
+static int parse_header_start(git_patch_parsed *patch, git_patch_parse_ctx *ctx)
+{
+	git_patch_parse_ctx tentative_ctx = *ctx;
+
+	/*
+	 Give it a first quick try without any special consideration for spaces
+	 in unquoted pathnames. This is sufficient for all the cases where there
+	 are no spaces in the pathnames or the pathnames are quoted. It fails
+	 to parse the pathnames correctly if there is an unquoted pathname with
+	 spaces.
+	 */
+	if (parse_header_path(&patch->header_old_path, &tentative_ctx) < 0)
+		return git_parse_err("corrupt old path in git diff header at line %"PRIuZ,
+			tentative_ctx.parse_ctx.line_num);
+
+	if (git_parse_advance_ws(&tentative_ctx.parse_ctx) < 0 ||
+		parse_header_path(&patch->header_new_path, &tentative_ctx) < 0)
 		return git_parse_err("corrupt new path in git diff header at line %"PRIuZ,
-			ctx->parse_ctx.line_num);
+			tentative_ctx.parse_ctx.line_num);
+
+	if (git_parse_ctx_contains(&tentative_ctx.parse_ctx, "\n", 1) ||
+		git_parse_ctx_contains(&tentative_ctx.parse_ctx, "\r\n", 2))
+	{
+		/*
+		 That first quick try has consumed the whole line, so the pathnames
+		 that were parsed should be good. Make the context definitive.
+		 */
+		*ctx = tentative_ctx;
+	}
+	else {
+		/*
+		 That first try hasn't consumed the whole line, so what we parsed can't
+		 possibly be the correct pathnames.
+		 
+		 We can't give up just yet and hope for the "---" and "+++" lines that
+		 should be coming after the header to fix everything though. This will
+		 not always be possible.
+
+		 A text file diff will always contain the "---" and "+++" lines, so
+		 we can get an unquoted pathname with spaces from there. However, a
+		 binary file diff does not contain those lines.
+
+		 If a binary file is renamed, the patch will have lines starting with
+		 "rename from/to/old/new" followed by a single pathname per line. We
+		 can parse an unquoted pathname with spaces from those.
+
+		 But if a binary file is created, deleted, or modified without being
+		 renamed, there may not be any other subsequent lines mentioning the
+		 pathnames in a way that allows us to parse a pathname with spaces
+		 unambiguously. A patch that includes the modified binary contents
+		 doesn't mention any pathnames again after the header's first line.
+
+		 In this last case, we can try to use a heuristic where we try to
+		 break the pathnames in the first line at multiple different space
+		 characters in the line, and if the pathnames are equal minus the
+		 prefix, we can assume those to be the correct pathnames.
+		 */
+		int heuristic_parsing_err;
+		char *heuristic_old_path = NULL, *heuristic_new_path = NULL;
+
+		if ((heuristic_parsing_err = parse_header_pathnames_heuristically(
+				&heuristic_old_path,
+				&heuristic_new_path,
+				patch,
+				ctx)) < 0) {
+
+			git__free(heuristic_old_path);
+			git__free(heuristic_new_path);
+
+			return heuristic_parsing_err;
+		}
+
+		git__free(patch->header_old_path);
+		git__free(patch->header_new_path);
+
+		patch->header_old_path = heuristic_old_path;
+		patch->header_new_path = heuristic_new_path;
+	}
 
 	/*
 	 * We cannot expect to be able to always parse paths correctly at this
 	 * point. Due to the possibility of unquoted names, whitespaces in
 	 * filenames and custom prefixes we have to allow that, though, and just
-	 * proceed here. We then hope for the "---" and "+++" lines to fix that
-	 * for us.
+	 * proceed here. We then hope for the "---"/"+++" or the "rename from/to"
+	 * lines to fix that for us.
 	 */
 	if (!git_parse_ctx_contains(&ctx->parse_ctx, "\n", 1) &&
 	    !git_parse_ctx_contains(&ctx->parse_ctx, "\r\n", 2)) {
@@ -880,12 +1146,39 @@ static int parse_patch_binary(
 	return 0;
 }
 
+static int parse_patch_advance_path_prefix(
+	git_patch_parsed *patch,
+	git_patch_parse_ctx *ctx)
+{
+	size_t prefix_len;
+	
+	int err = check_prefix_len(&prefix_len, patch, ctx->parse_ctx.line);
+	if (err < 0)
+		return err;
+	
+	git_parse_advance_chars(&ctx->parse_ctx, prefix_len);
+	return 0;
+}
+
 static int parse_patch_binary_nodata(
 	git_patch_parsed *patch,
 	git_patch_parse_ctx *ctx)
 {
 	const char *old = patch->old_path ? patch->old_path : patch->header_old_path;
 	const char *new = patch->new_path ? patch->new_path : patch->header_new_path;
+	
+	bool old_is_prefixed = true;
+	bool new_is_prefixed = true;
+
+	if (old == NULL && patch->rename_old_path != NULL) {
+		old = patch->rename_old_path;
+		old_is_prefixed = false;
+	}
+	
+	if (new == NULL && patch->rename_new_path != NULL) {
+		new = patch->rename_new_path;
+		new_is_prefixed = false;
+	}
 
 	if (!old || !new)
 		return git_parse_err("corrupt binary data without paths at line %"PRIuZ, ctx->parse_ctx.line_num);
@@ -896,11 +1189,13 @@ static int parse_patch_binary_nodata(
 		new = "/dev/null";
 
 	if (git_parse_advance_expected_str(&ctx->parse_ctx, "Binary files ") < 0 ||
-	    git_parse_advance_expected_str(&ctx->parse_ctx, old) < 0 ||
-	    git_parse_advance_expected_str(&ctx->parse_ctx, " and ") < 0 ||
-	    git_parse_advance_expected_str(&ctx->parse_ctx, new) < 0 ||
-	    git_parse_advance_expected_str(&ctx->parse_ctx, " differ") < 0 ||
-	    git_parse_advance_nl(&ctx->parse_ctx) < 0)
+		(!old_is_prefixed && parse_patch_advance_path_prefix(patch, ctx) < 0) ||
+		git_parse_advance_expected_str(&ctx->parse_ctx, old) < 0 ||
+		git_parse_advance_expected_str(&ctx->parse_ctx, " and ") < 0 ||
+		(!new_is_prefixed && parse_patch_advance_path_prefix(patch, ctx) < 0) ||
+		git_parse_advance_expected_str(&ctx->parse_ctx, new) < 0 ||
+		git_parse_advance_expected_str(&ctx->parse_ctx, " differ") < 0 ||
+		git_parse_advance_nl(&ctx->parse_ctx) < 0)
 		return git_parse_err("corrupt git binary header at line %"PRIuZ, ctx->parse_ctx.line_num);
 
 	patch->base.binary.contains_data = 0;
@@ -964,17 +1259,18 @@ static int check_header_names(
 	return 0;
 }
 
-static int check_prefix(
-	char **out,
+static int check_prefix_len(
 	size_t *out_len,
 	git_patch_parsed *patch,
 	const char *path_start)
 {
+	const char *after_prefix;
+	
 	const char *path = path_start;
 	size_t prefix_len = patch->ctx->opts.prefix_len;
 	size_t remain_len = prefix_len;
 
-	*out = NULL;
+	after_prefix = NULL;
 	*out_len = 0;
 
 	if (prefix_len == 0)
@@ -998,9 +1294,27 @@ static int check_prefix(
 
 done:
 	*out_len = (path - path_start);
-	*out = git__strndup(path_start, *out_len);
+	after_prefix = path;
 
-	return (*out == NULL) ? -1 : 0;
+	return (after_prefix == NULL) ? -1 : 0;
+}
+
+static int check_prefix(
+	char **out,
+	size_t *out_len,
+	git_patch_parsed *patch,
+	const char *path_start)
+{
+	size_t prefix_len;
+	
+	int res = check_prefix_len(&prefix_len, patch, path_start);
+	
+	if (res >= 0) {
+		*out_len = prefix_len;
+		*out = git__strndup(path_start, prefix_len);
+	}
+	
+	return res;
 }
 
 static int check_filenames(git_patch_parsed *patch)
@@ -1042,6 +1356,26 @@ static int check_filenames(git_patch_parsed *patch)
 		patch->base.delta->new_file.path = prefixed_new + new_prefixlen;
 	else
 		patch->base.delta->new_file.path = NULL;
+
+	/*
+	 * Final safeguard for when only one of the paths is parsed successfully
+	 * but the other one is NULL.
+	 *
+	 * If the pathname for one of the sides is NULL, there are at least two
+	 * problems that may arise at a later time:
+	 *
+	 *    - The diff/patch would be un-printable. Calling `git_diff_to_buf()`
+	 *      with such a diff/patch results in a crash.
+	 *
+	 *    - The diff/patch would be un-applicable. Even if the crash mentioned
+	 *      above was fixed in isolation, calling `git_apply()` with this diff
+	 *      fails with an "invalid 'filename'" assertion, which is triggered by
+	 *      an assert in a function that expects the pathname to never be NULL.
+	 */
+	if (!patch->base.delta->old_file.path)
+		patch->base.delta->old_file.path = patch->base.delta->new_file.path;
+	else if (!patch->base.delta->new_file.path)
+		patch->base.delta->new_file.path = patch->base.delta->old_file.path;
 
 	if (!patch->base.delta->old_file.path &&
 	    !patch->base.delta->new_file.path)
