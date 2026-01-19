@@ -37,16 +37,14 @@ jobs:
           setup-script: ubuntu
           env:
             CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            CMAKE_LOCAL_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DUSE_GSSAPI=ON
         - name: "macOS"
           id: macos
           os: macos-latest
           setup-script: osx
           env:
             CC: clang
-            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DUSE_GSSAPI=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            CMAKE_LOCAL_OPTIONS: -DREGEX_BACKEND=regcomp_l -DUSE_GSSAPI=ON
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
         - name: "Windows (amd64, Visual Studio)"
           id: windows
@@ -55,8 +53,7 @@ jobs:
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 17 2022
-            CMAKE_OPTIONS: -A x64 -DDEPRECATE_HARD=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            CMAKE_LOCAL_OPTIONS: -A x64
       fail-fast: false
     name: "Benchmark ${{ matrix.platform.name }}"
     env: ${{ matrix.platform.env }}
@@ -89,6 +86,9 @@ jobs:
       run: |
         mkdir build && cd build
         ../source/ci/build.sh
+      env:
+        CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DBUILD_TESTS=OFF -DBUILD_EXAMPLES=OFF -DBUILD_CLI=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
       shell: bash
     - name: Benchmark
       run: |
