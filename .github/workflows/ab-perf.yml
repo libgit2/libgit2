@@ -39,26 +39,26 @@ jobs:
             CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DUSE_HTTP_PARSER=http-parser -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
             CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
             CMAKE_GENERATOR: Ninja
-#        - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
-#          id: xenial-gcc-openssl
-#          os: ubuntu-latest
-#          container:
-#            name: xenial
-#          env:
-#            CC: gcc
-#            CMAKE_GENERATOR: Ninja
-#            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-#            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
-#        - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
-#          id: xenial-gcc-mbedtls
-#          os: ubuntu-latest
-#          container:
-#            name: xenial
-#          env:
-#            CC: clang
-#            CMAKE_GENERATOR: Ninja
-#            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-#            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+        - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
+          id: xenial-gcc-openssl
+          os: ubuntu-latest
+          container:
+            name: xenial
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+        - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
+          id: xenial-gcc-mbedtls
+          os: ubuntu-latest
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
         - name: "macOS"
           id: macos
           os: macos-14
@@ -71,60 +71,60 @@ jobs:
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
-#        - name: "Windows (amd64, Visual Studio, Schannel)"
-#          id: windows-amd64-vs
-#          os: windows-2022
-#          setup-script: win32
-#          build_prefix: RelWithDebInfo
-#          env:
-#            ARCH: amd64
-#            CMAKE_GENERATOR: Visual Studio 17 2022
-#            CMAKE_OPTIONS: -A x64 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2 -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-#            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
-#            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
-#            BUILD_TEMP: D:\Temp
-#            SKIP_SSH_TESTS: true
-#            SKIP_NEGOTIATE_TESTS: true
-#        - name: "Windows (x86, Visual Studio, WinHTTP)"
-#          id: windows-x86-vs
-#          os: windows-2022
-#          setup-script: win32
-#          build_prefix: RelWithDebInfo
-#          env:
-#            ARCH: x86
-#            CMAKE_GENERATOR: Visual Studio 17 2022
-#            CMAKE_OPTIONS: -A Win32 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2 -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-#            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
-#            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
-#            BUILD_TEMP: D:\Temp
-#            SKIP_SSH_TESTS: true
-#            SKIP_NEGOTIATE_TESTS: true
-#        - name: "Windows (amd64, mingw, WinHTTP)"
-#          id: windows-amd64-mingw
-#          os: windows-2022
-#          setup-script: mingw
-#          env:
-#            ARCH: amd64
-#            CMAKE_GENERATOR: MinGW Makefiles
-#            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-#            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
-#            BUILD_TEMP: D:\Temp
-#            BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
-#            SKIP_SSH_TESTS: true
-#            SKIP_NEGOTIATE_TESTS: true
-#        - name: "Windows (x86, mingw, Schannel)"
-#          id: windows-x86-mingw
-#          os: windows-2022
-#          setup-script: mingw
-#          env:
-#            ARCH: x86
-#            CMAKE_GENERATOR: MinGW Makefiles
-#            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
-#            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
-#            BUILD_TEMP: D:\Temp
-#            BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
-#            SKIP_SSH_TESTS: true
-#            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (amd64, Visual Studio, Schannel)"
+          id: windows-amd64-vs
+          os: windows-2022
+          setup-script: win32
+          build_prefix: RelWithDebInfo
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 17 2022
+            CMAKE_OPTIONS: -A x64 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2 -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
+            BUILD_TEMP: D:\Temp
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (x86, Visual Studio, WinHTTP)"
+          id: windows-x86-vs
+          os: windows-2022
+          setup-script: win32
+          build_prefix: RelWithDebInfo
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: Visual Studio 17 2022
+            CMAKE_OPTIONS: -A Win32 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2 -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
+            BUILD_TEMP: D:\Temp
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (amd64, mingw, WinHTTP)"
+          id: windows-amd64-mingw
+          os: windows-2022
+          setup-script: mingw
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: MinGW Makefiles
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            BUILD_TEMP: D:\Temp
+            BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (x86, mingw, Schannel)"
+          id: windows-x86-mingw
+          os: windows-2022
+          setup-script: mingw
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: MinGW Makefiles
+            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            BUILD_TEMP: D:\Temp
+            BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
     env: ${{ matrix.platform.env }}
     runs-on: ${{ matrix.platform.os }}
     name: "A/B: ${{ matrix.platform.name }}"
@@ -133,8 +133,7 @@ jobs:
       uses: actions/checkout@v4
       with:
         path: source/control
-# TODO: there are no control benchmarks in main yet
-#        ref: main
+        ref: main
     - name: Check out candidate
       uses: actions/checkout@v4
       with:
