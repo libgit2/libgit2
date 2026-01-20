@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+ - name: 🆘 Questions & Support
+   url: http://stackoverflow.com/questions/tagged/libgit2
+   about: Ask on StackOverflow.
+ - name: 💬 Discussions
+   url: https://github.com/libgit2/discussions
+   about: Join high-level discussions about the libgit2 project.
+ - name: 💡 Feature Request
+   url: https://github.com/libgit2/libgit2/issues/new?template=feature-request.yml
+   about: Suggest improvements.
+ - name: 🐞 Bug Report
+   url: https://github.com/libgit2/libgit2/issues/new?template=bug-report.yml
+   about: Encountered a bug? Report it on GitHub Issues.
