@@ -127,7 +127,7 @@ add_definitions(-DHAVE_CONFIG_H)
 
 if(MSVC)
         add_definitions(-D_CRT_SECURE_NO_DEPRECATE -D_CRT_SECURE_NO_WARNINGS)
-endif(MSVC)
+endif()
 
 set(CMAKE_INCLUDE_CURRENT_DIR 1)
 
@@ -138,4 +138,6 @@ set(targets)
 include_directories(${PROJECT_BINARY_DIR}/src/pcre)
 add_library(pcre OBJECT ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
 
-# end CMakeLists.txt
+if(NOT MSVC)
+	set_source_files_properties(pcre_compile.c PROPERTIES COMPILE_FLAGS "-Wno-dangling-pointer")
+endif()
