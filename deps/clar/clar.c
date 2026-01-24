@@ -345,6 +345,8 @@ clar_run_test(
 	const struct clar_func *cleanup)
 {
 	clar_time start, end;
+	int runs = test->runs;
+	volatile int i = 0;
 
 	_clar.last_report->start = time(NULL);
 	_clar.last_report->times = &_clar.last_report->time_mean;
