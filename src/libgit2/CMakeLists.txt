@@ -112,7 +112,7 @@ foreach(HEADER_SOURCE ${SRC_H})
 
   FILE(READ "${HEADER_SOURCE}" HEADER_CONTENTS)
   STRING(REGEX REPLACE "#include \"git2\/" "#include \"${LIBGIT2_FILENAME}/" HEADER_CONTENTS "${HEADER_CONTENTS}")
-  FILE(WRITE "${HEADER_OUT}" ${HEADER_CONTENTS})
+  FILE(WRITE "${HEADER_OUT}" "${HEADER_CONTENTS}")
 endforeach()
 
 # Rename git2.h after the regex & move
