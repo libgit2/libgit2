@@ -344,7 +344,6 @@ clar_run_test(
 	const struct clar_func *reset,
 	const struct clar_func *cleanup)
 {
-	clar_time start, end;
 	int runs = test->runs;
 	volatile int i = 0;
 
