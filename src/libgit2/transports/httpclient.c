@@ -1175,6 +1175,13 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 	if (!client->read_buf.size && (read_len = client_read(client)) < 0)
 		return read_len;
 
+	if (client->read_buf.size == 0) {
+		/* recv returned 0, the server hung up on us */
+		git_http_parser_finish(parser);
+		git_error_set(GIT_ERROR_HTTP, "unexpected EOF");
+		return -1;
+	}
+
 	parsed_len = git_http_parser_execute(parser,
 		client->read_buf.ptr,
 		client->read_buf.size);
@@ -1207,13 +1214,12 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 		 * the final byte when paused in a callback.  Consume
 		 * that byte.
 		 */
-		if ((additional_size = git_http_parser_remain_after_pause(parser)) > 0) {
-			GIT_ASSERT((client->read_buf.size - parsed_len) >= additional_size);
+		additional_size = git_http_parser_remain_after_pause(parser);
+		GIT_ASSERT((client->read_buf.size - parsed_len) >= additional_size);
 
-			parsed_len += git_http_parser_execute(parser,
-				client->read_buf.ptr + parsed_len,
-				additional_size);
-		}
+		parsed_len += git_http_parser_execute(parser,
+			client->read_buf.ptr + parsed_len,
+			additional_size);
 	}
 
 	/* Most failures will be reported in http_errno */
@@ -1228,12 +1234,6 @@ GIT_INLINE(int) client_read_and_parse(git_http_client *client)
 		git_error_set(GIT_ERROR_HTTP,
 		              "http parser did not consume entire buffer: %s",
 		              git_http_parser_errmsg(parser, http_errno));
-		return -1;
-	}
-
-	/* recv returned 0, the server hung up on us */
-	else if (!parsed_len) {
-		git_error_set(GIT_ERROR_HTTP, "unexpected EOF");
 		return -1;
 	}
 
