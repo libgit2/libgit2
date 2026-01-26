@@ -23,7 +23,7 @@ check_type_size("unsigned long long"    UNSIGNED_LONG_LONG)
 disable_warnings(unused-function)
 disable_warnings(implicit-fallthrough)
 disable_warnings(unused-but-set-variable)
-disable_warnings(no-dangling-pointer)
+disable_warnings(dangling-pointer)
 
 # User-configurable options
 
