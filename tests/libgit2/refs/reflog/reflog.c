@@ -107,15 +107,19 @@ void test_refs_reflog_reflog__renaming_the_reference_moves_the_reflog(void)
 	git_str_joinpath(&master_log_path, git_str_cstr(&master_log_path), "refs/heads/master");
 	git_str_joinpath(&moved_log_path, git_str_cstr(&moved_log_path), "refs/moved");
 
-	cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&master_log_path)));
-	cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&moved_log_path)));
+	if (cl_repo_has_ref_format(g_repo, "files")) {
+		cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&master_log_path)));
+		cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&moved_log_path)));
+	}
 
 	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
 	cl_git_pass(git_reference_rename(&new_master, master, "refs/moved", 0, NULL));
 	git_reference_free(master);
 
-	cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&master_log_path)));
-	cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&moved_log_path)));
+	if (cl_repo_has_ref_format(g_repo, "files")) {
+		cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&master_log_path)));
+		cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&moved_log_path)));
+	}
 
 	git_reference_free(new_master);
 	git_str_dispose(&moved_log_path);
@@ -130,13 +134,15 @@ void test_refs_reflog_reflog__deleting_the_reference_deletes_the_reflog(void)
 	git_str_joinpath(&master_log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
 	git_str_joinpath(&master_log_path, git_str_cstr(&master_log_path), "refs/heads/master");
 
-	cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&master_log_path)));
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&master_log_path)));
 
 	cl_git_pass(git_reference_lookup(&master, g_repo, "refs/heads/master"));
 	cl_git_pass(git_reference_delete(master));
 	git_reference_free(master);
 
-	cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&master_log_path)));
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&master_log_path)));
 	git_str_dispose(&master_log_path);
 }
 
@@ -153,7 +159,8 @@ void test_refs_reflog_reflog__removes_empty_reflog_dir(void)
 	git_str_joinpath(&log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
 	git_str_joinpath(&log_path, git_str_cstr(&log_path), "refs/heads/new-dir/new-head");
 
-	cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&log_path)));
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&log_path)));
 
 	cl_git_pass(git_reference_delete(ref));
 	git_reference_free(ref);
@@ -180,10 +187,12 @@ void test_refs_reflog_reflog__fails_gracefully_on_nonempty_reflog_dir(void)
 	git_str_joinpath(&log_path, git_repository_path(g_repo), GIT_REFLOG_DIR);
 	git_str_joinpath(&log_path, git_str_cstr(&log_path), "refs/heads/new-dir/new-head");
 
-	cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&log_path)));
+	if (cl_repo_has_ref_format(g_repo, "files")) {
+		cl_assert_equal_i(true, git_fs_path_isfile(git_str_cstr(&log_path)));
 
-	/* delete the ref manually, leave the reflog */
-	cl_must_pass(p_unlink("testrepo.git/refs/heads/new-dir/new-head"));
+		/* delete the ref manually, leave the reflog */
+		cl_must_pass(p_unlink("testrepo.git/refs/heads/new-dir/new-head"));
+	}
 
 	/* new ref creation should fail since new-dir contains reflogs still */
 	git_oid_from_string(&id, current_master_tip, GIT_OID_SHA1);
@@ -212,7 +221,9 @@ void test_refs_reflog_reflog__reading_the_reflog_from_a_reference_with_no_log_re
 	git_str subtrees_log_path = GIT_STR_INIT;
 
 	git_str_join_n(&subtrees_log_path, '/', 3, git_repository_path(g_repo), GIT_REFLOG_DIR, refname);
-	cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&subtrees_log_path)));
+
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert_equal_i(false, git_fs_path_isfile(git_str_cstr(&subtrees_log_path)));
 
 	cl_git_pass(git_reflog_read(&reflog, g_repo, refname));
 
@@ -233,6 +244,9 @@ void test_refs_reflog_reflog__reading_a_reflog_with_invalid_format_succeeds(void
 	git_oid id;
 	git_str logpath = GIT_STR_INIT, logcontents = GIT_STR_INIT;
 	char *star;
+
+	if (!cl_repo_has_ref_format(g_repo, "files"))
+		cl_skip();
 
 	/* Create a new branch. */
 	cl_git_pass(git_oid_from_string(&id, current_master_tip, GIT_OID_SHA1));

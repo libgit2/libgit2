@@ -462,45 +462,15 @@ void test_merge_workdir_setup__three_same_oids(void)
 
 static int create_remote_tracking_branch(const char *branch_name, const char *oid_str)
 {
-	int error = 0;
+	git_str refname = GIT_STR_INIT;
+	git_oid oid;
 
-	git_str remotes_path = GIT_STR_INIT,
-		origin_path = GIT_STR_INIT,
-		filename = GIT_STR_INIT,
-		data = GIT_STR_INIT;
+	cl_git_pass(git_oid_from_string(&oid, oid_str, GIT_OID_SHA1));
+	cl_git_pass(git_str_printf(&refname, GIT_REFS_REMOTES_DIR "origin/%s", branch_name));
+	cl_git_pass(git_reference_create(NULL, repo, refname.ptr, &oid, 0, NULL));
 
-	if ((error = git_str_puts(&remotes_path, git_repository_path(repo))) < 0 ||
-		(error = git_str_puts(&remotes_path, GIT_REFS_REMOTES_DIR)) < 0)
-		goto done;
-
-	if (!git_fs_path_exists(git_str_cstr(&remotes_path)) &&
-		(error = p_mkdir(git_str_cstr(&remotes_path), 0777)) < 0)
-		goto done;
-
-	if ((error = git_str_puts(&origin_path, git_str_cstr(&remotes_path))) < 0 ||
-		(error = git_str_puts(&origin_path, "origin")) < 0)
-		goto done;
-
-	if (!git_fs_path_exists(git_str_cstr(&origin_path)) &&
-		(error = p_mkdir(git_str_cstr(&origin_path), 0777)) < 0)
-		goto done;
-
-	if ((error = git_str_puts(&filename, git_str_cstr(&origin_path))) < 0 ||
-		(error = git_str_puts(&filename, "/")) < 0 ||
-		(error = git_str_puts(&filename, branch_name)) < 0 ||
-		(error = git_str_puts(&data, oid_str)) < 0 ||
-		(error = git_str_puts(&data, "\n")) < 0)
-		goto done;
-
-	cl_git_rewritefile(git_str_cstr(&filename), git_str_cstr(&data));
-
-done:
-	git_str_dispose(&remotes_path);
-	git_str_dispose(&origin_path);
-	git_str_dispose(&filename);
-	git_str_dispose(&data);
-
-	return error;
+	git_str_dispose(&refname);
+	return 0;
 }
 
 /* git merge refs/remotes/origin/octo1 */
