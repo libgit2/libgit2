@@ -175,3 +175,71 @@ void test_config_global__open_programdata(void)
 	git_repository_free(repo);
 	cl_fixture_cleanup("./foo.git");
 }
+
+void test_config_global__respects_GIT_CONFIG_GLOBAL_env(void)
+{
+	git_config *cfg;
+	int32_t value;
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_futils_mkdir_r("custom", 0777));
+	cl_git_mkfile("custom/my-gitconfig", "[envtest]\n  value = 12345\n");
+	cl_git_pass(git_fs_path_prettify(&path, "custom/my-gitconfig", NULL));
+
+	cl_setenv("GIT_CONFIG_GLOBAL", path.ptr);
+
+	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_get_int32(&value, cfg, "envtest.value"));
+	cl_assert_equal_i(12345, value);
+
+	git_config_free(cfg);
+	cl_setenv("GIT_CONFIG_GLOBAL", NULL);
+	git_str_dispose(&path);
+	cl_git_pass(git_futils_rmdir_r("custom", NULL, GIT_RMDIR_REMOVE_FILES));
+}
+
+void test_config_global__respects_GIT_CONFIG_SYSTEM_env(void)
+{
+	git_config *cfg;
+	int32_t value;
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_futils_mkdir_r("customsys", 0777));
+	cl_git_mkfile("customsys/my-sysconfig", "[systest]\n  value = 67890\n");
+	cl_git_pass(git_fs_path_prettify(&path, "customsys/my-sysconfig", NULL));
+
+	cl_setenv("GIT_CONFIG_SYSTEM", path.ptr);
+
+	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_get_int32(&value, cfg, "systest.value"));
+	cl_assert_equal_i(67890, value);
+
+	git_config_free(cfg);
+	cl_setenv("GIT_CONFIG_SYSTEM", NULL);
+	git_str_dispose(&path);
+	cl_git_pass(git_futils_rmdir_r("customsys", NULL, GIT_RMDIR_REMOVE_FILES));
+}
+
+void test_config_global__respects_GIT_CONFIG_NOSYSTEM_env(void)
+{
+	git_config *cfg;
+	git_str path = GIT_STR_INIT;
+	git_config_entry *entry;
+	int error;
+
+	cl_git_pass(git_futils_mkdir_r("customsys", 0777));
+	cl_git_mkfile("customsys/my-sysconfig", "[nosystest]\n  value = 11111\n");
+	cl_git_pass(git_fs_path_prettify(&path, "customsys/my-sysconfig", NULL));
+	cl_setenv("GIT_CONFIG_SYSTEM", path.ptr);
+	cl_setenv("GIT_CONFIG_NOSYSTEM", "true");
+
+	cl_git_pass(git_config_open_default(&cfg));
+	error = git_config_get_entry(&entry, cfg, "nosystest.value");
+	cl_assert_equal_i(GIT_ENOTFOUND, error);
+
+	git_config_free(cfg);
+	cl_setenv("GIT_CONFIG_NOSYSTEM", NULL);
+	cl_setenv("GIT_CONFIG_SYSTEM", NULL);
+	git_str_dispose(&path);
+	cl_git_pass(git_futils_rmdir_r("customsys", NULL, GIT_RMDIR_REMOVE_FILES));
+}
