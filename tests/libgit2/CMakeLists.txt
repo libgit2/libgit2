@@ -10,9 +10,9 @@ find_package(PythonInterp)
 if(NOT PYTHONINTERP_FOUND)
 	message(FATAL_ERROR "Could not find a python interpreter, which is needed to build the tests. "
 	                     "Make sure python is available, or pass -DBUILD_TESTS=OFF to skip building the tests")
-ENDIF()
+endif()
 
-set(CLAR_PATH "${PROJECT_SOURCE_DIR}/tests/clar")
+set(CLAR_PATH "${PROJECT_SOURCE_DIR}/deps/clar")
 set(CLAR_FIXTURES "${PROJECT_SOURCE_DIR}/tests/resources/")
 set(TEST_PATH "${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DCLAR_FIXTURE_PATH=\"${CLAR_FIXTURES}\")
@@ -48,7 +48,11 @@ add_executable(libgit2_tests ${SRC_CLAR} ${SRC_TEST} ${LIBGIT2_OBJECTS})
 set_target_properties(libgit2_tests PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_BINARY_DIR})
 target_include_directories(libgit2_tests PRIVATE ${TEST_INCLUDES} ${LIBGIT2_INCLUDES} ${LIBGIT2_DEPENDENCY_INCLUDES})
 target_include_directories(libgit2_tests SYSTEM PRIVATE ${LIBGIT2_SYSTEM_INCLUDES})
+
 target_link_libraries(libgit2_tests ${LIBGIT2_SYSTEM_LIBS})
+if(NOT MSVC_IDE)
+	target_link_libraries(libgit2_tests m)
+endif()
 
 ide_split_sources(libgit2_tests)
 

@@ -17,8 +17,13 @@ class Module(object):
 
         def _render_callback(self, cb):
             if not cb:
-                return '    { NULL, NULL }'
-            return '    { "%s", &%s }' % (cb['short_name'], cb['symbol'])
+                return '    { NULL, NULL, 0, NULL }'
+
+            return '    { "%s", %s, %d, &%s }' % \
+                (cb['short_name'], \
+                 '"' + cb['description'] + '"' if cb['description'] != None else "NULL", \
+                 cb['runs'], \
+                 cb['symbol'])
 
     class DeclarationTemplate(Template):
         def render(self):
@@ -27,6 +32,9 @@ class Module(object):
             for initializer in self.module.initializers:
                 out += "extern %s;\n" % initializer['declaration']
 
+            if self.module.reset:
+                out += "extern %s;\n" % self.module.reset['declaration']
+
             if self.module.cleanup:
                 out += "extern %s;\n" % self.module.cleanup['declaration']
 
@@ -34,7 +42,7 @@ class Module(object):
 
     class CallbacksTemplate(Template):
         def render(self):
-            out = "static const struct clar_func _clar_cb_%s[] = {\n" % self.module.name
+            out = "static const struct %s_func _%s_cb_%s[] = {\n" % (self.module.app_name, self.module.app_name, self.module.name)
             out += ",\n".join(self._render_callback(cb) for cb in self.module.callbacks)
             out += "\n};\n"
             return out
@@ -58,14 +66,16 @@ class Module(object):
     {
         "${clean_name}",
     ${initialize},
+    ${reset},
     ${cleanup},
         ${cb_ptr}, ${cb_count}, ${enabled}
     }"""
                 ).substitute(
                     clean_name = name,
                     initialize = self._render_callback(initializer),
+                    reset = self._render_callback(self.module.reset),
                     cleanup = self._render_callback(self.module.cleanup),
-                    cb_ptr = "_clar_cb_%s" % self.module.name,
+                    cb_ptr = "_%s_cb_%s" % (self.module.app_name, self.module.name),
                     cb_count = len(self.module.callbacks),
                     enabled = int(self.module.enabled)
                 )
@@ -73,8 +83,10 @@ class Module(object):
 
             return ','.join(templates)
 
-    def __init__(self, name):
+    def __init__(self, name, app_name, prefix):
         self.name = name
+        self.app_name = app_name
+        self.prefix = prefix
 
         self.mtime = None
         self.enabled = True
@@ -85,7 +97,7 @@ class Module(object):
 
     def _skip_comments(self, text):
         SKIP_COMMENTS_REGEX = re.compile(
-            r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+            r'//.*?$|/\*(?!\s*\[clar\]:).*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
             re.DOTALL | re.MULTILINE)
 
         def _replacer(match):
@@ -95,24 +107,63 @@ class Module(object):
         return re.sub(SKIP_COMMENTS_REGEX, _replacer, text)
 
     def parse(self, contents):
-        TEST_FUNC_REGEX = r"^(void\s+(test_%s__(\w+))\s*\(\s*void\s*\))\s*\{"
+        TEST_FUNC_REGEX = r"^(void\s+(%s_%s__(\w+))\s*\(\s*void\s*\))(?:\s*/\*\s*\[clar\]:\s*(.*?)\s*\*/)?\s*\{"
 
         contents = self._skip_comments(contents)
-        regex = re.compile(TEST_FUNC_REGEX % self.name, re.MULTILINE)
+        regex = re.compile(TEST_FUNC_REGEX % (self.prefix, self.name), re.MULTILINE)
 
         self.callbacks = []
         self.initializers = []
+        self.reset = None
         self.cleanup = None
 
-        for (declaration, symbol, short_name) in regex.findall(contents):
+        for (declaration, symbol, short_name, options) in regex.findall(contents):
+            runs = 0
+            description = None
+
+            while options != '':
+                match = re.search(r'^([a-zA-Z0-9]+)=(\"[^"]*\"|[a-zA-Z0-9_\-]+|\d+)(?:,\s*|\Z)(.*)', options)
+
+                if match == None:
+                    print("Invalid options: '%s' for '%s'" % (options, symbol))
+                    sys.exit(1)
+
+                key = match.group(1)
+                value = match.group(2)
+                options = match.group(3)
+
+                match = re.search(r'^\"(.*)\"$', value)
+                if match != None:
+                    value = match.group(1)
+
+                match = re.search(r'([^a-zA-Z0-9 _\-,\.])', value)
+                if match != None:
+                    print("Invalid character '%s' in %s for '%s'" % (match.group(1), key, symbol))
+                    sys.exit(1)
+
+                if key == "description":
+                    description = value
+                elif key == "runs":
+                    if not value.isnumeric():
+                        print("Invalid option: '%s' in runs for '%s'" % (option, symbol))
+                        sys.exit(1)
+                    runs = int(value)
+                else:
+                    print("Invalid option: '%s' for '%s'" % (key, symbol))
+                    sys.exit(1)
+
             data = {
                 "short_name" : short_name,
                 "declaration" : declaration,
-                "symbol" : symbol
+                "symbol" : symbol,
+                "description" : description,
+                "runs" : runs
             }
 
             if short_name.startswith('initialize'):
                 self.initializers.append(data)
+            elif short_name == 'reset':
+                self.reset = data
             elif short_name == 'cleanup':
                 self.cleanup = data
             else:
@@ -179,8 +230,8 @@ class TestSuite(object):
 
         return modules
 
-    def load_cache(self):
-        path = os.path.join(self.output, '.clarcache')
+    def load_cache(self, app_name):
+        path = os.path.join(self.output, ".%scache" % app_name)
         cache = {}
 
         try:
@@ -192,18 +243,18 @@ class TestSuite(object):
 
         return cache
 
-    def save_cache(self):
-        path = os.path.join(self.output, '.clarcache')
+    def save_cache(self, app_name):
+        path = os.path.join(self.output, ".%scache" % app_name)
         with open(path, 'wb') as cache:
             pickle.dump(self.modules, cache)
 
-    def load(self, force = False):
+    def load(self, app_name, prefix, force = False):
         module_data = self.find_modules()
-        self.modules = {} if force else self.load_cache()
+        self.modules = {} if force else self.load_cache(app_name)
 
         for path, name in module_data:
             if name not in self.modules:
-                self.modules[name] = Module(name)
+                self.modules[name] = Module(name, app_name, prefix)
 
             if not self.modules[name].refresh(path):
                 del self.modules[name]
@@ -222,15 +273,15 @@ class TestSuite(object):
     def callback_count(self):
         return sum(len(module.callbacks) for module in self.modules.values())
 
-    def write(self):
+    def write(self, name):
         if not os.path.exists(self.output):
             os.makedirs(self.output)
 
-        wrote_suite = self.write_suite()
-        wrote_header = self.write_header()
+        wrote_suite = self.write_suite(name)
+        wrote_header = self.write_header(name)
 
         if wrote_suite or wrote_header:
-            self.save_cache()
+            self.save_cache(name)
             return True
 
         return False
@@ -257,8 +308,8 @@ class TestSuite(object):
 
         return True
 
-    def write_suite(self):
-        suite_fn = os.path.join(self.output, 'clar.suite')
+    def write_suite(self, name):
+        suite_fn = os.path.join(self.output, '%s.suite' % name)
 
         with io.StringIO() as suite_file:
             modules = sorted(self.modules.values(), key=lambda module: module.name)
@@ -271,25 +322,26 @@ class TestSuite(object):
                 t = Module.CallbacksTemplate(module)
                 suite_file.write(t.render())
 
-            suites = "static struct clar_suite _clar_suites[] = {" + ','.join(
+            suites = "static struct %s_suite _%s_suites[] = {" % (name, name)
+            suites += ','.join(
                 Module.InfoTemplate(module).render() for module in modules
             ) + "\n};\n"
 
             suite_file.write(suites)
 
-            suite_file.write(u"static const size_t _clar_suite_count = %d;\n" % self.suite_count())
-            suite_file.write(u"static const size_t _clar_callback_count = %d;\n" % self.callback_count())
+            suite_file.write(u"static const size_t _%s_suite_count = %d;\n" % (name, self.suite_count()))
+            suite_file.write(u"static const size_t _%s_callback_count = %d;\n" % (name, self.callback_count()))
 
             return self.write_output(suite_fn, suite_file.getvalue())
 
         return False
 
-    def write_header(self):
-        header_fn = os.path.join(self.output, 'clar_suite.h')
+    def write_header(self, name):
+        header_fn = os.path.join(self.output, '%s_suite.h' % name)
 
         with io.StringIO() as header_file:
-            header_file.write(u"#ifndef _____clar_suite_h_____\n")
-            header_file.write(u"#define _____clar_suite_h_____\n")
+            header_file.write(u"#ifndef _____%s_suite_h_____\n" % name)
+            header_file.write(u"#define _____%s_suite_h_____\n" % name)
 
             modules = sorted(self.modules.values(), key=lambda module: module.name)
 
@@ -310,6 +362,8 @@ if __name__ == '__main__':
     parser.add_option('-f', '--force', action="store_true", dest='force', default=False)
     parser.add_option('-x', '--exclude', dest='excluded', action='append', default=[])
     parser.add_option('-o', '--output', dest='output')
+    parser.add_option('-n', '--name', dest='name', default='clar')
+    parser.add_option('-p', '--prefix', dest='prefix', default='test')
 
     options, args = parser.parse_args()
     if len(args) > 1:
@@ -323,7 +377,8 @@ if __name__ == '__main__':
     output = options.output or path
 
     suite = TestSuite(path, output)
-    suite.load(options.force)
+    suite.load(options.name, options.prefix, options.force)
     suite.disable(options.excluded)
-    if suite.write():
-        print("Written `clar.suite`, `clar_suite.h` (%d tests in %d suites)" % (suite.callback_count(), suite.suite_count()))
+
+    if suite.write(options.name):
+        print("Written `%s.suite`, `%s_suite.h` (%d tests in %d suites)" % (options.name, options.name, suite.callback_count(), suite.suite_count()))
