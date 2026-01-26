@@ -34,7 +34,7 @@ jobs:
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+            CMAKE_LOCAL_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2 -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
         - name: "Linux (Noble, Clang, mbedTLS, OpenSSH)"
           id: noble-clang-mbedtls
           os: ubuntu-latest
@@ -42,7 +42,7 @@ jobs:
             name: noble
           env:
             CC: clang
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DUSE_HTTP_PARSER=http-parser
+            CMAKE_LOCAL_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DUSE_HTTP_PARSER=http-parser
             CMAKE_GENERATOR: Ninja
         - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
           id: xenial-gcc-openssl
@@ -52,7 +52,7 @@ jobs:
           env:
             CC: gcc
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
+            CMAKE_LOCAL_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=exec -DDEBUG_STRICT_ALLOC=ON -DDEBUG_STRICT_OPEN=ON
         - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
           id: xenial-gcc-mbedtls
           os: ubuntu-latest
@@ -61,14 +61,14 @@ jobs:
           env:
             CC: clang
             CMAKE_GENERATOR: Ninja
-            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
+            CMAKE_LOCAL_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DDEBUG_LEAK_CHECKER=valgrind -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
         - name: "macOS"
           id: macos
           os: macos-14
           setup-script: osx
           env:
             CC: clang
-            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEPRECATE_HARD=ON -DDEBUG_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
+            CMAKE_LOCAL_OPTIONS: -DREGEX_BACKEND=regcomp_l -DDEBUG_LEAK_CHECKER=leaks -DUSE_GSSAPI=ON
             CMAKE_GENERATOR: Ninja
             PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
             SKIP_SSH_TESTS: true
@@ -80,7 +80,7 @@ jobs:
           env:
             ARCH: amd64
             CMAKE_GENERATOR: Visual Studio 17 2022
-            CMAKE_OPTIONS: -A x64 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            CMAKE_LOCAL_OPTIONS: -A x64 -DDEBUG_LEAK_CHECKER=win32 -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
             BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
             BUILD_TEMP: D:\Temp
             SKIP_SSH_TESTS: true
@@ -92,7 +92,7 @@ jobs:
           env:
             ARCH: x86
             CMAKE_GENERATOR: Visual Studio 17 2022
-            CMAKE_OPTIONS: -A Win32 -DDEBUG_LEAK_CHECKER=win32 -DDEPRECATE_HARD=ON -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            CMAKE_LOCAL_OPTIONS: -A Win32 -DDEBUG_LEAK_CHECKER=win32 -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
             BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
             BUILD_TEMP: D:\Temp
             SKIP_SSH_TESTS: true
@@ -104,7 +104,7 @@ jobs:
           env:
             ARCH: amd64
             CMAKE_GENERATOR: MinGW Makefiles
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
+            CMAKE_LOCAL_OPTIONS:
             BUILD_TEMP: D:\Temp
             BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
@@ -116,7 +116,7 @@ jobs:
           env:
             ARCH: x86
             CMAKE_GENERATOR: MinGW Makefiles
-            CMAKE_OPTIONS: -DDEPRECATE_HARD=ON -DUSE_HTTPS=Schannel
+            CMAKE_LOCAL_OPTIONS: -DUSE_HTTPS=Schannel
             BUILD_TEMP: D:\Temp
             BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
             SKIP_SSH_TESTS: true
@@ -132,7 +132,7 @@ jobs:
           env:
             CC: clang
             CFLAGS: -fsanitize=memory -fsanitize-memory-track-origins=2 -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_C_EXTENSIONS=ON -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_LOCAL_OPTIONS: -DCMAKE_C_EXTENSIONS=ON -DCMAKE_PREFIX_PATH=/usr/local/msan -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
@@ -147,7 +147,7 @@ jobs:
           env:
             CC: clang
             CFLAGS: -fsanitize=address -ggdb -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_LOCAL_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
@@ -162,7 +162,7 @@ jobs:
           env:
             CC: clang
             CFLAGS: -fsanitize=undefined,nullability -fno-sanitize-recover=undefined,nullability -fsanitize-blacklist=/home/libgit2/source/script/sanitizers.supp -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_LOCAL_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
@@ -177,7 +177,7 @@ jobs:
           env:
             CC: clang
             CFLAGS: -fsanitize=thread -fno-optimize-sibling-calls -fno-omit-frame-pointer
-            CMAKE_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DDEPRECATE_HARD=ON -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
+            CMAKE_LOCAL_OPTIONS: -DCMAKE_PREFIX_PATH=/usr/local -DUSE_HTTPS=OpenSSL -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON
             CMAKE_GENERATOR: Ninja
             SKIP_SSH_TESTS: true
             SKIP_NEGOTIATE_TESTS: true
@@ -219,6 +219,8 @@ jobs:
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
         shell: ${{ matrix.platform.shell }}
+        env:
+          CMAKE_OPTIONS: -DDEPRECATE_HARD=ON
     - name: Test
       uses: ./source/.github/actions/run-build
       with:
