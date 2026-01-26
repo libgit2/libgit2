@@ -23,6 +23,7 @@ check_type_size("unsigned long long"    UNSIGNED_LONG_LONG)
 disable_warnings(unused-function)
 disable_warnings(implicit-fallthrough)
 disable_warnings(unused-but-set-variable)
+disable_warnings(no-dangling-pointer)
 
 # User-configurable options
 
@@ -137,7 +138,3 @@ set(targets)
 # pcre
 include_directories(${PROJECT_BINARY_DIR}/src/pcre)
 add_library(pcre OBJECT ${PCRE_HEADERS} ${PCRE_SOURCES} ${PCREPOSIX_SOURCES})
-
-if(NOT MSVC)
-	set_source_files_properties(pcre_compile.c PROPERTIES COMPILE_FLAGS "-Wno-dangling-pointer")
-endif()
