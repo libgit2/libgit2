@@ -8,6 +8,7 @@
 #define INCLUDE_git_note_h__
 
 #include "oid.h"
+#include "types.h"
 
 /**
  * @file git2/notes.h
