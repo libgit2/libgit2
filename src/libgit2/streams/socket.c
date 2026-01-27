@@ -20,6 +20,10 @@
 # include <netdb.h>
 # include <netinet/in.h>
 # include <arpa/inet.h>
+# include <netinet/tcp.h>
+# ifdef __APPLE__
+#  include <sys/socket.h>
+# endif
 #else
 # include <winsock2.h>
 # include <ws2tcpip.h>
@@ -187,6 +191,32 @@ static int socket_connect(git_stream *stream)
 
 	for (p = info; p != NULL; p = p->ai_next) {
 		s = socket(p->ai_family, p->ai_socktype | SOCK_CLOEXEC, p->ai_protocol);
+
+		/* Enable TCP keepalive to detect dead connections */
+		if (s != INVALID_SOCKET && p->ai_family == AF_INET) {
+			int keepalive = 1;
+			if (setsockopt(s, SOL_SOCKET, SO_KEEPALIVE,
+			               (const char *)&keepalive, sizeof(keepalive)) == 0) {
+#ifdef __APPLE__
+				/* macOS: Set idle time to 60 seconds */
+				int keepidle = 60;
+				setsockopt(s, IPPROTO_TCP, TCP_KEEPALIVE,
+				          &keepidle, sizeof(keepidle));
+				/* Note: TCP_CONNECTIONTIMEOUT (0x20) could also be set */
+#elif defined(__linux__)
+				/* Linux: Set idle, interval, and count */
+				int keepidle = 60;   /* Start probes after 60 seconds */
+				int keepintvl = 10;  /* 10 seconds between probes */
+				int keepcnt = 3;     /* 3 probes before giving up */
+				setsockopt(s, IPPROTO_TCP, TCP_KEEPIDLE,
+				          &keepidle, sizeof(keepidle));
+				setsockopt(s, IPPROTO_TCP, TCP_KEEPINTVL,
+				          &keepintvl, sizeof(keepintvl));
+				setsockopt(s, IPPROTO_TCP, TCP_KEEPCNT,
+				          &keepcnt, sizeof(keepcnt));
+#endif
+			}
+		}
 
 		if (s == INVALID_SOCKET)
 			continue;
