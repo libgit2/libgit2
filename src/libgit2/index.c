@@ -10,6 +10,7 @@
 #include <stddef.h>
 
 #include "repository.h"
+#include "str.h"
 #include "tree.h"
 #include "tree-cache.h"
 #include "hash.h"
@@ -306,6 +307,36 @@ static void index_entry_reuc_free(git_index_reuc_entry *reuc)
 	git__free(reuc);
 }
 
+static void *extension_data(const struct index_extension *ext)
+{
+	return ((char *)ext) + ext->extension_size;
+}
+
+static int extension_srch(const void *key, const void *array_member)
+{
+	const struct index_extension *extension = array_member;
+
+	return strncmp(key, extension->signature, sizeof(extension->signature));
+}
+
+static int extension_cmp(const void *a, const void *b)
+{
+	const struct index_extension *info_a = a;
+	const struct index_extension *info_b = b;
+
+	return strncmp(
+		info_a->signature,
+		info_b->signature,
+		sizeof(info_a->signature));
+}
+
+static int extension_ondup(void **existing, void *new)
+{
+	const struct index_extension *info = *existing;
+	git_error_set(GIT_ERROR_INDEX, "found duplicate extension '%.4s'", info->signature);
+	return GIT_EEXISTS;
+}
+
 static void index_entry_free(git_index_entry *entry)
 {
 	if (!entry)
@@ -422,6 +453,7 @@ int git_index_open_ext(
 	if (git_vector_init(&index->entries, 32, git_index_entry_cmp) < 0 ||
 	    git_vector_init(&index->names, 8, conflict_name_cmp) < 0 ||
 	    git_vector_init(&index->reuc, 8, reuc_cmp) < 0 ||
+	    git_vector_init(&index->extensions, 8, extension_cmp) < 0 ||
 	    git_vector_init(&index->deleted, 8, git_index_entry_cmp) < 0)
 		goto fail;
 
@@ -473,6 +505,7 @@ static void index_free(git_index *index)
 	git_vector_dispose(&index->entries);
 	git_vector_dispose(&index->names);
 	git_vector_dispose(&index->reuc);
+	git_vector_dispose_deep(&index->extensions);
 	git_vector_dispose(&index->deleted);
 
 	git__free(index->index_file_path);
@@ -551,6 +584,7 @@ int git_index_clear(git_index *index)
 		goto done;
 
 	index_free_deleted(index);
+	git_vector_dispose_deep(&index->extensions);
 
 	if ((error = git_index_name_clear(index)) < 0 ||
 		(error = git_index_reuc_clear(index)) < 0)
@@ -2121,6 +2155,68 @@ void git_index_conflict_iterator_free(git_index_conflict_iterator *iterator)
 	git__free(iterator);
 }
 
+int git_index_extension_get(git_buf *out, git_index *index, const char *signature)
+{
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(index);
+	GIT_ASSERT_ARG(signature);
+
+	int error;
+	size_t pos;
+
+	error = git_vector_bsearch2(&pos, &index->extensions, extension_srch, signature);
+	if (error < 0) {
+		return error;
+	}
+
+	struct index_extension *ext = git_vector_get(&index->extensions, pos);
+
+	error = git_buf_set(out, extension_data(ext), ext->extension_size);
+	if (error < 0) {
+		return error;
+	}
+
+	return GIT_OK;
+}
+
+int git_index_extension_add(
+	git_index *index,
+	const char *signature,
+	const char *data,
+	size_t data_len,
+	int allow_overwrite)
+{
+	GIT_ASSERT_ARG(index);
+	GIT_ASSERT_ARG(signature);
+
+	size_t alloc_size;
+	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_size, sizeof(struct index_extension), data_len)
+	struct index_extension *ext = git__malloc(alloc_size);
+	GIT_ERROR_CHECK_ALLOC(ext);
+
+	memcpy(ext->signature, signature, sizeof(ext->signature));
+	ext->extension_size = data_len;
+	memcpy(extension_data(ext), data, data_len);
+
+	int (*on_dup)(void **old, void *new) = allow_overwrite ? NULL : extension_ondup;
+
+	return git_vector_insert_sorted(&index->extensions, ext, on_dup);
+}
+
+int git_index_extension_remove(git_index *index, const char *signature)
+{
+	GIT_ASSERT_ARG(index);
+	GIT_ASSERT_ARG(signature);
+
+	size_t pos;
+
+	if (git_vector_bsearch2(&pos, &index->extensions, extension_srch, signature) < 0) {
+		return GIT_ENOTFOUND;
+	}
+
+	return git_vector_remove(&index->extensions, pos);
+}
+
 size_t git_index_name_entrycount(git_index *index)
 {
 	GIT_ASSERT_ARG(index);
@@ -2701,12 +2797,19 @@ static int read_extension(size_t *read_len, git_index *index, size_t checksum_si
 		} else if (memcmp(dest.signature, INDEX_EXT_CONFLICT_NAME_SIG, 4) == 0) {
 			if (read_conflict_names(index, buffer + 8, dest.extension_size) < 0)
 				return -1;
+		} else {
+			/* else, unsupported extension. We cannot parse this,
+			 * but we can save it */
+			struct git_index_extension *ext = git__malloc(total_size);
+			GIT_ERROR_CHECK_ALLOC(ext);
+
+			/* Copy the extension (our struct is binary-compatible with the spec) */
+			memcpy(ext, buffer, total_size);
+
+			git_vector_insert_sorted(&index->extensions, ext, extension_ondup);
 		}
-		/* else, unsupported extension. We cannot parse this, but we can skip
-		 * it by returning `total_size */
 	} else {
-		/* we cannot handle non-ignorable extensions;
-		 * in fact they aren't even defined in the standard */
+		/* we cannot handle non-ignorable extensions */
 		git_error_set(GIT_ERROR_INDEX, "unsupported mandatory extension: '%.4s'", dest.signature);
 		return -1;
 	}
@@ -3248,6 +3351,15 @@ static int write_index(
 	/* write the reuc extension */
 	if (index->reuc.length > 0 && write_reuc_extension(index, file) < 0)
 		return -1;
+
+	/* write any unknown extension */
+	size_t i;
+	struct index_extension *ext;
+	git_vector_foreach(&index->extensions, i, ext) {
+		git_str ext_data = GIT_STR_INIT_CONST(extension_data(ext), ext->extension_size);
+		if (write_extension(file, ext, &ext_data) < 0)
+			return -1;
+	}
 
 	/* get out the hash for all the contents we've appended to the file */
 	git_filebuf_hash(checksum, file);
