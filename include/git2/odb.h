@@ -701,6 +701,16 @@ GIT_EXTERN(int) git_odb_get_backend(git_odb_backend **out, git_odb *odb, size_t 
  */
 GIT_EXTERN(int) git_odb_set_commit_graph(git_odb *odb, git_commit_graph *cgraph);
 
+/**
+ * Updates the priority of the backend
+ *
+ * @param odb object database
+ * @param backend backend to update the priority
+ * @param priority Value for ordering the backends queue
+ * @return 0 on success, error code otherwise
+ */
+GIT_EXTERN(int) git_odb_set_priority(git_odb *odb, git_odb_backend *backend, int priority);
+
 /** @} */
 GIT_END_DECL
 

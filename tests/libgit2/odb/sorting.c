@@ -107,3 +107,28 @@ void test_odb_sorting__override_default_backend_priority(void)
 	loose->free(loose);
 	packed->free(packed);
 }
+
+void test_odb_sorting__reprioritize(void)
+{
+	git_odb *new_odb;
+	git_odb_backend *backend_0 = new_backend(0);
+	git_odb_backend *backend_1 = new_backend(1);
+	fake_backend *internal;
+
+	cl_git_pass(git_odb_new(&new_odb));
+	cl_assert_equal_sz(0, git_odb_num_backends(new_odb));
+
+	cl_git_pass(git_odb_add_backend(new_odb, backend_0, 999));
+	cl_git_pass(git_odb_add_backend(new_odb, backend_1, 998));
+	cl_assert_equal_sz(2, git_odb_num_backends(new_odb));
+
+	cl_git_pass(git_odb_set_priority(new_odb, backend_0, 997));
+
+	cl_git_pass(git_odb_get_backend((git_odb_backend **)&internal, new_odb, 0));
+	cl_assert_equal_sz(1, internal->position);
+
+	cl_git_pass(git_odb_get_backend((git_odb_backend **)&internal, new_odb, 1));
+	cl_assert_equal_sz(0, internal->position);
+
+	git_odb_free(new_odb);
+}
