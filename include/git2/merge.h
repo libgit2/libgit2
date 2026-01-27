@@ -646,6 +646,10 @@ GIT_EXTERN(int) git_merge_commits(
  * to the index.  Callers should inspect the repository's index after this
  * completes, resolve any conflicts and prepare a commit.
  *
+ * If multiple commits are provided, they are merged using the octopus strategy.
+ * Merges with this strategy admit no conflicts, and the merge will fail at the first
+ * conflict encountered.
+ *
  * For compatibility with git, the repository is put into a merging
  * state. Once the commit is done (or if the user wishes to abort),
  * you should clear this state by calling
