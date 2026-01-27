@@ -195,6 +195,31 @@ static void pack_index_free(struct git_pack_file *p)
 	}
 }
 
+static int pack_get_suffixed_file_path(
+        git_str *out,
+        const struct git_pack_file *p,
+        const char *suffix)
+{
+	size_t name_len;
+	int error;
+
+	/* checked by git_pack_file alloc */
+	name_len = strlen(p->pack_name);
+	GIT_ASSERT(name_len > strlen(".pack"));
+
+	if ((error = git_str_init(out, name_len)) < 0)
+		return error;
+
+	git_str_put(out, p->pack_name, name_len - strlen(".pack"));
+	git_str_puts(out, suffix);
+	if (git_str_oom(out)) {
+		git_str_dispose(out);
+		return -1;
+	}
+
+	return 0;
+}
+
 /* Run with the packfile lock held */
 static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 {
@@ -305,32 +330,167 @@ static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 /* Run with the packfile lock held */
 static int pack_index_open_locked(struct git_pack_file *p)
 {
-	int error = 0;
-	size_t name_len;
-	git_str idx_name = GIT_STR_INIT;
+	int error;
+	git_str idx_name;
 
 	if (p->index_version > -1)
-		goto cleanup;
+		return 0;
 
-	/* checked by git_pack_file alloc */
-	name_len = strlen(p->pack_name);
-	GIT_ASSERT(name_len > strlen(".pack"));
+	if ((error = pack_get_suffixed_file_path(&idx_name, p, ".idx")) < 0)
+		return error;
 
-	if ((error = git_str_init(&idx_name, name_len)) < 0)
-		goto cleanup;
+	error = pack_index_check_locked(idx_name.ptr, p);
 
-	git_str_put(&idx_name, p->pack_name, name_len - strlen(".pack"));
-	git_str_puts(&idx_name, ".idx");
-	if (git_str_oom(&idx_name)) {
-		error = -1;
-		goto cleanup;
+	git_str_dispose(&idx_name);
+
+	return error;
+}
+
+static void pack_revindex_free(struct git_pack_file *p)
+{
+	if (p->revindex_map.data) {
+		git_futils_mmap_free(&p->revindex_map);
+		p->revindex_map.data = NULL;
+	}
+	if (p->revindex) {
+		git__free(p->revindex);
+		p->revindex = NULL;
+	}
+}
+
+/* Run with the packfile lock held */
+static int pack_revindex_check_locked(const char *path, struct git_pack_file *p)
+{
+	struct git_pack_ridx_header *hdr;
+	uint32_t version, i, *revindex;
+	size_t ridx_size;
+	struct stat st;
+	int error;
+
+	/* TODO: properly open the file without access time using O_NOATIME */
+	git_file fd = git_futils_open_ro(path);
+	if (fd < 0)
+		return fd;
+
+	if (p_fstat(fd, &st) < 0) {
+		p_close(fd);
+		git_error_set(GIT_ERROR_OS, "unable to stat pack reverse index '%s'", path);
+		return -1;
 	}
 
-	if (p->index_version == -1)
-		error = pack_index_check_locked(idx_name.ptr, p);
+	if (!S_ISREG(st.st_mode) ||
+		!git__is_sizet(st.st_size) ||
+		(ridx_size = (size_t)st.st_size) != (size_t)(sizeof(struct git_pack_ridx_header) + (4 * p->num_objects) + (p->oid_size * 2))) {
+		p_close(fd);
+		git_error_set(GIT_ERROR_ODB, "invalid pack reverse index '%s'", path);
+		return -1;
+	}
 
-cleanup:
-	git_str_dispose(&idx_name);
+	error = git_futils_mmap_ro(&p->revindex_map, fd, 0, ridx_size);
+
+	p_close(fd);
+
+	if (error < 0)
+		return error;
+
+	hdr = p->revindex_map.data;
+
+	if (hdr->ridx_signature != htonl(PACK_RIDX_SIGNATURE)) {
+		return packfile_error("invalid reverse index signature");
+	}
+
+	version = ntohl(hdr->ridx_version);
+
+	if (version < 1 || version > 1) {
+		git_futils_mmap_free(&p->revindex_map);
+		return packfile_error("unsupported reverse index version");
+	}
+
+	if (ntohl(hdr->ridx_oid_type) != p->oid_type) {
+		git_futils_mmap_free(&p->revindex_map);
+		return packfile_error("reverse index hash function mismatch");
+	}
+
+	revindex = (uint32_t *)(hdr + 1);
+
+	for (i = 0; i < p->num_objects; i++) {
+		if (ntohl(revindex[i]) > p->num_objects) {
+			git_futils_mmap_free(&p->revindex_map);
+			return packfile_error("invalid reverse index entry");
+		}
+	}
+
+	return 0;
+}
+
+struct pack_revindex_entry {
+	uint32_t pos;
+	off64_t offset;
+};
+
+static int order_by_offset(const void *p1, const void *p2, void *arg)
+{
+	const struct pack_revindex_entry *e1 = p1;
+	const struct pack_revindex_entry *e2 = p2;
+	GIT_UNUSED(arg);
+
+	return (e1->offset < e2->offset) ? -1 : (e1->offset > e2->offset) ? 1 : 0;
+}
+
+/* Run with the packfile lock held */
+static int pack_revindex_compute_locked(struct git_pack_file *p)
+{
+	struct pack_revindex_entry *revindex_tmp;
+	uint32_t *revindex, i;
+
+	revindex_tmp = git__calloc(p->num_objects, sizeof(*revindex_tmp));
+	GIT_ERROR_CHECK_ALLOC(revindex_tmp);
+
+	for (i = 0; i < p->num_objects; i++) {
+		revindex_tmp[i] = (struct pack_revindex_entry){
+			.pos = i,
+			.offset = nth_packed_object_offset_locked(p, i),
+		};
+	}
+
+	git__qsort_r(
+	        revindex_tmp, p->num_objects, sizeof(revindex_tmp[0]),
+	        order_by_offset, NULL);
+
+	revindex = git__calloc(p->num_objects, sizeof(*revindex));
+	GIT_ERROR_CHECK_ALLOC(revindex);
+
+	for (i = 0; i < p->num_objects; i++)
+		revindex[i] = htonl(revindex_tmp[i].pos);
+
+	git__free(revindex_tmp);
+
+	p->revindex = revindex;
+
+	return 0;
+}
+
+/* Run with the packfile lock held */
+static int pack_revindex_open_locked(struct git_pack_file *p)
+{
+	int error;
+	git_str ridx_name;
+
+	if (p->revindex_map.data || p->revindex)
+		return 0;
+
+	if (p->index_map.data == NULL && ((error = pack_index_open_locked(p)) < 0))
+		return error;
+
+	if ((error = pack_get_suffixed_file_path(&ridx_name, p, ".rev")) < 0)
+		return error;
+
+	if (git_fs_path_exists(ridx_name.ptr))
+		error = pack_revindex_check_locked(ridx_name.ptr, p);
+	else
+		error = pack_revindex_compute_locked(p);
+
+	git_str_dispose(&ridx_name);
 
 	return error;
 }
@@ -570,6 +730,210 @@ int git_packfile_resolve_header(
 	*type_p = type;
 
 	return error;
+}
+
+static int pack_ridx_pos_to_pack_pos(uint32_t *out, struct git_pack_file *p, uint32_t ridx_pos)
+{
+	const uint32_t *revindex;
+	int error;
+
+	if (ridx_pos > p->num_objects) {
+		git_error_set(GIT_ERROR_ODB, "reverse index position out of bounds");
+		return GIT_EINVALID;
+	}
+
+	if (!p->revindex_map.data && !p->revindex) {
+		if ((error = git_mutex_lock(&p->lock)) < 0) {
+			git_error_set(GIT_ERROR_OS, "failed to lock packfile reader");
+			return error;
+		}
+		error = pack_revindex_open_locked(p);
+		git_mutex_unlock(&p->lock);
+		if (error < 0)
+			return error;
+	}
+
+	if (p->revindex_map.data) {
+		struct git_pack_ridx_header *hdr = p->revindex_map.data;
+		revindex = (uint32_t *)(hdr + 1);
+	} else
+		revindex = p->revindex;
+
+	*out = ntohl(revindex[ridx_pos]);
+
+	return 0;
+}
+
+static int pack_ridx_pos_to_id(git_oid *out, struct git_pack_file *p, uint32_t ridx_pos)
+{
+	const unsigned char *oid_table = p->index_map.data;
+	const unsigned char *oid;
+	uint32_t pos;
+	int error;
+
+	if ((error = pack_ridx_pos_to_pack_pos(&pos, p, ridx_pos)) < 0)
+		return error;
+
+	if (p->index_version == 1) {
+		oid_table += 4 * 256;
+		oid = oid_table + pos * (4 + p->oid_size) + 4;
+	} else {
+		oid_table += 8 + 4 * 256;
+		oid = oid_table + pos * p->oid_size;
+	}
+
+	git_oid_from_raw(out, oid, p->oid_type);
+
+	return 0;
+}
+
+static int pack_ridx_pos_to_offset(off64_t *out, struct git_pack_file *p, uint32_t ridx_pos)
+{
+	uint32_t pos;
+	int error;
+
+	if (ridx_pos < p->num_objects) {
+		if ((error = pack_ridx_pos_to_pack_pos(&pos, p, ridx_pos)) < 0)
+			return error;
+		*out = nth_packed_object_offset_locked(p, pos);
+	} else if (ridx_pos == p->num_objects)
+		*out = p->mwf.size - p->oid_size;
+	else {
+		git_error_set(GIT_ERROR_ODB, "reverse index position out of bounds");
+		return GIT_EINVALID;
+	}
+
+	return 0;
+}
+
+static int pack_offset_to_ridx_pos(uint32_t *out, struct git_pack_file *p, off64_t offset)
+{
+	unsigned int lo = 0;
+	unsigned int hi = p->num_objects + 1;
+	int error;
+
+	while (lo < hi) {
+		const unsigned int mi = lo + (hi - lo) / 2;
+		off64_t found;
+
+		if ((error = pack_ridx_pos_to_offset(&found, p, mi)) < 0)
+			return error;
+
+		if (found == offset) {
+			*out = mi;
+			return 0;
+		} else if (found > offset)
+			hi = mi;
+		else
+			lo = mi + 1;
+	};
+
+	git_error_set(GIT_ERROR_ODB, "offset not found in reverse index");
+	return GIT_ENOTFOUND;
+}
+
+static int pack_delta_data_dup(unsigned char **out, struct git_pack_file *p, off64_t offset, size_t len)
+{
+	git_mwindow *w_curs = NULL;
+	unsigned char *data;
+	unsigned int left;
+	int error;
+
+	if ((error = git_mutex_lock(&p->lock)) < 0)
+		return error;
+
+	if ((error = git_mutex_lock(&p->mwf.lock)) < 0) {
+		git_mutex_unlock(&p->lock);
+		return error;
+	}
+
+	data = git_mwindow_open(&p->mwf, &w_curs, offset, len, &left);
+
+	git_mutex_unlock(&p->lock);
+	git_mutex_unlock(&p->mwf.lock);
+
+	if (data == NULL)
+		return GIT_EBUFS;
+
+	*out = git__malloc(len);
+	GIT_ERROR_CHECK_ALLOC(*out);
+
+	memcpy(*out, data, len);
+
+	git_mwindow_close(&w_curs);
+
+	return 0;
+}
+
+int git_packfile_get_delta(
+        git_oid *base_out,
+        void **z_data_out,
+        size_t *size_out,
+        size_t *z_size_out,
+        struct git_pack_file *p,
+        off64_t offset)
+{
+	size_t size, z_size;
+	git_object_t type;
+	git_mwindow *w_curs = NULL;
+	off64_t curpos = offset;
+	uint32_t ridx_pos;
+	off64_t base_offset, next_packed;
+	git_oid base_id;
+	unsigned char *z_data;
+	int error;
+
+	GIT_ASSERT_ARG(p);
+	GIT_ASSERT_ARG(base_out);
+	GIT_ASSERT_ARG(z_data_out);
+	GIT_ASSERT_ARG(size_out);
+	GIT_ASSERT_ARG(z_size_out);
+
+	error = git_packfile_unpack_header(&size, &type, p, &w_curs, &curpos);
+	if (error < 0)
+		return error;
+
+	if (type != GIT_PACKFILE_OFS_DELTA && type != GIT_PACKFILE_REF_DELTA) {
+		git_error_set(GIT_ERROR_ODB, "object is not stored as a delta");
+		return GIT_ENOTFOUND;
+	}
+
+	error = get_delta_base(&base_offset, p, &w_curs, &curpos, type, offset);
+	git_mwindow_close(&w_curs);
+
+	if (error < 0)
+		return error;
+
+	/* get the OID of the delta base using its offset and the reverse index */
+	if ((error = pack_offset_to_ridx_pos(&ridx_pos, p, base_offset)) < 0)
+		return error;
+
+	if ((error = pack_ridx_pos_to_id(&base_id, p, ridx_pos)) < 0)
+		return error;
+
+	/* get the offset of the next packed item to determine compressed delta size */
+	if ((error = pack_offset_to_ridx_pos(&ridx_pos, p, offset)) < 0)
+		return error;
+
+	if ((error = pack_ridx_pos_to_offset(&next_packed, p, ridx_pos + 1)) < 0)
+		return error;
+
+	if (next_packed <= curpos) {
+		git_error_set(GIT_ERROR_ODB, "non-monotonic offset table");
+		return GIT_EINVALID;
+	}
+	z_size = (size_t)(next_packed - curpos);
+
+	/* allocate a copy of compressed delta data and return it to the caller */
+	if ((error = pack_delta_data_dup(&z_data, p, curpos, z_size)) < 0)
+		return error;
+
+	git_oid_cpy(base_out, &base_id);
+	*z_data_out = z_data;
+	*size_out = size;
+	*z_size_out = z_size;
+
+	return 0;
 }
 
 #define SMALL_STACK_SIZE 64
@@ -1069,6 +1433,7 @@ void git_packfile_free(struct git_pack_file *p, bool unlink_packfile)
 		p_unlink(p->pack_name);
 
 	pack_index_free(p);
+	pack_revindex_free(p);
 
 	git__free(p->bad_object_ids);
 
