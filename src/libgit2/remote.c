@@ -236,6 +236,9 @@ int git_remote_create_with_opts(git_remote **out, const char *url, const git_rem
 	if (opts->repository) {
 		if ((error = git_repository_config_snapshot(&config_ro, opts->repository)) < 0)
 			goto on_error;
+	} else if (!(opts->flags & GIT_REMOTE_CREATE_SKIP_INSTEADOF)) {
+		if ((error = git_config_open_default(&config_ro)) < 0)
+			goto on_error;
 	}
 
 	remote = git__calloc(1, sizeof(git_remote));
@@ -247,7 +250,7 @@ int git_remote_create_with_opts(git_remote **out, const char *url, const git_rem
 		(error = canonicalize_url(&canonical_url, url)) < 0)
 		goto on_error;
 
-	if (opts->repository && !(opts->flags & GIT_REMOTE_CREATE_SKIP_INSTEADOF)) {
+	if (config_ro && !(opts->flags & GIT_REMOTE_CREATE_SKIP_INSTEADOF)) {
 		if ((error = apply_insteadof(&remote->url, config_ro, canonical_url.ptr, GIT_DIRECTION_FETCH, true)) < 0 ||
 		    (error = apply_insteadof(&remote->pushurl, config_ro, canonical_url.ptr, GIT_DIRECTION_PUSH, false)) < 0)
 			goto on_error;
