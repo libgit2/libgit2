@@ -323,6 +323,16 @@ static int _git_ssh_authenticate_session(
 				c->publickey_len, c->sign_callback, &c->payload);
 			break;
 		}
+		case GIT_CREDENTIAL_SSH_CUSTOM_SK: {
+			git_credential_ssh_custom_sk *c = (git_credential_ssh_custom_sk *)cred;
+
+			rc = libssh2_userauth_publickey_sk(
+				session, c->username, strlen(c->username),
+				(const unsigned char *)c->publickey, c->publickey_len,
+				c->privatekey, c->privatekey_len,
+				c->passphrase, c->sign_callback, &c->payload);
+			break;
+		}
 		case GIT_CREDENTIAL_SSH_INTERACTIVE: {
 			void **abstract = libssh2_session_abstract(session);
 			git_credential_ssh_interactive *c = (git_credential_ssh_interactive *)cred;
@@ -1033,6 +1043,7 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 		if (!git__prefixcmp(ptr, SSH_AUTH_PUBLICKEY)) {
 			*out |= GIT_CREDENTIAL_SSH_KEY;
 			*out |= GIT_CREDENTIAL_SSH_CUSTOM;
+			*out |= GIT_CREDENTIAL_SSH_CUSTOM_SK;
 #ifdef GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS
 			*out |= GIT_CREDENTIAL_SSH_MEMORY;
 #endif
