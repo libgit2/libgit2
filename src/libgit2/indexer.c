@@ -921,12 +921,13 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_inde
 		if (git_vector_init(&idx->deltas, total_objects / 2, NULL) < 0)
 			return -1;
 
+		stats->total_objects = total_objects;
+		stats->indexed_objects = 0;
 		stats->received_objects = 0;
 		stats->local_objects = 0;
 		stats->total_deltas = 0;
 		stats->indexed_deltas = 0;
-		stats->indexed_objects = 0;
-		stats->total_objects = total_objects;
+		stats->received_bytes = 0;
 
 		if ((error = do_progress_callback(idx, stats)) != 0)
 			return error;
