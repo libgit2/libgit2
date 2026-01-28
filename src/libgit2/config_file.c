@@ -16,6 +16,7 @@
 #include "config_list.h"
 #include "config_parse.h"
 #include "filebuf.h"
+#include "refdb.h"
 #include "regexp.h"
 #include "sysdir.h"
 #include "wildmatch.h"
@@ -665,27 +666,34 @@ static int conditional_match_onbranch(
 	const char *condition)
 {
 	git_str reference = GIT_STR_INIT, buf = GIT_STR_INIT;
+	git_reference *ref = NULL;
+	git_refdb *refdb = NULL;
 	int error;
 
 	GIT_UNUSED(cfg_file);
 
 	/*
-	 * NOTE: you cannot use `git_repository_head` here. Looking up the
-	 * HEAD reference will create the ODB, which causes us to read the
+	 * NOTE: we cannot use higher-level functions like
+	 * `git_repository_head` here, as these will cause us to read the
 	 * repo's config for keys like core.precomposeUnicode. As we're
 	 * just parsing the config right now, though, this would result in
 	 * an endless recursion.
+	 *
+	 * Instead, we use lower-level functionality to do so and use the refdb
+	 * directly. This requires that the refdb does not perform any config
+	 * lookups when initializing or when reading a single ref.
 	 */
-
-	if ((error = git_str_joinpath(&buf, git_repository_path(repo), GIT_HEAD_FILE)) < 0 ||
-	    (error = git_futils_readbuffer(&reference, buf.ptr)) < 0)
+	if ((error = git_repository_refdb(&refdb, (git_repository *) repo)) < 0 ||
+	    (error = git_refdb_lookup(&ref, refdb, GIT_HEAD_REF)) < 0)
 		goto out;
-	git_str_rtrim(&reference);
 
-	if (git__strncmp(reference.ptr, GIT_SYMREF, strlen(GIT_SYMREF)))
+	if (git_reference_type(ref) != GIT_REFERENCE_SYMBOLIC) {
+		*matches = 0;
 		goto out;
-	git_str_consume(&reference, reference.ptr + strlen(GIT_SYMREF));
+	}
 
+	if ((error = git_str_sets(&reference, git_reference_symbolic_target(ref))) < 0)
+		goto out;
 	if (git__strncmp(reference.ptr, GIT_REFS_HEADS_DIR, strlen(GIT_REFS_HEADS_DIR)))
 		goto out;
 	git_str_consume(&reference, reference.ptr + strlen(GIT_REFS_HEADS_DIR));
@@ -701,9 +709,12 @@ static int conditional_match_onbranch(
 		goto out;
 
 	*matches = wildmatch(buf.ptr, reference.ptr, WM_PATHNAME) == WM_MATCH;
+
 out:
 	git_str_dispose(&reference);
 	git_str_dispose(&buf);
+	git_reference_free(ref);
+	git_refdb_free(refdb);
 
 	return error;
 
