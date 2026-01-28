@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "futils.h"
 #include "repository.h"
+#include "date.h"
 
 static int remote_single_branch(git_remote **out, git_repository *repo, const char *name, const char *url, void *payload)
 {
@@ -121,6 +122,135 @@ void test_online_shallow__clone_depth_five(void)
 	git__free(roots);
 	git_str_dispose(&path);
 	git_revwalk_free(walk);
+	git_repository_free(repo);
+}
+
+void test_online_shallow__clone_since_oldest(void)
+{
+	git_str path = GIT_STR_INIT;
+	git_repository *repo;
+	git_revwalk *walk;
+	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
+	git_oid oid;
+	git_oid *roots;
+	size_t roots_len;
+	size_t num_commits = 0;
+	int error = 0;
+
+	/* Specify a date before the oldest commit. */
+	git_time_t since_date;
+	cl_git_pass(git_date_parse(&since_date,"2005-04-05"));
+	clone_opts.fetch_opts.shallow_since = since_date;
+	clone_opts.remote_cb = remote_single_branch;
+
+	git_str_joinpath(&path, clar_sandbox_path(), "shallowclone_old");
+
+	cl_git_pass(git_clone(
+	        &repo, "https://github.com/libgit2/TestGitRepository",
+	        git_str_cstr(&path), &clone_opts));
+
+	cl_assert_equal_b(false, git_repository_is_shallow(repo));
+
+	cl_git_pass(git_repository__shallow_roots(&roots, &roots_len, repo));
+	cl_assert_equal_i(0, roots_len);
+
+	git_revwalk_new(&walk, repo);
+
+	git_revwalk_push_head(walk);
+
+	while ((error = git_revwalk_next(&oid, walk)) == GIT_OK) {
+		num_commits++;
+	}
+
+	cl_assert_equal_i(num_commits, 21);
+	cl_assert_equal_i(error, GIT_ITEROVER);
+
+	git__free(roots);
+	git_str_dispose(&path);
+	git_revwalk_free(walk);
+	git_repository_free(repo);
+}
+
+void test_online_shallow__clone_since_midpoint(void)
+{
+	git_str path = GIT_STR_INIT;
+	git_repository *repo;
+	git_revwalk *walk;
+	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
+	git_oid oid;
+	git_oid *roots;
+	size_t roots_len;
+	size_t num_commits = 0;
+	int error = 0;
+
+	/* Specify a date between the oldest and most recent commit. */
+	git_time_t since_date;
+	cl_git_pass(git_date_parse(&since_date, "2005-04-07 22:30:00 UTC"));
+	clone_opts.fetch_opts.shallow_since = since_date;
+	clone_opts.remote_cb = remote_single_branch;
+
+	git_str_joinpath(&path, clar_sandbox_path(), "shallowclone_midpoint");
+
+	cl_git_pass(git_clone(
+	        &repo, "https://github.com/libgit2/TestGitRepository",
+	        git_str_cstr(&path), &clone_opts));
+
+	cl_assert_equal_b(true, git_repository_is_shallow(repo));
+
+	cl_git_pass(git_repository__shallow_roots(&roots, &roots_len, repo));
+	cl_assert_equal_i(3, roots_len);
+	cl_assert_equal_s(
+	        "d0114ab8ac326bab30e3a657a0397578c5a1af88",
+	        git_oid_tostr_s(&roots[0]));
+	cl_assert_equal_s(
+	        "49322bb17d3acc9146f98c97d078513228bbf3c0",
+	        git_oid_tostr_s(&roots[1]));
+	cl_assert_equal_s(
+	        "f73b95671f326616d66b2afb3bdfcdbbce110b44",
+	        git_oid_tostr_s(&roots[2]));
+
+	git_revwalk_new(&walk, repo);
+
+	git_revwalk_push_head(walk);
+
+	while ((error = git_revwalk_next(&oid, walk)) == GIT_OK) {
+		num_commits++;
+	}
+
+	cl_assert_equal_i(num_commits, 1);
+	cl_assert_equal_i(error, GIT_ITEROVER);
+
+	git__free(roots);
+	git_str_dispose(&path);
+	git_revwalk_free(walk);
+	git_repository_free(repo);
+}
+
+void test_online_shallow__clone_since_recent(void)
+{
+	git_str path = GIT_STR_INIT;
+	git_repository *repo;
+	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
+	size_t num_commits = 0;
+	int error = 0;
+
+	/* Specify a date newer than the most recent commit. */
+	git_time_t since_date;
+	cl_git_pass(git_date_parse(&since_date, "2025-04-07 22:30:00 UTC"));
+	clone_opts.fetch_opts.shallow_since = since_date;
+	clone_opts.remote_cb = remote_single_branch;
+
+	git_str_joinpath(&path, clar_sandbox_path(), "shallowclone_recent");
+
+	error = git_clone(
+	        &repo, "https://github.com/libgit2/TestGitRepository",
+	        git_str_cstr(&path), &clone_opts);
+
+	/* Command-line git gives a different (but no more useful) error in this
+	 * case - "error processing shallow info: 4". */
+	cl_assert_equal_i(error, GIT_EEOF);
+
+	git_str_dispose(&path);
 	git_repository_free(repo);
 }
 
