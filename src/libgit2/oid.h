@@ -224,13 +224,16 @@ GIT_INLINE(int) git_oid_raw_cpy(
 GIT_INLINE(int) git_oid__cmp(const git_oid *a, const git_oid *b)
 {
 #ifdef GIT_EXPERIMENTAL_SHA256
-	if (offsetof(git_oid, id) == sizeof(uint8_t)) {
-		return memcmp(a, b, git_oid_size(a->type) + sizeof(uint8_t));
-	} else {
-		if (a->type != b->type)
-			return a->type - b->type;
+	if (a->type != b->type)
+		return a->type - b->type;
 
-		return git_oid_raw_cmp(a->id, b->id, git_oid_size(a->type));
+	switch (a->type) {
+	case GIT_OID_SHA1:
+		return memcmp(a->id, b->id, 40);
+	case GIT_OID_SHA256:
+		return memcmp(a->id, b->id, 64);
+	default:
+		return 0;
 	}
 #else
 	return git_oid_raw_cmp(a->id, b->id, git_oid_size(GIT_OID_SHA1));
