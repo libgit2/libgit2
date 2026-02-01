@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "specialrefs.h"
+#include "specialref.h"
 
 #include "git2/sys/specialrefdb_backend.h"
 

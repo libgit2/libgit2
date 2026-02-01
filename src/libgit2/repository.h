@@ -26,7 +26,7 @@
 #include "submodule.h"
 #include "diff_driver.h"
 #include "grafts.h"
-#include "specialrefs.h"
+#include "specialref.h"
 
 #define DOT_GIT ".git"
 #define GIT_DIR DOT_GIT "/"
