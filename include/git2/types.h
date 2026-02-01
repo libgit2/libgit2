@@ -379,6 +379,12 @@ struct git_writestream {
 /** Representation of .mailmap file state. */
 typedef struct git_mailmap git_mailmap;
 
+/** An open special refs database handle. */
+typedef struct git_specialrefdb git_specialrefdb;
+
+/** A custom backend for speical refs */
+typedef struct git_specialrefdb_backend git_specialrefdb_backend;
+
 /** @} */
 GIT_END_DECL
 

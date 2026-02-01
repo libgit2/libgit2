@@ -35,6 +35,7 @@
 #include "submodule.h"
 #include "worktree.h"
 #include "path.h"
+#include "specialrefdb.h"
 
 #ifdef GIT_WIN32
 # include "win32/w32_util.h"
@@ -1671,6 +1672,32 @@ int git_repository_set_refdb(git_repository *repo, git_refdb *refdb)
 	return 0;
 }
 
+int git_repository_specialrefdb__weakptr(git_specialrefdb **out, git_repository *repo)
+{
+	int error = 0;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+
+	if (repo->_specialrefdb == NULL) {
+		git_specialrefdb *specialrefdb;
+
+		error = git_specialrefdb_open(&specialrefdb, repo);
+
+		if (!error) {
+			GIT_REFCOUNT_OWN(specialrefdb, repo);
+
+			if (git_atomic_compare_and_swap(&repo->_specialrefdb, NULL, specialrefdb) != NULL) {
+				GIT_REFCOUNT_OWN(specialrefdb, NULL);
+				git_specialrefdb_free(specialrefdb);
+			}
+		}
+	}
+
+	*out = repo->_specialrefdb;
+	return error;
+}
+
 static int repository_index_path(git_str *out, git_repository *repo)
 {
 	int error = GIT_ENOTFOUND;
@@ -3081,7 +3108,7 @@ int git_repository_head(git_reference **head_out, git_repository *repo)
 
 	GIT_ASSERT_ARG(head_out);
 
-	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_specialref_lookup_head(&head, repo)) < 0)
 		return error;
 
 	if (git_reference_type(head) == GIT_REFERENCE_DIRECT) {
