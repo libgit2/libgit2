@@ -34,7 +34,7 @@ extern int git_futils_readbuffer_fd(git_str *obj, git_file fd, size_t len);
  * support these internally and they will be removed before the `open` call.
  */
 #ifndef O_FSYNC
-# define O_FSYNC (1 << 31)
+# define O_FSYNC O_SYNC
 #endif
 
 extern int git_futils_writebuffer(
