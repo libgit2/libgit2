@@ -120,6 +120,9 @@ static void ssh_key_free(struct git_credential *cred)
 
 	git__free(c->username);
 
+	if (c->identity_path)
+		git__free(c->identity_path);
+
 	if (c->privatekey) {
 		/* Zero the memory which previously held the private key */
 		size_t key_len = strlen(c->privatekey);
@@ -311,6 +314,24 @@ int git_credential_ssh_key_from_agent(git_credential **cred, const char *usernam
 	c->privatekey = NULL;
 
 	*cred = &c->parent;
+	return 0;
+}
+
+int git_credential_ssh_key_from_custom_agent(git_credential **cred, const char *username, const char *identity_path) {
+	git_credential_ssh_key *c;
+	int rc;
+
+	GIT_ASSERT_ARG(identity_path);
+
+	rc = git_credential_ssh_key_from_agent(cred, username);
+
+	if (rc != 0)
+		return rc;
+
+	c = (git_credential_ssh_key *)*cred;
+	c->identity_path = git__strdup(identity_path);
+	GIT_ERROR_CHECK_ALLOC(c->identity_path);
+
 	return 0;
 }
 
