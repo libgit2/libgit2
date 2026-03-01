@@ -173,6 +173,14 @@ void test_refs_revparse__head(void)
 	test_object("master", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 }
 
+void test_refs_revparse__head_abbrev(void)
+{
+	test_object("@", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	test_object("@^0", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	test_object("@~0", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	test_object("master", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+}
+
 void test_refs_revparse__full_refs(void)
 {
 	test_object("refs/heads/master", "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
