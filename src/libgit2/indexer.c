@@ -490,6 +490,8 @@ static int store_object(git_indexer *idx)
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
 	GIT_ERROR_CHECK_ALLOC(pentry);
 
+	memset(&oid, 0, sizeof(git_oid));
+
 	if (git_hash_final(oid.id, &idx->hash_ctx)) {
 		git__free(pentry);
 		goto on_error;
