@@ -12,6 +12,7 @@
 #include "git2/net.h"
 #include "git2/transport.h"
 #include "git2/sys/transport.h"
+#include "bundle.h"
 #include "fs_path.h"
 
 typedef struct transport_definition {
@@ -28,6 +29,9 @@ static git_smart_subtransport_definition ssh_subtransport_definition = { git_sma
 #endif
 
 static transport_definition local_transport_definition = { "file://", git_transport_local, NULL };
+static transport_definition bundle_transport_definition = {
+	"", git_transport_bundle, NULL
+};
 
 static transport_definition transports[] = {
 	{ "git://",   git_transport_smart, &git_subtransport_definition },
@@ -104,6 +108,11 @@ static int transport_find_fn(
 	if (!definition && git_fs_path_exists(url) && git_fs_path_isdir(url))
 		definition = &local_transport_definition;
 #endif
+
+	if (!definition && git_fs_path_isfile(url) &&
+	    git_bundle__is_bundle(url)) {
+		definition = &bundle_transport_definition;
+	}
 
 	if (!definition)
 		return GIT_ENOTFOUND;

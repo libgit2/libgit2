@@ -1,0 +1,10 @@
+# v3 git bundle
+@filter=blah
+-d4a7dce85cf63874e984719f4fdd239f5145052f
+-c4a7dce85cf63874e984719f4fdd239f5145052f user comment
+-e4a7dce85cf63874e984719f4fdd239f5145052f user comment2
+a4a7dce85cf63874e984719f4fdd239f5145052f refs/heads/br2
+144344043ba4d4a405da03de3844aa829ae8be0e refs/heads/dir
+f9ed4af42472941da45a3ce44458455ed227a6be refs/heads/executable
+
+PACK
