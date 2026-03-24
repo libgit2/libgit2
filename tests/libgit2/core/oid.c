@@ -9,6 +9,8 @@ const char *str_oid_sha1 = "ae90f12eea699729ed24555e40b9fd669da12a12";
 const char *str_oid_sha1_p = "ae90f12eea699729ed";
 const char *str_oid_sha1_m = "ae90f12eea699729ed24555e40b9fd669da12a12THIS IS EXTRA TEXT THAT SHOULD GET IGNORED";
 
+const char *str_zero_sha1 = "0000000000000000000000000000000000000000";
+
 #ifdef GIT_EXPERIMENTAL_SHA256
 static git_oid id_sha256;
 static git_oid idp_sha256;
@@ -210,4 +212,28 @@ void test_core_oid__type_lookup(void)
 	cl_assert_equal_i(0, git_oid_type_fromstrn("sha1...", 5));
 	cl_assert_equal_s("unknown", git_oid_type_name(0));
 	cl_assert_equal_s("unknown", git_oid_type_name(42));
+}
+
+void test_core_oid__zero_suffixed(void)
+{
+	git_oid id, zero;
+
+	memset(&zero, 0x00, sizeof(git_oid));
+
+	memset(&id, 0xff, sizeof(git_oid));
+	cl_git_pass(git_oid_from_string(&id, str_zero_sha1, GIT_OID_SHA1));
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_assert(id.type == GIT_OID_SHA1);
+#endif
+	cl_assert(memcmp(id.id, zero.id, GIT_OID_MAX_SIZE) == 0);
+
+
+	memset(&id, 0xff, sizeof(git_oid));
+	cl_git_pass(git_oid_from_raw(&id, zero.id, GIT_OID_SHA1));
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_assert(id.type == GIT_OID_SHA1);
+#endif
+	cl_assert(memcmp(id.id, zero.id, GIT_OID_MAX_SIZE) == 0);
 }

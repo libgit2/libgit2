@@ -140,6 +140,8 @@ int git_odb__hashobj(git_oid *id, git_rawobj *obj, git_oid_t oid_type)
 	vec[1].data = obj->data;
 	vec[1].len = obj->len;
 
+	memset(id, 0, sizeof(git_oid));
+
 #ifdef GIT_EXPERIMENTAL_SHA256
 	id->type = oid_type;
 #endif
@@ -256,6 +258,7 @@ int git_odb__hashfd(
 		goto done;
 	}
 
+	memset(out, 0, sizeof(git_oid));
 	error = git_hash_final(out->id, &ctx);
 
 #ifdef GIT_EXPERIMENTAL_SHA256
@@ -1755,6 +1758,7 @@ int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 		return git_odb_stream__invalid_length(stream,
 			"stream_finalize_write()");
 
+	memset(out, 0, sizeof(git_oid));
 	git_hash_final(out->id, stream->hash_ctx);
 
 #ifdef GIT_EXPERIMENTAL_SHA256

@@ -1633,7 +1633,7 @@ static int maybe_append_head(refdb_fs_backend *backend, const git_reference *ref
 
 	/* if we can't resolve, we use {0}*40 as old id */
 	if (git_reference_name_to_id(&old_id, backend->repo, ref->name) < 0)
-		memset(&old_id, 0, sizeof(old_id));
+		git_oid_clear(&old_id, git_repository_oid_type(backend->repo));
 
 	if ((error = git_reference_lookup(&head, backend->repo, GIT_HEAD_FILE)) < 0 ||
 	    (error = reflog_append(backend, head, &old_id, git_reference_target(ref), who, message)) < 0)
