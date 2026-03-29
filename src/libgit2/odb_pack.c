@@ -563,6 +563,30 @@ static int pack_backend__read_header(
 	return git_packfile_resolve_header(len_p, type_p, e.p, e.offset);
 }
 
+static int pack_backend__get_delta(
+        git_oid *base_p,
+        void **z_data_p,
+        size_t *size_p,
+        size_t *z_size_p,
+        struct git_odb_backend *backend,
+        const git_oid *id)
+{
+	struct git_pack_entry e;
+	int error;
+
+	GIT_ASSERT_ARG(backend);
+	GIT_ASSERT_ARG(id);
+	GIT_ASSERT_ARG(base_p);
+	GIT_ASSERT_ARG(z_data_p);
+	GIT_ASSERT_ARG(size_p);
+	GIT_ASSERT_ARG(z_size_p);
+
+	if ((error = pack_entry_find(&e, (struct pack_backend *)backend, id)) < 0)
+		return error;
+
+	return git_packfile_get_delta(base_p, z_data_p, size_p, z_size_p, e.p, e.offset);
+}
+
 static int pack_backend__freshen(
 	git_odb_backend *backend, const git_oid *oid)
 {
@@ -907,6 +931,7 @@ static int pack_backend__alloc(
 	backend->parent.read = &pack_backend__read;
 	backend->parent.read_prefix = &pack_backend__read_prefix;
 	backend->parent.read_header = &pack_backend__read_header;
+	backend->parent.get_delta = &pack_backend__get_delta;
 	backend->parent.exists = &pack_backend__exists;
 	backend->parent.exists_prefix = &pack_backend__exists_prefix;
 	backend->parent.refresh = &pack_backend__refresh;
