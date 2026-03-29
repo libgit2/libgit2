@@ -63,7 +63,7 @@ static void analysis_from_branch(
 		cl_git_pass(git_str_printf(&our_refname, "%s%s", GIT_REFS_HEADS_DIR, our_branchname));
 		cl_git_pass(git_reference_lookup(&our_ref, repo, git_str_cstr(&our_refname)));
 	} else {
-		cl_git_pass(git_reference_lookup(&our_ref, repo, GIT_HEAD_FILE));
+		cl_git_pass(git_reference_lookup(&our_ref, repo, GIT_HEAD_REF));
 	}
 
 	cl_git_pass(git_str_printf(&their_refname, "%s%s", GIT_REFS_HEADS_DIR, their_branchname));
