@@ -171,6 +171,9 @@ void test_refs_branches_delete__removes_empty_folders(void)
 	git_str ref_folder = GIT_STR_INIT;
 	git_str reflog_folder = GIT_STR_INIT;
 
+	if (!cl_repo_has_ref_format(repo, "files"))
+		cl_skip();
+
 	/* Create a new branch with a nested name */
 	cl_git_pass(git_oid_from_string(&commit_id, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1));
 	cl_git_pass(git_commit_lookup(&commit, repo, &commit_id));
