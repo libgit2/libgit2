@@ -768,8 +768,14 @@ static int find_repo_traverse(
 
 	git_str_clear(&out->gitdir);
 
-	if ((error = git_fs_path_prettify(&path, start_path, NULL)) < 0)
-		return error;
+	if ((error = git_fs_path_prettify(&path, start_path, NULL)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			return error;
+
+		git_error_clear();
+		if ((error = git_str_sets(&path, start_path)) < 0)
+			goto out;
+	}
 
 	/*
 	 * In each loop we look first for a `.git` dir within the
@@ -810,7 +816,7 @@ static int find_repo_traverse(
 
 			if (S_ISDIR(st.st_mode)) {
 				if ((error = is_valid_repository_path(&is_valid, &path, &common_link, flags)) < 0)
-					goto out;
+						goto out;
 
 				if (is_valid) {
 					if ((error = git_fs_path_to_dir(&path)) < 0 ||
@@ -821,7 +827,7 @@ static int find_repo_traverse(
 						goto out;
 
 					git_str_swap(&common_link, &out->commondir);
-
+					
 					break;
 				}
 			} else if (S_ISREG(st.st_mode) && git__suffixcmp(path.ptr, "/" DOT_GIT) == 0) {
@@ -831,16 +837,20 @@ static int find_repo_traverse(
 
 				if (is_valid) {
 					git_str_swap(&out->gitdir, &repo_link);
-
+					
 					if ((error = git_str_put(&out->gitlink, path.ptr, path.size)) < 0)
-						goto out;
-
-					git_str_swap(&common_link, &out->commondir);
+					goto out;
+				
+				git_str_swap(&common_link, &out->commondir);
 				}
 				break;
 			}
 		}
-
+		/*
+		 * Stop searching because relative paths that reach "." cannot be walked up further.
+		 */
+		if (min_iterations == 0 && git__strcmp(path.ptr, ".") == 0)
+			break;
 		/*
 		 * Move up one directory. If we're in_dot_git, we'll
 		 * search the parent itself next. If we're !in_dot_git,
@@ -878,6 +888,9 @@ static int find_repo_traverse(
 		error = GIT_ENOTFOUND;
 		goto out;
 	}
+
+	/* If we found the repository, we need prettify gitdir since prettifying start_path may have failed above due to non existing child folder */
+	error = git_fs_path_prettify_dir(&out->gitdir, out->gitdir.ptr, NULL);
 
 out:
 	if (error)
