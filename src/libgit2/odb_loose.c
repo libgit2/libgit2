@@ -276,8 +276,8 @@ done:
 static int read_loose_standard(git_rawobj *out, git_str *obj)
 {
 	git_zstream zstream = GIT_ZSTREAM_INIT;
-	unsigned char head[MAX_HEADER_LEN], *body = NULL;
-	size_t decompressed, head_len, body_len, alloc_size;
+	unsigned char head[MAX_HEADER_LEN], *body = NULL, *body_out;
+	size_t decompressed, head_len, body_remain, alloc_size;
 	obj_hdr hdr;
 	int error;
 
@@ -285,16 +285,16 @@ static int read_loose_standard(git_rawobj *out, git_str *obj)
 		(error = git_zstream_set_input(&zstream, git_str_cstr(obj), git_str_len(obj))) < 0)
 		goto done;
 
-	decompressed = sizeof(head);
-
 	/*
 	 * inflate the initial part of the compressed buffer in order to
-	 * parse the header; read the largest header possible, then push the
-	 * remainder into the body buffer.
+	 * parse the header and read the largest header possible. later, we'll
+	 * push the remainder into the body buffer.
 	 */
+	decompressed = sizeof(head);
 	if ((error = git_zstream_get_output(head, &decompressed, &zstream)) < 0 ||
 		(error = parse_header(&hdr, &head_len, head, decompressed)) < 0)
 		goto done;
+	GIT_ASSERT(head_len <= decompressed);
 
 	if (!git_object_type_is_valid(hdr.type)) {
 		git_error_set(GIT_ERROR_ODB, "failed to inflate disk object");
@@ -311,16 +311,24 @@ static int read_loose_standard(git_rawobj *out, git_str *obj)
 		error = -1;
 		goto done;
 	}
+	body_out = body;
+	body_remain = hdr.size;
 
-	GIT_ASSERT(decompressed >= head_len);
-	body_len = decompressed - head_len;
-
-	if (body_len)
-		memcpy(body, head + head_len, body_len);
-
-	decompressed = hdr.size - body_len;
-	if ((error = git_zstream_get_output(body + body_len, &decompressed, &zstream)) < 0)
+	decompressed -= head_len;
+	if (decompressed > body_remain) {
+		git_error_set(GIT_ERROR_ODB, "malformed object: body was longer than specified in header");
+		error = -1;
 		goto done;
+	}
+	if (decompressed)
+		memcpy(body_out, head + head_len, decompressed);
+	body_out += decompressed;
+	body_remain -= decompressed;
+
+	decompressed = body_remain;
+	if ((error = git_zstream_get_output(body_out, &decompressed, &zstream)) < 0)
+		goto done;
+	body_out += decompressed;
 
 	if (!git_zstream_done(&zstream)) {
 		git_error_set(GIT_ERROR_ZLIB, "failed to finish zlib inflation: stream aborted prematurely");
@@ -328,7 +336,9 @@ static int read_loose_standard(git_rawobj *out, git_str *obj)
 		goto done;
 	}
 
-	body[hdr.size] = '\0';
+	/* object bodies that are too short are silently zero-padded */
+	GIT_ASSERT(body_out <= body + hdr.size);
+	*body_out = '\0';
 
 	out->data = body;
 	out->len = hdr.size;
