@@ -608,7 +608,7 @@ void test_iterator_workdir__filesystem(void)
 void test_iterator_workdir__filesystem2(void)
 {
 	git_iterator *i;
-	static const char *expect_base[] = {
+	static const char *expect_files[] = {
 		"heads/br2",
 		"heads/dir",
 		"heads/executable",
@@ -626,14 +626,21 @@ void test_iterator_workdir__filesystem2(void)
 		"tags/foo/foo/bar",
 		"tags/point_to_blob",
 		"tags/test",
-		NULL,
+	};
+	static const char *expect_reftable[] = {
+		"heads",
 	};
 
 	g_repo = cl_git_sandbox_init("testrepo");
 
 	cl_git_pass(git_iterator_for_filesystem(
 		&i, "testrepo/.git/refs", NULL));
-	expect_iterator_items(i, 17, expect_base, 17, expect_base);
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		expect_iterator_items(i, ARRAY_SIZE(expect_files), expect_files,
+				      ARRAY_SIZE(expect_files), expect_files);
+	else
+		expect_iterator_items(i, ARRAY_SIZE(expect_reftable), expect_reftable,
+				      ARRAY_SIZE(expect_reftable), expect_reftable);
 	git_iterator_free(i);
 }
 
