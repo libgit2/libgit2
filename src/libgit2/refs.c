@@ -1310,6 +1310,25 @@ int git_reference__is_pseudoref(const char *ref_name)
 	return 0;
 }
 
+int git_reference__is_per_worktree_ref(const char *ref_name)
+{
+	const char * const worktree_refs[] = {
+		"refs/bisect/",
+		"refs/worktree/",
+		"refs/rewritten/",
+	};
+	size_t i;
+
+	if (git__prefixcmp(ref_name, "refs/") != 0)
+		return 1;
+
+	for (i = 0; i < ARRAY_SIZE(worktree_refs); i++)
+	       if (git__prefixcmp(ref_name, worktree_refs[i]) == 0)
+		       return 1;
+
+	return 0;
+}
+
 static int peel_error(int error, const git_reference *ref, const char *msg)
 {
 	git_error_set(
