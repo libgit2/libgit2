@@ -98,6 +98,15 @@ int git_reference__is_note(const char *ref_name);
 int git_reference__is_pseudoref(const char *ref_name);
 const char *git_reference__shorthand(const char *name);
 
+/**
+ * Returns whether a reference is stored per worktree or not.
+ * Per-worktree references are:
+ *
+ * - all pseudorefs, e.g. HEAD and MERGE_HEAD
+ * - all references stored inside of "refs/bisect/"
+ */
+int git_reference__is_per_worktree_ref(const char *ref_name);
+
 /*
  * A `git_reference_cmp` wrapper suitable for passing to generic
  * comparators, like `vector_cmp` / `tsort` / etc.
