@@ -619,7 +619,7 @@ static int clone_repo(
 	/* enforce some behavior on fetch */
 	options.fetch_opts.update_fetchhead = 0;
 
-	if (!options.fetch_opts.depth)
+	if (!options.fetch_opts.depth && !options.fetch_opts.shallow_since)
 		options.fetch_opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_ALL;
 
 	/* Only clone to a new directory or an empty directory */
