@@ -121,6 +121,10 @@ static int packbuilder_config(git_packbuilder *pb)
 
 #undef config_get
 
+	ret = git_config_get_bool(&pb->no_reuse_delta, config, "pack.noReuseDelta");
+	if (ret == GIT_ENOTFOUND)
+		ret = 0;
+
 out:
 	git_config_free(config);
 
@@ -769,8 +773,6 @@ static int try_delta(git_packbuilder *pb, struct unpacked *trg,
 
 	*ret = 0;
 
-	/* TODO: support reuse-delta */
-
 	/* Let's not bust the allowed depth. */
 	if (src->depth >= max_depth)
 		return 0;
@@ -1333,6 +1335,40 @@ static int ll_find_deltas(git_packbuilder *pb, git_pobject **list,
 #define ll_find_deltas(pb, l, ls, w, d) find_deltas(pb, l, &ls, w, d)
 #endif
 
+static bool reuse_delta(git_pobject *po, git_packbuilder *pb)
+{
+	git_oid base_id;
+	void *z_data;
+	size_t size;
+	size_t z_size;
+	git_pobject *base_po;
+
+	if (pb->no_reuse_delta ||
+	    git_odb__get_delta(&base_id, &z_data, &size, &z_size, pb->odb, &po->id) < 0)
+		return false;
+
+	if (git_packbuilder_pobjectmap_get(&base_po, &pb->object_ix, &base_id) != 0) {
+		git__free(z_data);
+		return false;
+	}
+
+	po->delta = base_po;
+	po->delta_data = z_data;
+	po->delta_size = size;
+	po->z_delta_size = z_size;
+
+	/*
+	 * The base of this (reused) delta may be considered for deltification
+	 * itself.  Connect delta_child/delta_sibling network links to ensure
+	 * find_deltas() accounts for the depth of the reused deltas when
+	 * limiting depth for the deltas it creates itself.
+	 */
+	po->delta_sibling = po->delta->delta_child;
+	po->delta->delta_child = po;
+
+	return true;
+}
+
 int git_packbuilder__prepare(git_packbuilder *pb)
 {
 	git_pobject **delta_list;
@@ -1356,6 +1392,9 @@ int git_packbuilder__prepare(git_packbuilder *pb)
 
 	for (i = 0; i < pb->nr_objects; ++i) {
 		git_pobject *po = pb->object_list + i;
+
+		if (reuse_delta(po, pb))
+			continue;
 
 		/* Make sure the item is within our size limits */
 		if (po->size < 50 || po->size > pb->big_file_threshold)
