@@ -306,8 +306,11 @@ void test_clone_local__sha256_object_format_is_propagated(void)
 	 */
 	opts.bare = true;
 	opts.local = GIT_CLONE_LOCAL;
-	cl_git_fail(git_clone(&repo, cl_git_fixture_url("testrepo_256.git"), "./clone.git", &opts));
+	cl_git_pass(git_clone(&repo, cl_git_fixture_url("testrepo_256.git"), "./clone.git", &opts));
 
+	cl_assert_equal_i(GIT_OID_SHA256, git_repository_oid_type(repo));
+
+	git_repository_free(repo);
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
 #endif
 }
@@ -327,8 +330,11 @@ void test_clone_local__sha256_no_links_object_format_is_propagated(void)
 	 */
 	opts.bare = true;
 	opts.local = GIT_CLONE_LOCAL_NO_LINKS;
-	cl_git_fail(git_clone(&repo, cl_git_fixture_url("testrepo_256.git"), "./clone.git", &opts));
+	cl_git_pass(git_clone(&repo, cl_git_fixture_url("testrepo_256.git"), "./clone.git", &opts));
 
+	cl_assert_equal_i(GIT_OID_SHA256, git_repository_oid_type(repo));
+
+	git_repository_free(repo);
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
 #endif
 }

@@ -519,6 +519,12 @@ static int clone_local_into(
 		return error;
 	}
 
+	/* Propagate the source repository's object format to the target
+	 * so that it can read the copied object database. */
+	if ((error = git_repository__set_objectformat(
+			repo, git_repository_oid_type(src))) < 0)
+		goto cleanup;
+
 	if (git_repository__item_path(&src_odb, src, GIT_REPOSITORY_ITEM_OBJECTS) < 0 ||
 	    git_repository__item_path(&dst_odb, repo, GIT_REPOSITORY_ITEM_OBJECTS) < 0) {
 		error = -1;
