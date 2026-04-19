@@ -266,3 +266,69 @@ void test_clone_local__shallow_fails(void)
 
 	cl_git_fail_with(GIT_ENOTSUPPORTED, git_clone(&repo, cl_fixture("testrepo.git"), "./clone.git", &opts));
 }
+
+void test_clone_local__sha256_via_no_local(void)
+{
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	/*
+         * file:// URL + GIT_CLONE_NO_LOCAL -> remote code path
+	 *
+	 * Should correctly propagate the object format
+	 */
+	opts.bare = true;
+	opts.local = GIT_CLONE_NO_LOCAL;
+	cl_git_pass(git_clone(&repo, cl_git_fixture_url("testrepo_256.git"), "./clone.git", &opts));
+
+	cl_assert_equal_i(GIT_OID_SHA256, git_repository_oid_type(repo));
+
+	git_repository_free(repo);
+	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
+#endif
+}
+
+void test_clone_local__sha256_object_format_is_propagated(void)
+{
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	/*
+	 * file:// URL + GIT_CLONE_LOCAL -> local code path with hardlinks
+	 *
+	 * Should correctly propagate the object format
+	 */
+	opts.bare = true;
+	opts.local = GIT_CLONE_LOCAL;
+	cl_git_fail(git_clone(&repo, cl_git_fixture_url("testrepo_256.git"), "./clone.git", &opts));
+
+	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
+#endif
+}
+
+void test_clone_local__sha256_no_links_object_format_is_propagated(void)
+{
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	/*
+	 * file:// URL + GIT_CLONE_LOCAL_NO_LINKS -> local code path with copy
+	 *
+	 * Should correctly propagate the object format
+	 */
+	opts.bare = true;
+	opts.local = GIT_CLONE_LOCAL_NO_LINKS;
+	cl_git_fail(git_clone(&repo, cl_git_fixture_url("testrepo_256.git"), "./clone.git", &opts));
+
+	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
+#endif
+}
