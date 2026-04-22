@@ -236,8 +236,21 @@ int git_reference_lookup_resolved(
 	 * contain additional data that doesn't even follow the normal ref
 	 * format. So we look these up as "loose" refs directly.
 	 */
-	if (git_reference__is_pseudoref(name))
-		return git_reference__lookup_loose(ref_out, repo->gitdir, name, repo->oid_type);
+	if (git_reference__is_pseudoref(name)) {
+		if ((error = git_reference__lookup_loose(ref_out, repo->gitdir, name, repo->oid_type)) < 0)
+			return error;
+
+		if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0) {
+			git_reference_free(*ref_out);
+			*ref_out = NULL;
+			return error;
+		}
+
+		GIT_REFCOUNT_INC(refdb);
+		(*ref_out)->db = refdb;
+
+		return 0;
+	}
 
 	if ((error = reference_normalize_for_repo(normalized, repo, name, true)) < 0 ||
 	    (error = git_repository_refdb__weakptr(&refdb, repo)) < 0 ||

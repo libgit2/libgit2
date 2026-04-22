@@ -14,6 +14,7 @@ void test_refs_pseudoref__lookup_fetch_head_after_fetch(void)
 	git_repository *dst;
 	git_remote *remote;
 	git_reference *ref;
+	git_object *commit;
 	git_str url = GIT_STR_INIT;
 
 	cl_git_sandbox_init("testrepo.git");
@@ -28,8 +29,10 @@ void test_refs_pseudoref__lookup_fetch_head_after_fetch(void)
 
 	cl_git_pass(git_reference_lookup(&ref, dst, "FETCH_HEAD"));
 	cl_assert_equal_i(GIT_REFERENCE_DIRECT, git_reference_type(ref));
-	cl_assert(ref->db == NULL);
+	cl_assert(ref->db != NULL);
+	cl_git_pass(git_reference_peel(&commit, ref, GIT_OBJECT_COMMIT));
 
+	git_object_free(commit);
 	git_reference_free(ref);
 	git_repository_free(dst);
 }
