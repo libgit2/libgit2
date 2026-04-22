@@ -763,7 +763,7 @@ typedef enum {
 	 */
 	GIT_REMOTE_DOWNLOAD_TAGS_NONE,
 	/**
-	 * Ask for the all the tags.
+	 * Ask for all the tags.
 	 */
 	GIT_REMOTE_DOWNLOAD_TAGS_ALL
 } git_remote_autotag_option_t;
