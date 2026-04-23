@@ -276,8 +276,7 @@ void test_clone_local__sha256_via_no_local(void)
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 
 	/*
-         * file:// URL + GIT_CLONE_NO_LOCAL -> remote code path
-	 *
+	 * file:// URL + GIT_CLONE_NO_LOCAL -> remote code path
 	 * Should correctly propagate the object format
 	 */
 	opts.bare = true;
@@ -301,7 +300,6 @@ void test_clone_local__sha256_object_format_is_propagated(void)
 
 	/*
 	 * file:// URL + GIT_CLONE_LOCAL -> local code path with hardlinks
-	 *
 	 * Should correctly propagate the object format
 	 */
 	opts.bare = true;
@@ -325,7 +323,6 @@ void test_clone_local__sha256_no_links_object_format_is_propagated(void)
 
 	/*
 	 * file:// URL + GIT_CLONE_LOCAL_NO_LINKS -> local code path with copy
-	 *
 	 * Should correctly propagate the object format
 	 */
 	opts.bare = true;
