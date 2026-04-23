@@ -524,14 +524,20 @@ int git_reference__lookup_loose(
 
 		if (!(target = loose_parse_symbolic(&buf)))
 			error = -1;
-		else if (out != NULL)
+		else if (out != NULL) {
 			*out = git_reference__alloc_symbolic(ref_name, target);
+			if (*out == NULL)
+				error = -1;
+		}
 	} else {
 		git_oid oid;
 
 		if (!(error = loose_parse_oid(&oid, ref_name, &buf, oid_type)) &&
-			out != NULL)
+			out != NULL) {
 			*out = git_reference__alloc(ref_name, &oid, NULL);
+			if (*out == NULL)
+				error = -1;
+		}
 	}
 
 	git_str_dispose(&buf);
