@@ -577,7 +577,7 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 	validate_ownership_data *data = payload;
 	const char *test_path;
 
-	if (strcmp(entry->value, "") == 0) {
+	if (!entry->value || strcmp(entry->value, "") == 0) {
 		*data->is_safe = false;
 	} else if (strcmp(entry->value, "*") == 0) {
 		*data->is_safe = true;
