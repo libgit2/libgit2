@@ -480,13 +480,9 @@ void test_network_remote_local__sha256_oid_type(void)
 
 	git_remote_disconnect(remote);
 
-	/*
-	 * Uncomment to reproduce SIGSEGV: local_oid_type dereferences
-	 * t->repo->oid_type, but local_close already freed t->repo.
-	 *
-	 * cl_git_pass(git_remote_oid_type(&oid_type, remote));
-	 * cl_assert_equal_i(GIT_OID_SHA256, oid_type);
-	 */
+	/* oid_type remains available after disconnect */
+	cl_git_pass(git_remote_oid_type(&oid_type, remote));
+	cl_assert_equal_i(GIT_OID_SHA256, oid_type);
 #endif
 }
 
