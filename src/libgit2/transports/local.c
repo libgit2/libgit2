@@ -41,6 +41,9 @@ typedef struct {
 	git_vector refs;
 	unsigned connected : 1,
 		have_refs : 1;
+#ifdef GIT_EXPERIMENTAL_SHA256
+	git_oid_t oid_type;
+#endif
 } transport_local;
 
 static void free_head(git_remote_head *head)
@@ -231,6 +234,10 @@ static int local_connect(
 
 	t->repo = repo;
 
+#ifdef GIT_EXPERIMENTAL_SHA256
+	t->oid_type = repo->oid_type;
+#endif
+
 	if (store_refs(t) < 0)
 		return -1;
 
@@ -267,7 +274,7 @@ static int local_oid_type(git_oid_t *out, git_transport *transport)
 {
 	transport_local *t = (transport_local *)transport;
 
-	*out = t->repo->oid_type;
+	*out = t->oid_type;
 
 	return 0;
 }
