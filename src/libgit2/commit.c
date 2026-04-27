@@ -46,10 +46,10 @@ static int git_commit__create_buffer_internal(
 	git_str *out,
 	const git_signature *author,
 	const git_signature *committer,
-	const char *message_encoding,
 	const char *message,
 	const git_oid *tree,
-	git_array_oid_t *parents)
+	git_array_oid_t *parents,
+	const git_commit_create_ext_options *opts)
 {
 	size_t i = 0;
 	const git_oid *parent;
@@ -69,8 +69,8 @@ static int git_commit__create_buffer_internal(
 	git_signature__writebuf(out, "author ", author);
 	git_signature__writebuf(out, "committer ", committer);
 
-	if (message_encoding != NULL)
-		git_str_printf(out, "encoding %s\n", message_encoding);
+	if (opts && opts->message_encoding != NULL)
+		git_str_printf(out, "encoding %s\n", opts->message_encoding);
 
 	git_str_putc(out, '\n');
 
@@ -126,14 +126,13 @@ on_error:
 static int git_commit__create_internal(
 	git_oid *id,
 	git_repository *repo,
-	const char *update_ref,
 	const git_signature *author,
 	const git_signature *committer,
-	const char *message_encoding,
 	const char *message,
 	const git_oid *tree,
 	git_commit_parent_callback parent_cb,
 	void *parent_payload,
+	const git_commit_create_ext_options *opts,
 	bool validate)
 {
 	int error;
@@ -143,8 +142,10 @@ static int git_commit__create_internal(
 	const git_oid *current_id = NULL;
 	git_array_oid_t parents = GIT_ARRAY_INIT;
 
-	if (update_ref) {
-		error = git_reference_lookup_resolved(&ref, repo, update_ref, 10);
+	if (opts && opts->update_ref) {
+		error = git_reference_lookup_resolved(&ref,
+			repo, opts->update_ref, 10);
+
 		if (error < 0 && error != GIT_ENOTFOUND)
 			return error;
 	}
@@ -156,9 +157,8 @@ static int git_commit__create_internal(
 	if ((error = validate_tree_and_parents(&parents, repo, tree, parent_cb, parent_payload, current_id, validate)) < 0)
 		goto cleanup;
 
-	error = git_commit__create_buffer_internal(&buf, author, committer,
-		message_encoding, message, tree,
-		&parents);
+	error = git_commit__create_buffer_internal(&buf,
+		author, committer, message, tree, &parents, opts);
 
 	if (error < 0)
 		goto cleanup;
@@ -173,9 +173,9 @@ static int git_commit__create_internal(
 		goto cleanup;
 
 
-	if (update_ref != NULL) {
+	if (opts && opts->update_ref != NULL) {
 		error = git_reference__update_for_commit(
-			repo, ref, update_ref, id, "commit");
+			repo, ref, opts->update_ref, id, "commit");
 		goto cleanup;
 	}
 
@@ -198,9 +198,14 @@ int git_commit_create_from_callback(
 	git_commit_parent_callback parent_cb,
 	void *parent_payload)
 {
+	git_commit_create_ext_options opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
+
+	opts.update_ref = update_ref;
+	opts.message_encoding = message_encoding;
+
 	return git_commit__create_internal(
-		id, repo, update_ref, author, committer, message_encoding, message,
-		tree, parent_cb, parent_payload, true);
+		id, repo, author, committer, message,
+		tree, parent_cb, parent_payload, &opts, true);
 }
 
 typedef struct {
@@ -230,8 +235,9 @@ int git_commit_create_v(
 	size_t parent_count,
 	...)
 {
-	int error = 0;
+	git_commit_create_ext_options opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
 	commit_parent_varargs data;
+	int error = 0;
 
 	GIT_ASSERT_ARG(tree);
 	GIT_ASSERT_ARG(git_tree_owner(tree) == repo);
@@ -239,10 +245,12 @@ int git_commit_create_v(
 	data.total = parent_count;
 	va_start(data.args, parent_count);
 
+	opts.update_ref = update_ref;
+	opts.message_encoding = message_encoding;
+
 	error = git_commit__create_internal(
-		id, repo, update_ref, author, committer,
-		message_encoding, message, git_tree_id(tree),
-		commit_parent_from_varargs, &data, false);
+		id, repo, author, committer, message, git_tree_id(tree),
+		commit_parent_from_varargs, &data, &opts, false);
 
 	va_end(data.args);
 	return error;
@@ -271,17 +279,20 @@ int git_commit_create_from_ids(
 	size_t parent_count,
 	const git_oid *parents[])
 {
+	git_commit_create_ext_options opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
 	commit_parent_oids data = { parent_count, parents };
 
+	opts.update_ref = update_ref;
+	opts.message_encoding = message_encoding;
+
 	return git_commit__create_internal(
-		id, repo, update_ref, author, committer,
-		message_encoding, message, tree,
-		commit_parent_from_ids, &data, true);
+		id, repo, author, committer, message, tree,
+		commit_parent_from_ids, &data, &opts, true);
 }
 
 typedef struct {
 	size_t total;
-	const git_commit **parents;
+	git_commit * const *parents;
 	git_repository *repo;
 } commit_parent_data;
 
@@ -297,6 +308,27 @@ static const git_oid *commit_parent_from_array(size_t curr, void *payload)
 	return git_commit_id(commit);
 }
 
+int git_commit_create_ext(
+	git_oid *id,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	git_commit * const parents[],
+	const git_commit_create_ext_options *opts)
+{
+	commit_parent_data data = { parent_count, parents, repo };
+
+	GIT_ASSERT_ARG(tree);
+	GIT_ASSERT_ARG(git_tree_owner(tree) == repo);
+
+	return git_commit__create_internal(
+		id, repo, author, committer, message, git_tree_id(tree),
+		commit_parent_from_array, &data, opts, false);
+}
+
 int git_commit_create(
 	git_oid *id,
 	git_repository *repo,
@@ -309,15 +341,18 @@ int git_commit_create(
 	size_t parent_count,
 	const git_commit *parents[])
 {
-	commit_parent_data data = { parent_count, parents, repo };
+	git_commit_create_ext_options opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
+	commit_parent_data data = { parent_count, (git_commit * const *)parents, repo };
 
 	GIT_ASSERT_ARG(tree);
 	GIT_ASSERT_ARG(git_tree_owner(tree) == repo);
 
+	opts.update_ref = update_ref;
+	opts.message_encoding = message_encoding;
+
 	return git_commit__create_internal(
-		id, repo, update_ref, author, committer,
-		message_encoding, message, git_tree_id(tree),
-		commit_parent_from_array, &data, false);
+		id, repo, author, committer, message, git_tree_id(tree),
+		commit_parent_from_array, &data, &opts, false);
 }
 
 static const git_oid *commit_parent_for_amend(size_t curr, void *payload)
@@ -341,6 +376,7 @@ int git_commit_amend(
 	git_repository *repo;
 	git_oid tree_id;
 	git_reference *ref = NULL;
+	git_commit_create_ext_options opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
 	int error;
 
 	GIT_ASSERT_ARG(id);
@@ -378,9 +414,12 @@ int git_commit_amend(
 		}
 	}
 
+	opts.message_encoding = message_encoding;
+
 	error = git_commit__create_internal(
-		id, repo, NULL, author, committer, message_encoding, message,
-		&tree_id, commit_parent_for_amend, (void *)commit_to_amend, false);
+		id, repo, author, committer, message, &tree_id,
+		commit_parent_for_amend, (void *)commit_to_amend,
+		&opts, false);
 
 	if (!error && update_ref) {
 		error = git_reference__update_for_commit(
@@ -964,9 +1003,10 @@ int git_commit__create_buffer(
 	const git_commit *parents[])
 {
 	int error;
-	commit_parent_data data = { parent_count, parents, repo };
+	commit_parent_data data = { parent_count, (git_commit * const *)parents, repo };
 	git_array_oid_t parents_arr = GIT_ARRAY_INIT;
 	const git_oid *tree_id;
+	git_commit_create_ext_options opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
 
 	GIT_ASSERT_ARG(tree);
 	GIT_ASSERT_ARG(git_tree_owner(tree) == repo);
@@ -976,10 +1016,11 @@ int git_commit__create_buffer(
 	if ((error = validate_tree_and_parents(&parents_arr, repo, tree_id, commit_parent_from_array, &data, NULL, true)) < 0)
 		return error;
 
+	opts.message_encoding = message_encoding;
+
 	error = git_commit__create_buffer_internal(
-		out, author, committer,
-		message_encoding, message, tree_id,
-		&parents_arr);
+		out, author, committer, message, tree_id,
+		&parents_arr, &opts);
 
 	git_array_clear(parents_arr);
 	return error;
