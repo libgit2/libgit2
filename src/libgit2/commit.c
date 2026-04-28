@@ -161,6 +161,10 @@ on_error:
 	return error;
 }
 
+struct git_commitbuilder {
+	git_str *contents;
+};
+
 static int git_commit__create_internal(
 	git_oid *id,
 	git_repository *repo,
@@ -173,12 +177,12 @@ static int git_commit__create_internal(
 	const git_commit_create_ext_options *opts,
 	bool validate)
 {
-	int error;
 	git_odb *odb;
 	git_reference *ref = NULL;
 	git_str buf = GIT_STR_INIT;
 	const git_oid *current_id = NULL;
 	git_array_oid_t parents = GIT_ARRAY_INIT;
+	int error = 0;
 
 	if (opts && opts->update_ref) {
 		error = git_reference_lookup_resolved(&ref,
@@ -187,27 +191,31 @@ static int git_commit__create_internal(
 		if (error < 0 && error != GIT_ENOTFOUND)
 			return error;
 	}
+
 	git_error_clear();
 
 	if (ref)
 		current_id = git_reference_target(ref);
 
-	if ((error = validate_tree_and_parents(&parents, repo, tree, parent_cb, parent_payload, current_id, validate)) < 0)
+	if ((error = validate_tree_and_parents(&parents, repo, tree,
+		parent_cb, parent_payload, current_id, validate)) < 0)
 		goto cleanup;
 
-	error = git_commit__create_buffer_internal(&buf,
-		author, committer, message, tree, &parents, opts);
-
-	if (error < 0)
+	if ((error = git_commit__create_buffer_internal(&buf,
+		author, committer, message, tree, &parents, opts)) < 0)
 		goto cleanup;
 
-	if (git_repository_odb__weakptr(&odb, repo) < 0)
-		goto cleanup;
+	if (opts && opts->sign) {
+		git_commitbuilder builder = { &buf };
 
-	if (git_odb__freshen(odb, tree) < 0)
-		goto cleanup;
+		if ((error = opts->sign(&builder, repo, buf.ptr,
+			opts->payload)) < 0)
+			goto cleanup;
+	}
 
-	if (git_odb_write(id, odb, buf.ptr, buf.size, GIT_OBJECT_COMMIT) < 0)
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0 ||
+	    (error = git_odb__freshen(odb, tree)) < 0 ||
+	    (error = git_odb_write(id, odb, buf.ptr, buf.size, GIT_OBJECT_COMMIT)) < 0)
 		goto cleanup;
 
 
@@ -365,6 +373,57 @@ int git_commit_create_ext(
 	return git_commit__create_internal(
 		id, repo, author, committer, message, git_tree_id(tree),
 		commit_parent_from_array, &data, opts, false);
+}
+
+static int append_header(
+	git_str *out,
+	const char *raw_content,
+	const char *name,
+	const char *value)
+{
+	const char *header_end;
+
+	/* Identifying the end of the commit header area */
+	header_end = strstr(raw_content, "\n\n");
+
+	if (!header_end) {
+		git_error_set(GIT_ERROR_INVALID, "malformed commit contents");
+		return -1;
+	}
+
+	/* The header ends after the first LF */
+	header_end++;
+
+	git_str_put(out, raw_content, header_end - raw_content);
+
+	if (format_header_field(out, name, value) < 0)
+		return -1;
+
+	git_str_puts(out, header_end);
+
+	if (git_str_oom(out))
+		return -1;
+
+	return 0;
+}
+
+int git_commitbuilder_add_header(
+	git_commitbuilder *builder,
+	const char *field,
+	const char *value)
+{
+	git_str signed_data = GIT_BUF_INIT;
+	int error;
+
+	if ((error = append_header(&signed_data, builder->contents->ptr,
+		field, value)) < 0)
+		goto done;
+
+	git_str_swap(builder->contents, &signed_data);
+
+done:
+	git_str_dispose(&signed_data);
+	return error;
 }
 
 int git_commit_create(
@@ -1079,20 +1138,29 @@ int git_commit_create_with_signature(
 	const char *signature_field)
 {
 	git_odb *odb;
-	int error = 0;
-	const char *field;
-	const char *header_end;
-	git_str commit = GIT_STR_INIT;
+	git_str signed_content = GIT_STR_INIT;
 	git_commit *parsed;
 	git_array_oid_t parents = GIT_ARRAY_INIT;
 	git_commit__parse_options parse_opts = {0};
+	size_t commit_content_len;
+	int error = 0;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(commit_content);
+
+	if (!signature_field)
+		signature_field = "gpgsig";
+
+	commit_content_len = strlen(commit_content);;
 
 	parse_opts.oid_type = repo->oid_type;
 
 	/* The first step is to verify that all the tree and parents exist */
 	parsed = git__calloc(1, sizeof(git_commit));
 	GIT_ERROR_CHECK_ALLOC(parsed);
-	if (commit_parse(parsed, commit_content, strlen(commit_content), &parse_opts) < 0) {
+
+	if (commit_parse(parsed, commit_content, commit_content_len, &parse_opts) < 0) {
 		error = -1;
 		goto cleanup;
 	}
@@ -1102,39 +1170,25 @@ int git_commit_create_with_signature(
 
 	git_array_clear(parents);
 
-	/* Then we start appending by identifying the end of the commit header */
-	header_end = strstr(commit_content, "\n\n");
-	if (!header_end) {
-		git_error_set(GIT_ERROR_INVALID, "malformed commit contents");
-		error = -1;
-		goto cleanup;
-	}
-
-	/* The header ends after the first LF */
-	header_end++;
-	git_str_put(&commit, commit_content, header_end - commit_content);
-
-	if (signature != NULL) {
-		field = signature_field ? signature_field : "gpgsig";
-
-		if ((error = format_header_field(&commit, field, signature)) < 0)
+	if (signature) {
+		if ((error = append_header(&signed_content,
+			commit_content, signature_field, signature)) < 0)
 			goto cleanup;
+
+		commit_content = signed_content.ptr;
+		commit_content_len = signed_content.size;
 	}
-
-	git_str_puts(&commit, header_end);
-
-	if (git_str_oom(&commit))
-		return -1;
 
 	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
 		goto cleanup;
 
-	if ((error = git_odb_write(out, odb, commit.ptr, commit.size, GIT_OBJECT_COMMIT)) < 0)
+	if ((error = git_odb_write(out, odb, commit_content,
+		commit_content_len, GIT_OBJECT_COMMIT)) < 0)
 		goto cleanup;
 
 cleanup:
 	git_commit__free(parsed);
-	git_str_dispose(&commit);
+	git_str_dispose(&signed_content);
 	return error;
 }
 

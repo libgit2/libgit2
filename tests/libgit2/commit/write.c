@@ -299,130 +299,6 @@ void test_commit_write__can_validate_objects(void)
 	cl_git_fail(create_commit_from_ids(&commit_id, &tree_id, &parent_id));
 }
 
-void test_commit_write__attach_signature_checks_objects(void)
-{
-	const char *sig = "magic word: pretty please";
-	const char *badtree =  "tree 6b79e22d69bf46e289df0345a14ca059dfc9bdf6\n\
-parent 34734e478d6cf50c27c9d69026d93974d052c454\n\
-author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-\n\
-a simple commit which does not work\n";
-
-	const char *badparent =  "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\
-parent 34734e478d6cf50c27c9d69026d93974d052c454\n\
-author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-\n\
-a simple commit which does not work\n";
-
-	git_oid id;
-
-	cl_git_fail_with(-1, git_commit_create_with_signature(&id, g_repo, badtree, sig, "magicsig"));
-	cl_git_fail_with(-1, git_commit_create_with_signature(&id, g_repo, badparent, sig, "magicsig"));
-
-}
-
-void test_commit_write__attach_singleline_signature(void)
-{
-	const char *sig = "magic word: pretty please";
-
-	const char *data =  "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\
-parent 8496071c1b46c854b31185ea97743be6a8774479\n\
-author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-\n\
-a simple commit which works\n";
-
-	const char *complete =  "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\
-parent 8496071c1b46c854b31185ea97743be6a8774479\n\
-author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-magicsig magic word: pretty please\n\
-\n\
-a simple commit which works\n";
-
-	git_oid id;
-	git_odb *odb;
-	git_odb_object *obj;
-
-	cl_git_pass(git_commit_create_with_signature(&id, g_repo, data, sig, "magicsig"));
-
-	cl_git_pass(git_repository_odb(&odb, g_repo));
-	cl_git_pass(git_odb_read(&obj, odb, &id));
-	cl_assert_equal_s(complete, git_odb_object_data(obj));
-
-	git_odb_object_free(obj);
-	git_odb_free(odb);
-}
-
-void test_commit_write__attach_multiline_signature(void)
-{
-		const char *gpgsig = "-----BEGIN PGP SIGNATURE-----\n\
-Version: GnuPG v1.4.12 (Darwin)\n\
-\n\
-iQIcBAABAgAGBQJQ+FMIAAoJEH+LfPdZDSs1e3EQAJMjhqjWF+WkGLHju7pTw2al\n\
-o6IoMAhv0Z/LHlWhzBd9e7JeCnanRt12bAU7yvYp9+Z+z+dbwqLwDoFp8LVuigl8\n\
-JGLcnwiUW3rSvhjdCp9irdb4+bhKUnKUzSdsR2CK4/hC0N2i/HOvMYX+BRsvqweq\n\
-AsAkA6dAWh+gAfedrBUkCTGhlNYoetjdakWqlGL1TiKAefEZrtA1TpPkGn92vbLq\n\
-SphFRUY9hVn1ZBWrT3hEpvAIcZag3rTOiRVT1X1flj8B2vGCEr3RrcwOIZikpdaW\n\
-who/X3xh/DGbI2RbuxmmJpxxP/8dsVchRJJzBwG+yhwU/iN3MlV2c5D69tls/Dok\n\
-6VbyU4lm/ae0y3yR83D9dUlkycOnmmlBAHKIZ9qUts9X7mWJf0+yy2QxJVpjaTGG\n\
-cmnQKKPeNIhGJk2ENnnnzjEve7L7YJQF6itbx5VCOcsGh3Ocb3YR7DMdWjt7f8pu\n\
-c6j+q1rP7EpE2afUN/geSlp5i3x8aXZPDj67jImbVCE/Q1X9voCtyzGJH7MXR0N9\n\
-ZpRF8yzveRfMH8bwAJjSOGAFF5XkcR/RNY95o+J+QcgBLdX48h+ZdNmUf6jqlu3J\n\
-7KmTXXQcOVpN6dD3CmRFsbjq+x6RHwa8u1iGn+oIkX908r97ckfB/kHKH7ZdXIJc\n\
-cpxtDQQMGYFpXK/71stq\n\
-=ozeK\n\
------END PGP SIGNATURE-----";
-
-	const char *data =  "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\
-parent 8496071c1b46c854b31185ea97743be6a8774479\n\
-author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-\n\
-a simple commit which works\n";
-
-const char *complete = "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\
-parent 8496071c1b46c854b31185ea97743be6a8774479\n\
-author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
-gpgsig -----BEGIN PGP SIGNATURE-----\n\
- Version: GnuPG v1.4.12 (Darwin)\n\
- \n\
- iQIcBAABAgAGBQJQ+FMIAAoJEH+LfPdZDSs1e3EQAJMjhqjWF+WkGLHju7pTw2al\n\
- o6IoMAhv0Z/LHlWhzBd9e7JeCnanRt12bAU7yvYp9+Z+z+dbwqLwDoFp8LVuigl8\n\
- JGLcnwiUW3rSvhjdCp9irdb4+bhKUnKUzSdsR2CK4/hC0N2i/HOvMYX+BRsvqweq\n\
- AsAkA6dAWh+gAfedrBUkCTGhlNYoetjdakWqlGL1TiKAefEZrtA1TpPkGn92vbLq\n\
- SphFRUY9hVn1ZBWrT3hEpvAIcZag3rTOiRVT1X1flj8B2vGCEr3RrcwOIZikpdaW\n\
- who/X3xh/DGbI2RbuxmmJpxxP/8dsVchRJJzBwG+yhwU/iN3MlV2c5D69tls/Dok\n\
- 6VbyU4lm/ae0y3yR83D9dUlkycOnmmlBAHKIZ9qUts9X7mWJf0+yy2QxJVpjaTGG\n\
- cmnQKKPeNIhGJk2ENnnnzjEve7L7YJQF6itbx5VCOcsGh3Ocb3YR7DMdWjt7f8pu\n\
- c6j+q1rP7EpE2afUN/geSlp5i3x8aXZPDj67jImbVCE/Q1X9voCtyzGJH7MXR0N9\n\
- ZpRF8yzveRfMH8bwAJjSOGAFF5XkcR/RNY95o+J+QcgBLdX48h+ZdNmUf6jqlu3J\n\
- 7KmTXXQcOVpN6dD3CmRFsbjq+x6RHwa8u1iGn+oIkX908r97ckfB/kHKH7ZdXIJc\n\
- cpxtDQQMGYFpXK/71stq\n\
- =ozeK\n\
- -----END PGP SIGNATURE-----\n\
-\n\
-a simple commit which works\n";
-
-	git_oid one, two;
-	git_odb *odb;
-	git_odb_object *obj;
-
-	cl_git_pass(git_commit_create_with_signature(&one, g_repo, data, gpgsig, "gpgsig"));
-	cl_git_pass(git_commit_create_with_signature(&two, g_repo, data, gpgsig, NULL));
-
-	cl_assert(!git_oid_cmp(&one, &two));
-	cl_git_pass(git_repository_odb(&odb, g_repo));
-	cl_git_pass(git_odb_read(&obj, odb, &one));
-	cl_assert_equal_s(complete, git_odb_object_data(obj));
-
-	git_odb_object_free(obj);
-	git_odb_free(odb);
-}
-
 void test_commit_write__can_add_extra_headers(void)
 {
 	git_odb *odb;
@@ -477,5 +353,171 @@ This is a fun new commit.";
 	git_commit_free(commit);
 	git_signature_free(committer);
 	git_signature_free(author);
+	git_odb_free(odb);
+}
+
+static const char *unsigned_data =
+"tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\
+parent 8496071c1b46c854b31185ea97743be6a8774479\n\
+author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+\n\
+a simple commit which works\n";
+
+static const char *gpgsig =
+"-----BEGIN PGP SIGNATURE-----\n\
+Version: GnuPG v1.4.12 (Darwin)\n\
+\n\
+iQIcBAABAgAGBQJQ+FMIAAoJEH+LfPdZDSs1e3EQAJMjhqjWF+WkGLHju7pTw2al\n\
+o6IoMAhv0Z/LHlWhzBd9e7JeCnanRt12bAU7yvYp9+Z+z+dbwqLwDoFp8LVuigl8\n\
+JGLcnwiUW3rSvhjdCp9irdb4+bhKUnKUzSdsR2CK4/hC0N2i/HOvMYX+BRsvqweq\n\
+AsAkA6dAWh+gAfedrBUkCTGhlNYoetjdakWqlGL1TiKAefEZrtA1TpPkGn92vbLq\n\
+SphFRUY9hVn1ZBWrT3hEpvAIcZag3rTOiRVT1X1flj8B2vGCEr3RrcwOIZikpdaW\n\
+who/X3xh/DGbI2RbuxmmJpxxP/8dsVchRJJzBwG+yhwU/iN3MlV2c5D69tls/Dok\n\
+6VbyU4lm/ae0y3yR83D9dUlkycOnmmlBAHKIZ9qUts9X7mWJf0+yy2QxJVpjaTGG\n\
+cmnQKKPeNIhGJk2ENnnnzjEve7L7YJQF6itbx5VCOcsGh3Ocb3YR7DMdWjt7f8pu\n\
+c6j+q1rP7EpE2afUN/geSlp5i3x8aXZPDj67jImbVCE/Q1X9voCtyzGJH7MXR0N9\n\
+ZpRF8yzveRfMH8bwAJjSOGAFF5XkcR/RNY95o+J+QcgBLdX48h+ZdNmUf6jqlu3J\n\
+7KmTXXQcOVpN6dD3CmRFsbjq+x6RHwa8u1iGn+oIkX908r97ckfB/kHKH7ZdXIJc\n\
+cpxtDQQMGYFpXK/71stq\n\
+=ozeK\n\
+-----END PGP SIGNATURE-----";
+
+static const char *signed_data =
+"tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\
+parent 8496071c1b46c854b31185ea97743be6a8774479\n\
+author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+gpgsig -----BEGIN PGP SIGNATURE-----\n\
+ Version: GnuPG v1.4.12 (Darwin)\n\
+ \n\
+ iQIcBAABAgAGBQJQ+FMIAAoJEH+LfPdZDSs1e3EQAJMjhqjWF+WkGLHju7pTw2al\n\
+ o6IoMAhv0Z/LHlWhzBd9e7JeCnanRt12bAU7yvYp9+Z+z+dbwqLwDoFp8LVuigl8\n\
+ JGLcnwiUW3rSvhjdCp9irdb4+bhKUnKUzSdsR2CK4/hC0N2i/HOvMYX+BRsvqweq\n\
+ AsAkA6dAWh+gAfedrBUkCTGhlNYoetjdakWqlGL1TiKAefEZrtA1TpPkGn92vbLq\n\
+ SphFRUY9hVn1ZBWrT3hEpvAIcZag3rTOiRVT1X1flj8B2vGCEr3RrcwOIZikpdaW\n\
+ who/X3xh/DGbI2RbuxmmJpxxP/8dsVchRJJzBwG+yhwU/iN3MlV2c5D69tls/Dok\n\
+ 6VbyU4lm/ae0y3yR83D9dUlkycOnmmlBAHKIZ9qUts9X7mWJf0+yy2QxJVpjaTGG\n\
+ cmnQKKPeNIhGJk2ENnnnzjEve7L7YJQF6itbx5VCOcsGh3Ocb3YR7DMdWjt7f8pu\n\
+ c6j+q1rP7EpE2afUN/geSlp5i3x8aXZPDj67jImbVCE/Q1X9voCtyzGJH7MXR0N9\n\
+ ZpRF8yzveRfMH8bwAJjSOGAFF5XkcR/RNY95o+J+QcgBLdX48h+ZdNmUf6jqlu3J\n\
+ 7KmTXXQcOVpN6dD3CmRFsbjq+x6RHwa8u1iGn+oIkX908r97ckfB/kHKH7ZdXIJc\n\
+ cpxtDQQMGYFpXK/71stq\n\
+ =ozeK\n\
+ -----END PGP SIGNATURE-----\n\
+\n\
+a simple commit which works\n";
+
+void test_commit_write__attach_signature_checks_objects(void)
+{
+	const char *sig = "magic word: pretty please";
+	const char *badtree =  "tree 6b79e22d69bf46e289df0345a14ca059dfc9bdf6\n\
+parent 34734e478d6cf50c27c9d69026d93974d052c454\n\
+author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+\n\
+a simple commit which does not work\n";
+
+	const char *badparent =  "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\
+parent 34734e478d6cf50c27c9d69026d93974d052c454\n\
+author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+\n\
+a simple commit which does not work\n";
+
+	git_oid id;
+
+	cl_git_fail_with(-1, git_commit_create_with_signature(&id, g_repo, badtree, sig, "magicsig"));
+	cl_git_fail_with(-1, git_commit_create_with_signature(&id, g_repo, badparent, sig, "magicsig"));
+
+}
+
+void test_commit_write__attach_singleline_signature(void)
+{
+	const char *sig = "magic word: pretty please";
+
+	const char *complete =  "tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n\
+parent 8496071c1b46c854b31185ea97743be6a8774479\n\
+author Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+committer Ben Burkert <ben@benburkert.com> 1358451456 -0800\n\
+magicsig magic word: pretty please\n\
+\n\
+a simple commit which works\n";
+
+	git_oid id;
+	git_odb *odb;
+	git_odb_object *obj;
+
+	cl_git_pass(git_commit_create_with_signature(&id, g_repo, unsigned_data, sig, "magicsig"));
+
+	cl_git_pass(git_repository_odb(&odb, g_repo));
+	cl_git_pass(git_odb_read(&obj, odb, &id));
+	cl_assert_equal_s(complete, git_odb_object_data(obj));
+
+	git_odb_object_free(obj);
+	git_odb_free(odb);
+}
+
+void test_commit_write__attach_multiline_signature(void)
+{
+	git_oid one, two;
+	git_odb *odb;
+	git_odb_object *obj;
+
+	cl_git_pass(git_commit_create_with_signature(&one, g_repo, unsigned_data, gpgsig, "gpgsig"));
+	cl_git_pass(git_commit_create_with_signature(&two, g_repo, unsigned_data, gpgsig, NULL));
+
+	cl_assert(!git_oid_cmp(&one, &two));
+	cl_git_pass(git_repository_odb(&odb, g_repo));
+	cl_git_pass(git_odb_read(&obj, odb, &one));
+	cl_assert_equal_s(signed_data, git_odb_object_data(obj));
+
+	git_odb_object_free(obj);
+	git_odb_free(odb);
+}
+
+static int sign_cb(
+	git_commitbuilder *builder, git_repository *repo,
+	const char *commit_buffer, void *payload)
+{
+	GIT_UNUSED(repo);
+	GIT_UNUSED(commit_buffer);
+	GIT_UNUSED(payload);
+
+	return git_commitbuilder_add_header(builder,
+		"gpgsig", gpgsig);
+}
+
+void test_commit_write__signature_callback(void)
+{
+	git_oid result_id, tree_id, parent_id;
+	git_odb *odb;
+	git_odb_object *obj;
+	git_signature *committer;
+	git_tree *tree;
+	git_commit *parent;
+	git_commit_create_ext_options opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
+
+	cl_git_pass(git_oid_from_string(&tree_id, "4b825dc642cb6eb9a060e54bf8d69288fbee4904", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&parent_id, "8496071c1b46c854b31185ea97743be6a8774479", GIT_OID_SHA1));
+
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	cl_git_pass(git_commit_lookup(&parent, g_repo, &parent_id));
+	cl_git_pass(git_signature_new(&committer, "Ben Burkert", "ben@benburkert.com", 1358451456, -480));
+
+	opts.sign = sign_cb;
+
+	cl_git_pass(git_commit_create_ext(&result_id, g_repo, committer,
+		committer, "a simple commit which works\n", tree,
+		1, &parent, &opts));
+
+	cl_git_pass(git_repository_odb(&odb, g_repo));
+	cl_git_pass(git_odb_read(&obj, odb, &result_id));
+	cl_assert_equal_s(signed_data, git_odb_object_data(obj));
+
+	git_tree_free(tree);
+	git_commit_free(parent);
+	git_signature_free(committer);
+	git_odb_object_free(obj);
 	git_odb_free(odb);
 }
