@@ -422,3 +422,60 @@ a simple commit which works\n";
 	git_odb_object_free(obj);
 	git_odb_free(odb);
 }
+
+void test_commit_write__can_add_extra_headers(void)
+{
+	git_odb *odb;
+	git_signature *author, *committer;
+	git_oid tree_id, parent_id, commit_id;
+	git_commit *parent;
+	git_tree *tree;
+	git_odb_object *obj;
+	git_commit_create_ext_options opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
+	const git_commit_header extra_headers[] = {
+		{ "line_one", "First extra header" },
+		{ "line_two", "Second extra header" }
+	};
+
+	const char *expected = "tree 1810dff58d8a660512d4832e740f692884338ccd\n\
+parent 8496071c1b46c854b31185ea97743be6a8774479\n\
+author Vicent Marti <vicent@github.com> 987654321 +0130\n\
+committer Vicent Marti <vicent@github.com> 123456789 +0100\n\
+line_one First extra header\n\
+line_two Second extra header\n\
+\n\
+This is a fun new commit.";
+
+	cl_git_pass(git_signature_new(
+		&author, committer_name, committer_email, 987654321, 90));
+	cl_git_pass(git_signature_new(
+		&committer, committer_name, committer_email, 123456789, 60));
+
+	/* this is a valid tree and parent */
+	git_oid_from_string(&tree_id, tree_id_str, GIT_OID_SHA1);
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+
+	git_oid_from_string(&parent_id, parent_id_str, GIT_OID_SHA1);
+	cl_git_pass(git_commit_lookup(&parent, g_repo, &parent_id));
+
+	opts.extra_headers = extra_headers;
+	opts.extra_headers_len = 2;
+
+	cl_git_pass(git_commit_create_ext(
+		&commit_id, g_repo, author, committer,
+		"This is a fun new commit.",
+		tree, 1, &parent, &opts));
+
+	cl_git_pass(git_repository_odb(&odb, g_repo));
+	cl_git_pass(git_odb_read(&obj, odb, &commit_id));
+
+	cl_assert_equal_s(expected, git_odb_object_data(obj));
+
+	git_odb_object_free(obj);
+	git_tree_free(tree);
+	git_commit_free(parent);
+	git_commit_free(commit);
+	git_signature_free(committer);
+	git_signature_free(author);
+	git_odb_free(odb);
+}

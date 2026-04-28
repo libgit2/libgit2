@@ -363,6 +363,11 @@ GIT_EXTERN(int) git_commit_create_from_stage(
 	const char *message,
 	const git_commit_create_options *opts);
 
+/** The field name and value for a custom commit header entry. */
+typedef struct {
+	const char *field;
+	const char *value;
+} git_commit_header;
 
 typedef struct {
 	unsigned int version;
@@ -380,6 +385,13 @@ typedef struct {
 
 	/** Encoding for the commit message; leave NULL for default. */
 	const char *message_encoding;
+
+	/**
+	 * Extra headers can be specified as an array of field name and
+	 * value pairs.
+	 */
+	const git_commit_header *extra_headers;
+	size_t extra_headers_len; /**< Number of extra headers */
 } git_commit_create_ext_options;
 
 /** Current version for the `git_commit_create_ext_options` structure */

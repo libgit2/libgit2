@@ -42,6 +42,32 @@ void git_commit__free(void *_commit)
 	git__free(commit);
 }
 
+/**
+ * Append to 'out' properly marking continuations when there's a newline in 'content'
+ */
+static int format_header_field(git_str *out, const char *field, const char *content)
+{
+	const char *lf;
+
+	GIT_ASSERT_ARG(out);
+	GIT_ASSERT_ARG(field);
+	GIT_ASSERT_ARG(content);
+
+	git_str_puts(out, field);
+	git_str_putc(out, ' ');
+
+	while ((lf = strchr(content, '\n')) != NULL) {
+		git_str_put(out, content, lf - content);
+		git_str_puts(out, "\n ");
+		content = lf + 1;
+	}
+
+	git_str_puts(out, content);
+	git_str_putc(out, '\n');
+
+	return git_str_oom(out) ? -1 : 0;
+}
+
 static int git_commit__create_buffer_internal(
 	git_str *out,
 	const git_signature *author,
@@ -69,8 +95,20 @@ static int git_commit__create_buffer_internal(
 	git_signature__writebuf(out, "author ", author);
 	git_signature__writebuf(out, "committer ", committer);
 
-	if (opts && opts->message_encoding != NULL)
-		git_str_printf(out, "encoding %s\n", opts->message_encoding);
+	if (opts && opts->message_encoding != NULL) {
+		if (format_header_field(out, "encoding",
+			opts->message_encoding) < 0)
+			goto on_error;
+	}
+
+	if (opts && opts->extra_headers_len) {
+		for (i = 0; i < opts->extra_headers_len; i++) {
+			if (format_header_field(out,
+				opts->extra_headers[i].field,
+				opts->extra_headers[i].value) < 0)
+				goto on_error;
+		}
+	}
 
 	git_str_putc(out, '\n');
 
@@ -1026,38 +1064,11 @@ int git_commit__create_buffer(
 	return error;
 }
 
-/**
- * Append to 'out' properly marking continuations when there's a newline in 'content'
- */
-static int format_header_field(git_str *out, const char *field, const char *content)
-{
-	const char *lf;
-
-	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(field);
-	GIT_ASSERT_ARG(content);
-
-	git_str_puts(out, field);
-	git_str_putc(out, ' ');
-
-	while ((lf = strchr(content, '\n')) != NULL) {
-		git_str_put(out, content, lf - content);
-		git_str_puts(out, "\n ");
-		content = lf + 1;
-	}
-
-	git_str_puts(out, content);
-	git_str_putc(out, '\n');
-
-	return git_str_oom(out) ? -1 : 0;
-}
-
 static const git_oid *commit_parent_from_commit(size_t n, void *payload)
 {
 	const git_commit *commit = (const git_commit *) payload;
 
 	return git_array_get(commit->parent_ids, n);
-
 }
 
 int git_commit_create_with_signature(
