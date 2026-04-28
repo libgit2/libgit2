@@ -294,7 +294,8 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
  * @return 0 on succeess, GIT_ENOTFOUND if the field does not exist,
  * or an error code
  */
-GIT_EXTERN(int) git_commit_header_field(git_buf *out, const git_commit *commit, const char *field);
+GIT_EXTERN(int) git_commit_header_field(
+	git_buf *out, const git_commit *commit, const char *field);
 
 /**
  * Extract the signature from a commit
@@ -369,6 +370,42 @@ typedef struct {
 	const char *value;
 } git_commit_header;
 
+/** An accessor object for setting commit signature data. */
+typedef struct git_commitbuilder git_commitbuilder;
+
+/**
+ * Add a header on a commit being created.
+ *
+ * @param builder in-progress commitbuilder object
+ * @param field the header field to add
+ * @param value the header value to add
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_commitbuilder_add_header(
+	git_commitbuilder *builder,
+	const char *field,
+	const char *value);
+
+/**
+ * Commit signing callback: used when a function is going to write
+ * a commit (for example, in `git_commit_create_ext`) to allow callers
+ * to sign the commit.
+ *
+ * @param builder commit builder object to populate with the signature
+ * @param repo the repository being committed in
+ * @param commit_content the raw contents of the commit (to be signed)
+ * @param payload the caller-specified callback payload
+ * @return 0 if this callback has created a signature and populated the
+ *         field and signature buffers, `GIT_PASSTHROUGH` if the callback
+ *         does not want to sign the commit, any other value to stop and
+ *         return a failure
+ */
+typedef int GIT_CALLBACK(git_commit_signature_cb)(
+	git_commitbuilder *builder,
+	git_repository *repo,
+	const char *commit_content,
+	void *payload);
+
 typedef struct {
 	unsigned int version;
 
@@ -392,6 +429,12 @@ typedef struct {
 	 */
 	const git_commit_header *extra_headers;
 	size_t extra_headers_len; /**< Number of extra headers */
+
+	/** Signing callback; leave NULL for no commit signing. */
+	git_commit_signature_cb sign;
+
+	/** Callback payload (optional) */
+	void *payload;
 } git_commit_create_ext_options;
 
 /** Current version for the `git_commit_create_ext_options` structure */
