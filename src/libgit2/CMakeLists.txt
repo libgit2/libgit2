@@ -99,9 +99,10 @@ configure_file(experimental.h.in "${PROJECT_BINARY_DIR}/include/git2/experimenta
 # translate filenames in the git2.h so that they match the install directory
 # (allows for side-by-side installs of libgit2 and libgit2-experimental.)
 
-FILE(READ "${PROJECT_SOURCE_DIR}/include/git2.h" LIBGIT2_INCLUDE)
-STRING(REGEX REPLACE "#include \"git2\/" "#include \"${LIBGIT2_FILENAME}/" LIBGIT2_INCLUDE "${LIBGIT2_INCLUDE}")
-FILE(WRITE "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h" ${LIBGIT2_INCLUDE})
+file(READ "${PROJECT_SOURCE_DIR}/include/git2.h" LIBGIT2_INCLUDE)
+string(REGEX REPLACE "#include \"git2\/" "#include \"${LIBGIT2_FILENAME}/" LIBGIT2_INCLUDE "${LIBGIT2_INCLUDE}")
+file(WRITE "${LIBGIT2_FILENAME}.h.tmp" ${LIBGIT2_INCLUDE})
+configure_file("${LIBGIT2_FILENAME}.h.tmp" "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h" COPYONLY)
 
 # cmake package targets
 
