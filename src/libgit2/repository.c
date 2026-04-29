@@ -3145,7 +3145,7 @@ int git_repository_foreach_worktree(git_repository *repo,
 		return cb(repo, payload);
 
 	if ((error = git_repository_open(&worktree_repo, repo->commondir)) < 0 ||
-	    (error = cb(worktree_repo, payload) != 0))
+	    (error = cb(worktree_repo, payload)) != 0)
 		goto out;
 
 	git_repository_free(worktree_repo);
@@ -3160,7 +3160,7 @@ int git_repository_foreach_worktree(git_repository *repo,
 		git_worktree_free(worktree);
 		worktree = NULL;
 
-		if ((error = git_worktree_lookup(&worktree, repo, worktrees.strings[i]) < 0) ||
+		if ((error = git_worktree_lookup(&worktree, repo, worktrees.strings[i])) < 0 ||
 		    (error = git_repository_open_from_worktree(&worktree_repo, worktree)) < 0) {
 			if (error != GIT_ENOTFOUND)
 				goto out;
