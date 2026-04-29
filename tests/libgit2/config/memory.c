@@ -20,6 +20,7 @@ static void assert_config_contains(git_config_backend *backend,
 	git_config_entry *entry = NULL;
 	cl_git_pass(git_config_backend_get_string(&entry, backend, name));
 	cl_assert_equal_s(entry->value, value);
+	git_config_entry_free(entry);
 }
 
 struct expected_entry {
