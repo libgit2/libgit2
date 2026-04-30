@@ -1135,7 +1135,8 @@ static int config_file_write(
 	const char *value)
 
 {
-	char *orig_section = NULL, *section = NULL, *orig_name, *name, *ldot;
+	char *orig_section = NULL, *section = NULL;
+	const char *orig_name, *name, *ldot;
 	git_str buf = GIT_STR_INIT, contents = GIT_STR_INIT;
 	git_config_parser parser = GIT_CONFIG_PARSER_INIT;
 	git_filebuf file = GIT_FILEBUF_INIT;

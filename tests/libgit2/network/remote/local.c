@@ -466,6 +466,26 @@ void test_network_remote_local__push_delete(void)
 	cl_git_sandbox_cleanup();
 }
 
+void test_network_remote_local__sha256_oid_type(void)
+{
+#ifndef GIT_EXPERIMENTAL_SHA256
+	cl_skip();
+#else
+	git_oid_t oid_type;
+
+	connect_to_local_repository(cl_fixture("testrepo_256.git"));
+
+	cl_git_pass(git_remote_oid_type(&oid_type, remote));
+	cl_assert_equal_i(GIT_OID_SHA256, oid_type);
+
+	git_remote_disconnect(remote);
+
+	/* oid_type remains available after disconnect */
+	cl_git_pass(git_remote_oid_type(&oid_type, remote));
+	cl_assert_equal_i(GIT_OID_SHA256, oid_type);
+#endif
+}
+
 void test_network_remote_local__anonymous_remote_inmemory_repo(void)
 {
 	git_repository *inmemory;

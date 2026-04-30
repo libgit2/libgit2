@@ -407,3 +407,56 @@ void test_refs_normalize__negative_refspec_pattern(void)
 	ensure_refname_invalid(
 		GIT_REFERENCE_FORMAT_REFSPEC_PATTERN, "foo/^bar");
 }
+
+void test_refs_normalize__refspec_shorthand_allows_uppercase_segments(void)
+{
+	/* Without REFSPEC_SHORTHAND, multi-level refs starting with ALL_CAPS (pseudorefs) should be rejected */
+	ensure_refname_invalid(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "A/b");
+	ensure_refname_invalid(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "FOO/BAR/BAZ");
+	ensure_refname_invalid(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "HEAD_TRACKER/foo");
+	ensure_refname_invalid(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "HEAD/feature");
+	ensure_refname_invalid(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "FETCH_HEAD/branch");
+	ensure_refname_invalid(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "MERGE_HEAD/test");
+
+	/* With REFSPEC_SHORTHAND, they should be allowed (used in refspecs like "A/b:refs/heads/A/b") */
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL | GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND,
+		"A/b", "A/b");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL | GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND,
+		"FOO/BAR/BAZ", "FOO/BAR/BAZ");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL | GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND,
+		"HEAD_TRACKER/foo", "HEAD_TRACKER/foo");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL | GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND,
+		"HEAD/feature", "HEAD/feature");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL | GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND,
+		"FETCH_HEAD/branch", "FETCH_HEAD/branch");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL | GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND,
+		"MERGE_HEAD/test", "MERGE_HEAD/test");
+
+	/* Mixed case first segments don't look like pseudorefs, so they're allowed even without SHORTHAND */
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "AaA/b", "AaA/b");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "Head/feature", "Head/feature");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL, "merge_head/test", "merge_head/test");
+
+	/* Fully qualified refs starting with uppercase should always be allowed */
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_NORMAL, "refs/heads/A/b", "refs/heads/A/b");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_NORMAL, "refs/heads/FOO/BAR", "refs/heads/FOO/BAR");
+	ensure_refname_normalized(
+		GIT_REFERENCE_FORMAT_NORMAL, "refs/heads/HEAD/feature", "refs/heads/HEAD/feature");
+}

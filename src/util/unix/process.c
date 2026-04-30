@@ -44,7 +44,7 @@ struct git_process {
 
 GIT_INLINE(bool) is_delete_env(const char *env)
 {
-	char *c = strchr(env, '=');
+	const char *c = strchr(env, '=');
 
 	if (c == NULL)
 		return false;

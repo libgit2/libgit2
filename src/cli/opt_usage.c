@@ -201,7 +201,7 @@ int cli_opt_help_fprint(
 {
 	git_str help = GIT_BUF_INIT;
 	const cli_opt_spec *spec;
-	bool required;
+	bool required = true;
 	int error = 0;
 
 	/* Display required arguments first */

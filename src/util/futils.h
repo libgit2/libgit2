@@ -32,9 +32,17 @@ extern int git_futils_readbuffer_fd(git_str *obj, git_file fd, size_t len);
 
 /* Additional constants for `git_futils_writebuffer`'s `open_flags`.  We
  * support these internally and they will be removed before the `open` call.
+ *
+ * Not all platforms define O_FSYNC.  Fall back to O_SYNC (the POSIX
+ * standard name; O_FSYNC is a non-standard alias) when available,
+ * otherwise use a sentinel value that won't collide with real open
+ * flags.  Avoid (1 << 31) since left-shifting into the sign bit of
+ * a signed int is undefined behavior.
  */
-#ifndef O_FSYNC
-# define O_FSYNC (1 << 31)
+#if !defined(O_FSYNC) && defined(O_SYNC)
+# define O_FSYNC O_SYNC
+#elif !defined(O_FSYNC)
+# define O_FSYNC (1 << 30)
 #endif
 
 extern int git_futils_writebuffer(

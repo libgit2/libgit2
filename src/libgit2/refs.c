@@ -819,7 +819,7 @@ int git_reference_list(
 
 static int is_valid_ref_char(char ch)
 {
-	if ((unsigned) ch <= ' ')
+	if ((unsigned) ch <= ' ' || ch == '\177') /* ASCII control characters */
 		return 0;
 
 	switch (ch) {
@@ -894,6 +894,9 @@ static bool is_valid_normalized_name(const char *name, size_t len)
 		if (i == 0 && c == '^')
 			continue; /* The first character is allowed to be "^" for negative refspecs */
 
+		if (len == 1 && c == '@')
+			return true; /* Abbreviation for HEAD */
+
 		if ((c < 'A' || c > 'Z') && c != '_')
 			return false;
 	}
@@ -965,11 +968,16 @@ int git_reference__normalize_name(
 				process_flags &= ~GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
 
 			if (normalize) {
-				size_t cur_len = git_str_len(buf);
+				/* `<empty>@` (i.e. just `@`) is an alias for `HEAD` */
+				if (segments_count == 0 && segment_len == 1 && current[0] == '@') {
+					git_str_sets(buf, GIT_HEAD_FILE);
+				} else {
+					size_t cur_len = git_str_len(buf);
 
-				git_str_joinpath(buf, git_str_cstr(buf), current);
-				git_str_truncate(buf,
-					cur_len + segment_len + (segments_count ? 1 : 0));
+					git_str_joinpath(buf, git_str_cstr(buf), current);
+					git_str_truncate(buf,
+						cur_len + segment_len + (segments_count ? 1 : 0));
+				}
 
 				if (git_str_oom(buf)) {
 					error = -1;
@@ -1018,6 +1026,7 @@ int git_reference__normalize_name(
 			goto cleanup;
 
 	if ((segments_count > 1)
+		&& !(flags & GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND)
 		&& (is_valid_normalized_name(name, strchr(name, '/') - name)))
 			goto cleanup;
 

@@ -553,7 +553,7 @@ static int apply_credentials(
 {
 	git_http_auth_context *auth = server->auth_context;
 	git_vector *challenges = &server->auth_challenges;
-	const char *challenge;
+	const char *challenge = NULL;
 	git_str token = GIT_STR_INIT;
 	int error = 0;
 

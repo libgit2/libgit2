@@ -1447,7 +1447,7 @@ int git_config_parse_bool(int *out, const char *value)
 		return 0;
 	}
 
-	git_error_set(GIT_ERROR_CONFIG, "failed to parse '%s' as a boolean value", value);
+	git_error_set(GIT_ERROR_CONFIG, "failed to parse '%s' as a boolean", value ? value : "(null)");
 	return -1;
 }
 

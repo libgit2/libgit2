@@ -58,7 +58,7 @@ set(LIBGIT2_SYSTEM_LIBS ${LIBGIT2_SYSTEM_LIBS} PARENT_SCOPE)
 add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
 target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
-target_include_directories(libgit2package INTERFACE $<INSTALL_INTERFACE:include>)
+target_include_directories(libgit2package INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
 set_target_properties(libgit2package PROPERTIES C_STANDARD 90)
 set_target_properties(libgit2package PROPERTIES C_EXTENSIONS OFF)
@@ -99,9 +99,10 @@ configure_file(experimental.h.in "${PROJECT_BINARY_DIR}/include/git2/experimenta
 # translate filenames in the git2.h so that they match the install directory
 # (allows for side-by-side installs of libgit2 and libgit2-experimental.)
 
-FILE(READ "${PROJECT_SOURCE_DIR}/include/git2.h" LIBGIT2_INCLUDE)
-STRING(REGEX REPLACE "#include \"git2\/" "#include \"${LIBGIT2_FILENAME}/" LIBGIT2_INCLUDE "${LIBGIT2_INCLUDE}")
-FILE(WRITE "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h" ${LIBGIT2_INCLUDE})
+file(READ "${PROJECT_SOURCE_DIR}/include/git2.h" LIBGIT2_INCLUDE)
+string(REGEX REPLACE "#include \"git2\/" "#include \"${LIBGIT2_FILENAME}/" LIBGIT2_INCLUDE "${LIBGIT2_INCLUDE}")
+file(WRITE "${LIBGIT2_FILENAME}.h.tmp" ${LIBGIT2_INCLUDE})
+configure_file("${LIBGIT2_FILENAME}.h.tmp" "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h" COPYONLY)
 
 # cmake package targets
 
