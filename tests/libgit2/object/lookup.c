@@ -120,3 +120,14 @@ void test_object_lookup__lookup_object_with_wrong_hash_returns_error(void)
 	git_str_dispose(&oldpath);
 	git_str_dispose(&newpath);
 }
+
+void test_object_lookup__lookup_short_object_errors_gracefully(void)
+{
+	const char *invalid = "bf3d798a12d2bd09a73b1bbdec6fde6f9836f9ac";
+	git_object *object;
+	git_oid oid;
+
+	cl_git_pass(git_oid_from_string(&oid, invalid, GIT_OID_SHA1));
+
+	cl_git_fail(git_object_lookup(&object, g_repo, &oid, GIT_OBJECT_BLOB));
+}
