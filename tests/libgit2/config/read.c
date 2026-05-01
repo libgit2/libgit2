@@ -247,6 +247,16 @@ void test_config_read__multiline_multiple_quoted_quote_at_beginning_of_line(void
 	git_config_free(cfg);
 }
 
+void test_config_read__negative_refspec(void)
+{
+	git_config* cfg;
+	cl_git_pass(git_config_open_ondisk(&cfg, cl_fixture("config/config23")));
+	cl_git_pass(git_config_get_string_buf(&buf, cfg, "remote.origin.fetch"));
+	cl_assert_equal_s("^hidden", buf.ptr);
+	git_buf_dispose(&buf);
+	git_config_free(cfg);
+}
+
 void test_config_read__header_in_last_line(void)
 {
 	git_config *cfg;
