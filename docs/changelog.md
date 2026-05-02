@@ -4,6 +4,15 @@ v1.9.3
 This release includes a number of bugfixes and compatibility
 improvements, particularly around SHA256 support.
 
+* merge_files: avoid UB in xdiff by @ethomson in
+  https://github.com/libgit2/libgit2/pull/7239
+* git_merge_file_from_index: handle cases when a child (ours or
+  theirs) is null by @eantoranz in
+  https://github.com/libgit2/libgit2/pull/7092
+* cmake: write git.h.tmp to current binary directory by @kcsaul in
+  https://github.com/libgit2/libgit2/pull/7241
+* fix(pack): ensure pack_backend__read returns null terminated buffer
+  by @kanru in https://github.com/libgit2/libgit2/pull/7238
 * Check object lengths against headers in read_loose by @howtonotwin
   in https://github.com/libgit2/libgit2/pull/7178
 * cmake: don't recreate git2.h unnecessarily by @ethomson in
