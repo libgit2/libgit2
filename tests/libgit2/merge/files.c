@@ -175,6 +175,36 @@ void test_merge_files__automerge_from_index(void)
 	git_merge_file_result_free(&result);
 }
 
+void test_merge_files__automerge_zero_byte(void)
+{
+	git_merge_file_result result = {0};
+	git_index_entry ancestor, theirs, ours;
+
+	git_oid_from_string(&ancestor.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	ancestor.path = "automergeable.txt";
+	ancestor.mode = GIT_FILEMODE_BLOB;
+
+	git_oid_from_string(&ours.id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", GIT_OID_SHA1);
+	ours.path = "empty.txt";
+	ours.mode = GIT_FILEMODE_BLOB;
+
+	git_oid_from_string(&theirs.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	theirs.path = "automergeable.txt";
+	theirs.mode = GIT_FILEMODE_BLOB;
+
+	cl_git_pass(git_merge_file_from_index(&result, repo,
+		&ancestor, &ours, &theirs, 0));
+
+	cl_assert_equal_i(1, result.automergeable);
+
+	cl_assert_equal_s("empty.txt", result.path);
+	cl_assert_equal_i(GIT_FILEMODE_BLOB, result.mode);
+
+	cl_assert_equal_i(0, result.len);
+
+	git_merge_file_result_free(&result);
+}
+
 void test_merge_files__automerge_from_index_delete_file(void)
 {
 	git_merge_file_result result = {0};
