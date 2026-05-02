@@ -1420,7 +1420,7 @@ int git_packbuilder_write(
 	git_str object_path = GIT_STR_INIT;
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *indexer = NULL;
-	git_indexer_progress stats;
+	git_indexer_progress stats = { 0 };
 	struct pack_write_context ctx;
 	int t;
 
