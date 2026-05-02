@@ -739,6 +739,7 @@ GIT_INLINE(int) filename_to_oid(struct loose_backend *backend, git_oid *oid, con
 	if (v < 0)
 		return -1;
 
+	memset(oid, 0, sizeof(git_oid));
 	oid->id[0] = (unsigned char) v;
 
 	ptr += 3;

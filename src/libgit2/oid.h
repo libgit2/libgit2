@@ -221,19 +221,14 @@ GIT_INLINE(int) git_oid_raw_cpy(
  */
 GIT_INLINE(int) git_oid__cmp(const git_oid *a, const git_oid *b)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
-	if (a->type != b->type)
-		return a->type - b->type;
-
-	return git_oid_raw_cmp(a->id, b->id, git_oid_size(a->type));
-#else
-	return git_oid_raw_cmp(a->id, b->id, git_oid_size(GIT_OID_SHA1));
-#endif
+	return memcmp(a, b, sizeof(git_oid));
 }
 
 GIT_INLINE(void) git_oid__cpy_prefix(
 	git_oid *out, const git_oid *id, size_t len)
 {
+	memset(out, 0, sizeof(git_oid));
+
 #ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = id->type;
 #endif
@@ -258,10 +253,12 @@ GIT_INLINE(bool) git_oid__is_hexstr(const char *str, git_oid_t type)
 
 GIT_INLINE(void) git_oid_clear(git_oid *out, git_oid_t type)
 {
-	memset(out->id, 0, git_oid_size(type));
+	memset(out, 0, sizeof(git_oid));
 
 #ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = type;
+#else
+	GIT_UNUSED(type);
 #endif
 }
 
