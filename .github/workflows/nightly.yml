@@ -282,7 +282,6 @@ jobs:
             RUN_INVASIVE_TESTS: true
             SKIP_PROXY_TESTS: true
             SKIP_PUSHOPTIONS_TESTS: true
-            GITTEST_FLAKY_STAT: true
           os: ubuntu-latest
         - name: "Linux (arm64, Bionic, GCC, OpenSSL)"
           id: bionic-arm64-gcc-openssl
