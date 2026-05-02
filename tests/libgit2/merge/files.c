@@ -234,7 +234,7 @@ void test_merge_files__automerge_from_index_delete_file(void)
 void test_merge_files__automerge_from_index_add_file(void)
 {
 	git_merge_file_result result = {0};
-	git_index_entry *ancestor=NULL, ours, *theirs=NULL;
+	git_index_entry *ancestor = NULL, ours, *theirs = NULL;
 
 	git_oid__fromstr(&ours.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
 	ours.path = "automergeable.txt";
