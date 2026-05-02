@@ -1275,8 +1275,12 @@ static int filesystem_iterator_entry_hash(
 	filesystem_iterator *iter,
 	filesystem_iterator_entry *entry)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 	git_str fullpath = GIT_STR_INIT;
 	int error;
+
+	id_opts.object_type = GIT_OBJECT_BLOB;
+	id_opts.oid_type = iter->oid_type;
 
 	if (S_ISDIR(entry->st.st_mode)) {
 		memset(&entry->id, 0, git_oid_size(iter->oid_type));
@@ -1289,7 +1293,8 @@ static int filesystem_iterator_entry_hash(
 
 	if (!(error = git_str_joinpath(&fullpath, iter->root, entry->path)) &&
 	    !(error = git_path_validate_str_length(iter->base.repo, &fullpath)))
-		error = git_odb__hashfile(&entry->id, fullpath.ptr, GIT_OBJECT_BLOB, iter->oid_type);
+		error = git_object_id_from_file(&entry->id,
+			fullpath.ptr, &id_opts);
 
 	git_str_dispose(&fullpath);
 	return error;
