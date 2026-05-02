@@ -216,18 +216,13 @@ if should_run "SSH_TESTS"; then
 	cat >"${SSHD_DIR}/sshd_config" <<-EOF
 	Port 2222
 	ListenAddress 0.0.0.0
-	Protocol 2
 	HostKey ${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}
 	PidFile ${SSHD_DIR}/pid
 	AuthorizedKeysFile ${HOME}/.ssh/authorized_keys
 	LogLevel DEBUG
-	RSAAuthentication yes
 	PasswordAuthentication yes
 	PubkeyAuthentication yes
-	ChallengeResponseAuthentication no
 	StrictModes no
-	HostCertificate ${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}.pub
-	HostKey ${SSHD_DIR}/id_${GITTEST_SSH_KEYTYPE}
 	# Required here as sshd will simply close connection otherwise
 	UsePAM no
 	EOF
