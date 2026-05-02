@@ -101,8 +101,8 @@ configure_file(experimental.h.in "${PROJECT_BINARY_DIR}/include/git2/experimenta
 
 file(READ "${PROJECT_SOURCE_DIR}/include/git2.h" LIBGIT2_INCLUDE)
 string(REGEX REPLACE "#include \"git2\/" "#include \"${LIBGIT2_FILENAME}/" LIBGIT2_INCLUDE "${LIBGIT2_INCLUDE}")
-file(WRITE "${LIBGIT2_FILENAME}.h.tmp" ${LIBGIT2_INCLUDE})
-configure_file("${LIBGIT2_FILENAME}.h.tmp" "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h" COPYONLY)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${LIBGIT2_FILENAME}.h.tmp" ${LIBGIT2_INCLUDE})
+configure_file("${CMAKE_CURRENT_BINARY_DIR}/${LIBGIT2_FILENAME}.h.tmp" "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}.h" COPYONLY)
 
 # cmake package targets
 
