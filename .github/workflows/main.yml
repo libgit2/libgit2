@@ -123,7 +123,7 @@ jobs:
             SKIP_NEGOTIATE_TESTS: true
         - name: "Windows (x86, Cygwin)"
           id: windows-x86-cygwin
-          os: windows-2019
+          os: windows-2022
           setup-script: cygwin
           shell: D:\Temp\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
           continue-on-error: true
@@ -135,7 +135,7 @@ jobs:
             BUILD_PATH: /bin:/usr/bin:/usr/local/bin:/sbin:/usr/sbin:/usr/local/sbin
         - name: "Windows (amd64, Cygwin)"
           id: windows-amd64-cygwin
-          os: windows-2019
+          os: windows-2022
           setup-script: cygwin
           shell: D:\Temp\cygwin\bin\bash.exe --login --norc -eo pipefail -o igncr '{0}'
           continue-on-error: true
