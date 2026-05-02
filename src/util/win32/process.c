@@ -256,7 +256,7 @@ int git_process_start(git_process *process)
 {
 	STARTUPINFOW startup_info;
 	SECURITY_ATTRIBUTES security_attrs;
-	DWORD flags = CREATE_UNICODE_ENVIRONMENT;
+	DWORD flags = CREATE_UNICODE_ENVIRONMENT | CREATE_NO_WINDOW;
 	HANDLE in[2]  = { NULL, NULL },
 	       out[2] = { NULL, NULL },
 	       err[2] = { NULL, NULL };
