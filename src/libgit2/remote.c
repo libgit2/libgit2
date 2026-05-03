@@ -2092,7 +2092,9 @@ cleanup:
 	return error;
 }
 
-static int truncate_fetch_head(const char *gitdir)
+static int truncate_fetch_head(
+	const char *gitdir,
+	unsigned int update_flags)
 {
 	git_str path = GIT_STR_INIT;
 	int error;
@@ -2100,9 +2102,15 @@ static int truncate_fetch_head(const char *gitdir)
 	if ((error = git_str_joinpath(&path, gitdir, GIT_FETCH_HEAD_FILE)) < 0)
 		return error;
 
-	error = git_futils_truncate(path.ptr, GIT_REFS_FILE_MODE);
-	git_str_dispose(&path);
+	/* When update suppressed, skip truncate when file doesn't exist to prevent creating empty file */
+	if (!(update_flags & GIT_REMOTE_UPDATE_FETCHHEAD) &&
+	    !git_fs_path_exists(path.ptr))
+		goto out;
 
+	error = git_futils_truncate(path.ptr, GIT_REFS_FILE_MODE);
+
+out:
+	git_str_dispose(&path);
 	return error;
 }
 
@@ -2136,7 +2144,7 @@ int git_remote_update_tips(
 	else
 		tagopt = download_tags;
 
-	if ((error = truncate_fetch_head(git_repository_path(remote->repo))) < 0)
+	if ((error = truncate_fetch_head(git_repository_path(remote->repo), update_flags)) < 0)
 		goto out;
 
 	if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
