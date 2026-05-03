@@ -295,8 +295,8 @@ static int config_file_snapshot(git_config_backend **out, git_config_backend *ba
 static int config_file_set(git_config_backend *cfg, const char *name, const char *value)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
-	git_config_list *config_list;
-	git_config_list_entry *existing;
+	git_config_list *config_list = NULL;
+	git_config_list_entry *existing = NULL;
 	char *key, *esc_value = NULL;
 	int error;
 
@@ -328,6 +328,7 @@ static int config_file_set(git_config_backend *cfg, const char *name, const char
 		goto out;
 
 out:
+	git_config_list_entry_free((git_config_backend_entry *)existing);
 	git_config_list_free(config_list);
 	git__free(esc_value);
 	git__free(key);
@@ -353,14 +354,14 @@ static int config_file_get(
 	if ((error = config_file_take_list(&config_list, h)) < 0)
 		return error;
 
-	if ((error = (git_config_list_get(&entry, config_list, key))) < 0) {
-		git_config_list_free(config_list);
-		return error;
-	}
+	if ((error = (git_config_list_get(&entry, config_list, key))) < 0)
+		goto out;
 
 	*out = &entry->base;
 
-	return 0;
+ out:
+	git_config_list_free(config_list);
+	return error;
 }
 
 static int config_file_set_multivar(
@@ -394,7 +395,7 @@ static int config_file_delete(git_config_backend *cfg, const char *name)
 {
 	config_file_backend *b = GIT_CONTAINER_OF(cfg, config_file_backend, parent);
 	git_config_list *config_list = NULL;
-	git_config_list_entry *entry;
+	git_config_list_entry *entry = NULL;
 	char *key = NULL;
 	int error;
 
@@ -415,6 +416,7 @@ static int config_file_delete(git_config_backend *cfg, const char *name)
 		goto out;
 
 out:
+	git_config_list_entry_free((git_config_backend_entry *)entry);
 	git_config_list_free(config_list);
 	git__free(key);
 	return error;
@@ -448,6 +450,7 @@ static int config_file_delete_multivar(git_config_backend *cfg, const char *name
 		goto out;
 
 out:
+	git_config_list_entry_free((git_config_backend_entry *)entry);
 	git_config_list_free(config_list);
 	git__free(key);
 	git_regexp_dispose(&preg);
