@@ -53,6 +53,8 @@
 #cmakedefine GIT_SSH_LIBSSH2 1
 #cmakedefine GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS 1
 
+#cmakedefine GIT_HTTP 1
+
 #cmakedefine GIT_HTTPS 1
 #cmakedefine GIT_HTTPS_OPENSSL 1
 #cmakedefine GIT_HTTPS_OPENSSL_DYNAMIC 1

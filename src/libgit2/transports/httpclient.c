@@ -6,6 +6,9 @@
  */
 
 #include "common.h"
+
+#ifdef GIT_HTTP
+
 #include "git2.h"
 
 #include "vector.h"
@@ -1631,3 +1634,5 @@ void git_http_client_free(git_http_client *client)
 	git_str_dispose(&client->read_buf);
 	git__free(client);
 }
+
+#endif /* GIT_HTTP */

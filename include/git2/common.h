@@ -173,7 +173,10 @@ typedef enum {
 	GIT_FEATURE_SHA1           = (1 << 10),
 
 	/** SHA256 object support */
-	GIT_FEATURE_SHA256         = (1 << 11)
+	GIT_FEATURE_SHA256         = (1 << 11),
+
+	/** HTTP remotes */
+	GIT_FEATURE_HTTP           = (1 << 12)
 } git_feature_t;
 
 /**
