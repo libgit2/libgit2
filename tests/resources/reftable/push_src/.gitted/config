@@ -1,0 +1,12 @@
+[core]
+	repositoryformatversion = 1
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+	hideDotFiles = dotGitOnly
+[submodule "submodule"]
+	url = m:/dd/libgit2/tests-clar/resources/testrepo.git
+[extensions]
+	refstorage = reftable

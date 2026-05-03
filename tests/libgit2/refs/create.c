@@ -281,7 +281,10 @@ static void test_win32_name(const char *name)
 	ret = git_reference_create(&new_reference, g_repo, name, &id, 0, NULL);
 
 #ifdef GIT_WIN32
-	cl_assert_equal_i(GIT_EINVALIDSPEC, ret);
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_assert_equal_i(GIT_EINVALIDSPEC, ret);
+	else
+		cl_git_pass(ret);
 #else
 	cl_git_pass(ret);
 #endif

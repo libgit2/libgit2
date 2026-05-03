@@ -384,6 +384,21 @@ GIT_EXTERN(int) git_refdb_backend_fs(
 	git_repository *repo);
 
 /**
+ * Constructor for the reftable-based refdb backend
+ *
+ * Under normal usage, this is called for you when the repository is
+ * opened / created that uses the reftable format, but you can use this to
+ * explicitly construct a reftable refdb backend for a repository.
+ *
+ * @param backend_out Output pointer to the git_refdb_backend object
+ * @param repo Git repository to access
+ * @return 0 on success, <0 error code on failure
+ */
+GIT_EXTERN(int) git_refdb_backend_reftable(
+	git_refdb_backend **backend_out,
+	git_repository *repo);
+
+/**
  * Sets the custom backend to an existing reference DB
  *
  * The `git_refdb` will take ownership of the `git_refdb_backend` so you

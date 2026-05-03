@@ -487,21 +487,6 @@ static const char *loose_parse_symbolic(git_str *file_content)
 	return refname_start;
 }
 
-/*
- * Returns whether a reference is stored per worktree or not.
- * Per-worktree references are:
- *
- * - all pseudorefs, e.g. HEAD and MERGE_HEAD
- * - all references stored inside of "refs/bisect/"
- */
-static bool is_per_worktree_ref(const char *ref_name)
-{
-	return git__prefixcmp(ref_name, "refs/") != 0 ||
-	       git__prefixcmp(ref_name, "refs/bisect/") == 0 ||
-	       git__prefixcmp(ref_name, "refs/worktree/") == 0 ||
-	       git__prefixcmp(ref_name, "refs/rewritten/") == 0;
-}
-
 int git_reference__lookup_loose(
 	git_reference **out,
 	const char *ref_dir,
@@ -551,7 +536,7 @@ static int loose_lookup(
 {
 	const char *ref_dir;
 
-	if (is_per_worktree_ref(ref_name))
+	if (git_reference__is_per_worktree_ref(ref_name))
 		ref_dir = backend->gitpath;
 	else
 		ref_dir = backend->commonpath;
@@ -995,11 +980,11 @@ static int iter_load_paths(
 		git_str_puts(&ctx->ref_name, entry->path);
 
 		if (worktree) {
-			if (!is_per_worktree_ref(ctx->ref_name.ptr))
+			if (!git_reference__is_per_worktree_ref(ctx->ref_name.ptr))
 				continue;
 		} else {
 			if (git_repository_is_worktree(ctx->backend->repo) &&
-			    is_per_worktree_ref(ctx->ref_name.ptr))
+			    git_reference__is_per_worktree_ref(ctx->ref_name.ptr))
 				continue;
 		}
 
@@ -1261,7 +1246,7 @@ static int loose_lock(git_filebuf *file, refdb_fs_backend *backend, const char *
 		return GIT_EINVALIDSPEC;
 	}
 
-	if (is_per_worktree_ref(name))
+	if (git_reference__is_per_worktree_ref(name))
 		basedir = backend->gitpath;
 	else
 		basedir = backend->commonpath;
