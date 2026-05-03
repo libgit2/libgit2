@@ -7,6 +7,8 @@
 
 #include "common.h"
 
+#include "bundle.h"
+#include "git2/bundle.h"
 #include "git2/types.h"
 #include "git2/remote.h"
 #include "git2/net.h"
@@ -28,17 +30,19 @@ static git_smart_subtransport_definition ssh_subtransport_definition = { git_sma
 #endif
 
 static transport_definition local_transport_definition = { "file://", git_transport_local, NULL };
+static transport_definition bundle_transport_definition = { "bundle://", git_transport_bundle, NULL };
 
 static transport_definition transports[] = {
-	{ "git://",   git_transport_smart, &git_subtransport_definition },
-	{ "http://",  git_transport_smart, &http_subtransport_definition },
-	{ "https://", git_transport_smart, &http_subtransport_definition },
-	{ "file://",  git_transport_local, NULL },
+	{ "git://",    git_transport_smart, &git_subtransport_definition },
+	{ "http://",   git_transport_smart, &http_subtransport_definition },
+	{ "https://",  git_transport_smart, &http_subtransport_definition },
+	{ "file://",   git_transport_local, NULL },
+	{ "bundle://", git_transport_bundle, NULL },
 
 #ifdef GIT_SSH
-	{ "ssh://",   git_transport_smart, &ssh_subtransport_definition },
-	{ "ssh+git://",   git_transport_smart, &ssh_subtransport_definition },
-	{ "git+ssh://",   git_transport_smart, &ssh_subtransport_definition },
+	{ "ssh://",     git_transport_smart, &ssh_subtransport_definition },
+	{ "ssh+git://", git_transport_smart, &ssh_subtransport_definition },
+	{ "git+ssh://", git_transport_smart, &ssh_subtransport_definition },
 #endif
 
 	{ NULL, 0, 0 }
@@ -104,6 +108,16 @@ static int transport_find_fn(
 	if (!definition && git_fs_path_exists(url) && git_fs_path_isdir(url))
 		definition = &local_transport_definition;
 #endif
+
+	/*
+	 * Check if the path points to a git bundle file.  We peek the first
+	 * line rather than assuming any plain file is a bundle, to avoid
+	 * misidentifying arbitrary files.
+	 */
+	if (!definition && git_fs_path_exists(url) &&
+	    git_fs_path_isfile(url) &&
+	    git_bundle_is_valid(url) == 1)
+		definition = &bundle_transport_definition;
 
 	if (!definition)
 		return GIT_ENOTFOUND;
