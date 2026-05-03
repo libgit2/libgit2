@@ -294,7 +294,8 @@ GIT_EXTERN(int) git_commit_nth_gen_ancestor(
  * @return 0 on succeess, GIT_ENOTFOUND if the field does not exist,
  * or an error code
  */
-GIT_EXTERN(int) git_commit_header_field(git_buf *out, const git_commit *commit, const char *field);
+GIT_EXTERN(int) git_commit_header_field(
+	git_buf *out, const git_commit *commit, const char *field);
 
 /**
  * Extract the signature from a commit
@@ -315,6 +316,169 @@ GIT_EXTERN(int) git_commit_header_field(git_buf *out, const git_commit *commit, 
  * or the commit does not have a signature.
  */
 GIT_EXTERN(int) git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_repository *repo, git_oid *commit_id, const char *field);
+
+
+typedef struct {
+	unsigned int version;
+
+	/**
+	 * Flags for creating the commit.
+	 *
+	 * If `allow_empty_commit` is specified, a commit with no changes
+	 * from the prior commit (and "empty" commit) is allowed. Otherwise,
+	 * commit creation will be stopped.
+	 */
+	unsigned int allow_empty_commit : 1;
+
+	/** The commit author, or NULL for the default. */
+	const git_signature *author;
+
+	/** The committer, or NULL for the default. */
+	const git_signature *committer;
+
+	/** Encoding for the commit message; leave NULL for default. */
+	const char *message_encoding;
+} git_commit_create_options;
+
+/** Current version for the `git_commit_create_options` structure */
+#define GIT_COMMIT_CREATE_OPTIONS_VERSION 1
+
+/** Static constructor for `git_commit_create_options` */
+#define GIT_COMMIT_CREATE_OPTIONS_INIT { GIT_COMMIT_CREATE_OPTIONS_VERSION }
+
+/**
+ * Commits the staged changes in the repository; this is a near analog to
+ * `git commit -m message`.
+ *
+ * By default, empty commits are not allowed.
+ *
+ * @param id pointer to store the new commit's object id
+ * @param repo repository to commit changes in
+ * @param message the commit message
+ * @param opts options for creating the commit
+ * @return 0 on success, GIT_EUNCHANGED if there were no changes to commit, or an error code
+ */
+GIT_EXTERN(int) git_commit_create_from_stage(
+	git_oid *id,
+	git_repository *repo,
+	const char *message,
+	const git_commit_create_options *opts);
+
+/** The field name and value for a custom commit header entry. */
+typedef struct {
+	const char *field;
+	const char *value;
+} git_commit_header;
+
+/** An accessor object for setting commit signature data. */
+typedef struct git_commitbuilder git_commitbuilder;
+
+/**
+ * Add a header on a commit being created.
+ *
+ * @param builder in-progress commitbuilder object
+ * @param field the header field to add
+ * @param value the header value to add
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_commitbuilder_add_header(
+	git_commitbuilder *builder,
+	const char *field,
+	const char *value);
+
+/**
+ * Commit signing callback: used when a function is going to write
+ * a commit (for example, in `git_commit_create_ext`) to allow callers
+ * to sign the commit.
+ *
+ * @param builder commit builder object to populate with the signature
+ * @param repo the repository being committed in
+ * @param commit_content the raw contents of the commit (to be signed)
+ * @param payload the caller-specified callback payload
+ * @return 0 if this callback has created a signature and populated the
+ *         field and signature buffers, `GIT_PASSTHROUGH` if the callback
+ *         does not want to sign the commit, any other value to stop and
+ *         return a failure
+ */
+typedef int GIT_CALLBACK(git_commit_signature_cb)(
+	git_commitbuilder *builder,
+	git_repository *repo,
+	const char *commit_content,
+	void *payload);
+
+typedef struct {
+	unsigned int version;
+
+	/**
+	 * If not NULL, the name of the reference that will be updated
+	 * to point to this commit. If the reference is not direct, it
+	 * will be resolved to a direct reference. Use `HEAD` to update
+	 * the `HEAD` of the current branch and	make it point to this
+	 * commit. If the reference doesn't exist yet, it will be created.
+	 * If it does exist, the first parent must be the tip of this
+	 * branch.
+	 */
+	const char *update_ref;
+
+	/** Encoding for the commit message; leave NULL for default. */
+	const char *message_encoding;
+
+	/**
+	 * Extra headers can be specified as an array of field name and
+	 * value pairs.
+	 */
+	const git_commit_header *extra_headers;
+	size_t extra_headers_len; /**< Number of extra headers */
+
+	/** Signing callback; leave NULL for no commit signing. */
+	git_commit_signature_cb sign;
+
+	/** Callback payload (optional) */
+	void *payload;
+} git_commit_create_ext_options;
+
+/** Current version for the `git_commit_create_ext_options` structure */
+#define GIT_COMMIT_CREATE_EXT_OPTIONS_VERSION 1
+
+/** Static constructor for `git_commit_create_ext_options` */
+#define GIT_COMMIT_CREATE_EXT_OPTIONS_INIT { GIT_COMMIT_CREATE_EXT_OPTIONS_VERSION }
+
+/**
+ * Create a new commit object and write it to the object database.
+ *
+ * Note that the message will _not_ be cleaned up automatically. You
+ * may wish to use the `git_message_prettify` API to clean it up.
+ *
+ * This API provides the most control for generating commit objects;
+ * this is useful if (for example) you have a tree object already.
+ * If you have staged changes, and just want to emulate `git commit`
+ * on the command line, then `git_commit_create_from_stage` may be a
+ * simpler option.
+ *
+ * @param id_out pointer to store the new commit's object id
+ * @param repo repository to store the commit in
+ * @param author The name of the author and time of authorship
+ * @param committer The name of the committer and time of commit
+ * @param message Full message for this commit
+ * @param tree The `git_tree` that will be used as the tree for this commit
+ * @param parent_count Number of parents for this commit
+ * @param parents Array pointers to `git_commit` objects that will be used
+ *  as parents for this commit.
+ * @param opts Additional options for creating this commit,
+ *  or `NULL` for defaults
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_commit_create_ext(
+	git_oid *id_out,
+	git_repository *repo,
+	const git_signature *author,
+	const git_signature *committer,
+	const char *message,
+	const git_tree *tree,
+	size_t parent_count,
+	git_commit * const parents[],
+	const git_commit_create_ext_options *opts);
+
 
 /**
  * Create new commit in the repository from a list of `git_object` pointers
@@ -428,52 +592,6 @@ GIT_EXTERN(int) git_commit_create_v(
 	const git_tree *tree,
 	size_t parent_count,
 	...);
-
-typedef struct {
-	unsigned int version;
-
-	/**
-	 * Flags for creating the commit.
-	 *
-	 * If `allow_empty_commit` is specified, a commit with no changes
-	 * from the prior commit (and "empty" commit) is allowed. Otherwise,
-	 * commit creation will be stopped.
-	 */
-	unsigned int allow_empty_commit : 1;
-
-	/** The commit author, or NULL for the default. */
-	const git_signature *author;
-
-	/** The committer, or NULL for the default. */
-	const git_signature *committer;
-
-	/** Encoding for the commit message; leave NULL for default. */
-	const char *message_encoding;
-} git_commit_create_options;
-
-/** Current version for the `git_commit_create_options` structure */
-#define GIT_COMMIT_CREATE_OPTIONS_VERSION 1
-
-/** Static constructor for `git_commit_create_options` */
-#define GIT_COMMIT_CREATE_OPTIONS_INIT { GIT_COMMIT_CREATE_OPTIONS_VERSION }
-
-/**
- * Commits the staged changes in the repository; this is a near analog to
- * `git commit -m message`.
- *
- * By default, empty commits are not allowed.
- *
- * @param id pointer to store the new commit's object id
- * @param repo repository to commit changes in
- * @param message the commit message
- * @param opts options for creating the commit
- * @return 0 on success, GIT_EUNCHANGED if there were no changes to commit, or an error code
- */
-GIT_EXTERN(int) git_commit_create_from_stage(
-	git_oid *id,
-	git_repository *repo,
-	const char *message,
-	const git_commit_create_options *opts);
 
 /**
  * Amend an existing commit by replacing only non-NULL values.
