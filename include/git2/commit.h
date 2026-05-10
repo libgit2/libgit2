@@ -594,6 +594,25 @@ GIT_EXTERN(int) git_commit_create_v(
 	...);
 
 /**
+ * A "batteries included" commit creation from a tree using defaults.
+ *
+ * By default, empty commits are not allowed.
+ *
+ * @param id pointer to store the new commit's object id
+ * @param repo repository to commit changes in
+ * @param tree tree to point the commit to
+ * @param message the commit message
+ * @param opts options for creating the commit
+ * @return 0 on success, GIT_EUNCHANGED if there were no changes to commit, or an error code
+ */
+GIT_EXTERN(int) git_commit_create_from_tree(
+	git_oid *id,
+	git_repository *repo,
+	const git_tree *tree,
+	const char *message,
+	const git_commit_create_options *opts);
+
+/**
  * Amend an existing commit by replacing only non-NULL values.
  *
  * This creates a new commit that is exactly the same as the old commit,

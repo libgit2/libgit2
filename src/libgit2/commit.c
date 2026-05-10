@@ -1192,29 +1192,58 @@ cleanup:
 	return error;
 }
 
-int git_commit_create_from_stage(
+static int check_for_empty_commit(
+	git_repository *repo, const git_tree *tree, git_index *index)
+{
+	git_diff *diff = NULL;
+	git_tree *head_tree = NULL;
+	int error = -1;
+
+	error = git_repository_head_tree(&head_tree, repo);
+
+	if (error && error != GIT_EUNBORNBRANCH)
+		goto done;
+
+	/*
+	 * TODO: stop comparison on first delta
+	 * TODO: stop casting away constness
+	 */
+	if (tree)
+		error = git_diff_tree_to_tree(&diff, repo, head_tree, (git_tree *)tree, NULL);
+	else
+		error = git_diff_tree_to_index(&diff, repo, head_tree, index, NULL);
+
+	if (error < 0)
+		goto done;
+
+	if (git_diff_num_deltas(diff) == 0) {
+		git_error_set(GIT_ERROR_REPOSITORY,
+			"no changes are staged for commit");
+		error = GIT_EUNCHANGED;
+		goto done;
+	}
+
+done:
+	git_diff_free(diff);
+	git_tree_free(head_tree);
+
+	return error;
+}
+
+static int create_from_tree(
 	git_oid *out,
 	git_repository *repo,
+	const git_tree *tree,
 	const char *message,
-	const git_commit_create_options *given_opts)
+	const git_commit_create_options *opts)
 {
-	git_commit_create_options opts = GIT_COMMIT_CREATE_OPTIONS_INIT;
 	git_signature *default_signature = NULL;
 	const git_signature *author, *committer;
-	git_index *index = NULL;
-	git_diff *diff = NULL;
-	git_oid tree_id;
-	git_tree *head_tree = NULL, *tree = NULL;
 	git_commitarray parents = { 0 };
 	int error = -1;
 
-	GIT_ASSERT_ARG(out && repo);
-
-	if (given_opts)
-		memcpy(&opts, given_opts, sizeof(git_commit_create_options));
-
-	author = opts.author;
-	committer = opts.committer;
+	author = opts->author;
+	committer = opts->committer;
 
 	if (!author || !committer) {
 		if (git_signature_default(&default_signature, repo) < 0)
@@ -1227,46 +1256,78 @@ int git_commit_create_from_stage(
 			committer = default_signature;
 	}
 
-	if (git_repository_index(&index, repo) < 0)
-		goto done;
-
-	if (!opts.allow_empty_commit) {
-		error = git_repository_head_tree(&head_tree, repo);
-
-		if (error && error != GIT_EUNBORNBRANCH)
-			goto done;
-
-		error = -1;
-
-		if (git_diff_tree_to_index(&diff, repo, head_tree, index, NULL) < 0)
-			goto done;
-
-		if (git_diff_num_deltas(diff) == 0) {
-			git_error_set(GIT_ERROR_REPOSITORY,
-				"no changes are staged for commit");
-			error = GIT_EUNCHANGED;
-			goto done;
-		}
-	}
-
-	if (git_index_write_tree(&tree_id, index) < 0 ||
-	    git_tree_lookup(&tree, repo, &tree_id) < 0 ||
-	    git_repository_commit_parents(&parents, repo) < 0)
+	if (git_repository_commit_parents(&parents, repo) < 0)
 		goto done;
 
 	error = git_commit_create(out, repo, "HEAD", author, committer,
-			opts.message_encoding, message,
+			opts->message_encoding, message,
 			tree, parents.count,
 			(const git_commit **)parents.commits);
 
 done:
 	git_commitarray_dispose(&parents);
 	git_signature_free(default_signature);
+
+	return error;
+}
+
+int git_commit_create_from_stage(
+	git_oid *out,
+	git_repository *repo,
+	const char *message,
+	const git_commit_create_options *given_opts)
+{
+	git_commit_create_options opts = GIT_COMMIT_CREATE_OPTIONS_INIT;
+	git_index *index = NULL;
+	git_oid tree_id;
+	git_tree *tree = NULL;
+	int error = -1;
+
+	GIT_ASSERT_ARG(out && repo && message);
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_commit_create_options));
+
+	if (git_repository_index(&index, repo) < 0)
+		goto done;
+
+	if (!opts.allow_empty_commit &&
+	    (error = check_for_empty_commit(repo, NULL, index)) < 0)
+		goto done;
+
+	if (git_index_write_tree(&tree_id, index) < 0 ||
+	    git_tree_lookup(&tree, repo, &tree_id) < 0) {
+		error = -1;
+		goto done;
+	}
+
+	error = create_from_tree(out, repo, tree, message, &opts);
+
+done:
 	git_tree_free(tree);
-	git_tree_free(head_tree);
-	git_diff_free(diff);
 	git_index_free(index);
 	return error;
+}
+
+int git_commit_create_from_tree(
+	git_oid *out,
+	git_repository *repo,
+	const git_tree *tree,
+	const char *message,
+	const git_commit_create_options *given_opts)
+{
+	git_commit_create_options opts = GIT_COMMIT_CREATE_OPTIONS_INIT;
+
+	GIT_ASSERT_ARG(out && repo && tree && message);
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_commit_create_options));
+
+	if (!opts.allow_empty_commit &&
+	    check_for_empty_commit(repo, tree, NULL) < 0)
+		return -1;
+
+	return create_from_tree(out, repo, tree, message, &opts);
 }
 
 int git_commit_committer_with_mailmap(
