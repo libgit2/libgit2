@@ -204,7 +204,9 @@ extern int git_process_new_from_cmdline(
 {
 	git_process_options merged_opts = {0};
 
-	memcpy(&merged_opts, opts, sizeof(git_process_options));
+	if (opts)
+		memcpy(&merged_opts, opts, sizeof(git_process_options));
+
 	merged_opts.use_shell = 1;
 
 	return git_process_new(out, &cmdline, 1, env, env_len, &merged_opts);
