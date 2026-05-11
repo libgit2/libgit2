@@ -16,7 +16,7 @@ static git_atomic32 init_count;
 static int init_common(git_runtime_init_fn init_fns[], size_t cnt)
 {
 	size_t i;
-	int ret;
+	int ret = 0;
 
 	/* Initialize subsystems that have global state */
 	for (i = 0; i < cnt; i++) {
