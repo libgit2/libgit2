@@ -1,5 +1,3 @@
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 static const char *packed_objects_256[] = {
 	"99f3b405443221141eb0fd1e0cca5d355f893983749b7fb455769fba434e7945",
 	"d0fc7f52dc42358506e7f3f3be72f5271994abb104b9397ab3e19bb42361504d",
@@ -150,5 +148,3 @@ static const char *loose_objects_256[] = {
 	"a4813ef6708e6011e8187224297e83e4a285f58bf5eabb1db270351388603c95",
 	"43e084a4599ca42c476919917e3db8fde0045ee66305fd5e634b0c793c536a1b"
 };
-
-#endif

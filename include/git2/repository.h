@@ -370,14 +370,12 @@ typedef struct {
 	 */
 	const char *origin_url;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	/**
 	 *
 	 * Type of object IDs to use for this repository, or 0 for
 	 * default (currently SHA1).
 	 */
 	git_oid_t oid_type;
-#endif
 
 	/**
 	 * Type of the reference database to use for this repository, or 0 for

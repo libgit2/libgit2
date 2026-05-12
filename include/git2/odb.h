@@ -76,8 +76,6 @@ typedef struct {
  */
 GIT_EXTERN(int) git_odb_new(git_odb **odb);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 /**
  * Create a new object database with no backends.
  *
@@ -88,8 +86,6 @@ GIT_EXTERN(int) git_odb_new(git_odb **odb);
 GIT_EXTERN(int) git_odb_new_ext(
 	git_odb **odb,
 	const git_odb_options *opts);
-
-#endif
 
 /**
  * Create a new object database and automatically add
@@ -112,8 +108,6 @@ GIT_EXTERN(int) git_odb_new_ext(
  */
 GIT_EXTERN(int) git_odb_open(git_odb **odb_out, const char *objects_dir);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 /**
  * Create a new object database and automatically add loose and packed
  * backends.
@@ -128,8 +122,6 @@ GIT_EXTERN(int) git_odb_open_ext(
 	git_odb **odb_out,
 	const char *objects_dir,
 	const git_odb_options *opts);
-
-#endif
 
 /**
  * Add an on-disk alternate to an existing Object DB.

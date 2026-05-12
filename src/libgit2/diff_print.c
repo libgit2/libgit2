@@ -238,12 +238,8 @@ static int diff_print_one_raw(
 		return -1;
 	}
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	GIT_ASSERT(delta->old_file.id.type == delta->new_file.id.type);
 	oid_hexsize = git_oid_hexsize(delta->old_file.id.type);
-#else
-	oid_hexsize = GIT_OID_SHA1_HEXSIZE;
-#endif
 
 	id_is_abbrev = (pi->id_strlen > 0 &&
 	                (size_t)pi->id_strlen <= oid_hexsize);

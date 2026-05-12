@@ -48,9 +48,6 @@ void test_repo_new__sha1(void)
 
 void test_repo_new__sha256(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	git_repository *repo;
 	git_repository_new_options repo_opts = GIT_REPOSITORY_NEW_OPTIONS_INIT;
 
@@ -60,5 +57,4 @@ void test_repo_new__sha256(void)
 	cl_assert_equal_i(GIT_OID_SHA256, git_repository_oid_type(repo));
 
 	git_repository_free(repo);
-#endif
 }

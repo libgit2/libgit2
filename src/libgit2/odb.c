@@ -492,15 +492,8 @@ int git_odb__add_default_backends(
 		return -1;
 
 	/* add the packed file backend */
-#ifdef GIT_EXPERIMENTAL_SHA256
 	if (git_odb_backend_pack(&packed, objects_dir, &pack_opts) < 0)
 		return -1;
-#else
-	GIT_UNUSED(pack_opts);
-
-	if (git_odb_backend_pack(&packed, objects_dir) < 0)
-		return -1;
-#endif
 
 	if (add_backend_internal(db, packed, git_odb__packed_priority, as_alternates, inode) < 0)
 		return -1;
@@ -1488,9 +1481,7 @@ int git_odb_open_wstream(
 	    (error = hash_header(ctx, size, type)) < 0)
 		goto done;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	(*stream)->oid_type = db->options.oid_type;
-#endif
 	(*stream)->hash_ctx = ctx;
 	(*stream)->declared_size = size;
 	(*stream)->received_bytes = 0;
@@ -1536,9 +1527,7 @@ int git_odb_stream_finalize_write(git_oid *out, git_odb_stream *stream)
 	memset(out, 0, sizeof(git_oid));
 	git_hash_final(out->id, stream->hash_ctx);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = stream->oid_type;
-#endif
 
 	if (git_odb__freshen(stream->backend->odb, out))
 		return 0;

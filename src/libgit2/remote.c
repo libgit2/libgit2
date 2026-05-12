@@ -1041,12 +1041,7 @@ int git_remote_oid_type(git_oid_t *out, git_remote *remote)
 		return -1;
 	}
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	return remote->transport->oid_type(out, remote->transport);
-#else
-	*out = GIT_OID_SHA1;
-	return 0;
-#endif
 }
 
 static int lookup_config(char **out, git_config *cfg, const char *name)

@@ -261,7 +261,6 @@ static int git_smart__capabilities(unsigned int *capabilities, git_transport *tr
 	return 0;
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 static int git_smart__oid_type(git_oid_t *out, git_transport *transport)
 {
 	transport_smart *t = GIT_CONTAINER_OF(transport, transport_smart, parent);
@@ -283,7 +282,6 @@ static int git_smart__oid_type(git_oid_t *out, git_transport *transport)
 
 	return 0;
 }
-#endif
 
 static int git_smart__ls(const git_remote_head ***out, size_t *size, git_transport *transport)
 {
@@ -505,9 +503,7 @@ int git_transport_smart(git_transport **out, git_remote *owner, void *param)
 	t->parent.connect = git_smart__connect;
 	t->parent.set_connect_opts = git_smart__set_connect_opts;
 	t->parent.capabilities = git_smart__capabilities;
-#ifdef GIT_EXPERIMENTAL_SHA256
 	t->parent.oid_type = git_smart__oid_type;
-#endif
 	t->parent.close = git_smart__close;
 	t->parent.free = git_smart__free;
 	t->parent.negotiate_fetch = git_smart__negotiate_fetch;

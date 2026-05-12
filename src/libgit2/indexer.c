@@ -144,10 +144,8 @@ GIT_INLINE(git_hash_algorithm_t) indexer_hash_algorithm(git_indexer *idx)
 	switch (idx->oid_type) {
 		case GIT_OID_SHA1:
 			return GIT_HASH_ALGORITHM_SHA1;
-#ifdef GIT_EXPERIMENTAL_SHA256
 		case GIT_OID_SHA256:
 			return GIT_HASH_ALGORITHM_SHA256;
-#endif
 	}
 
 	return GIT_HASH_ALGORITHM_NONE;
@@ -232,7 +230,6 @@ cleanup:
 	return -1;
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 int git_indexer_new(
 	git_indexer **out,
 	const char *prefix,
@@ -246,17 +243,6 @@ int git_indexer_new(
 		opts ? opts->odb : NULL,
 		opts);
 }
-#else
-int git_indexer_new(
-	git_indexer **out,
-	const char *prefix,
-	unsigned int mode,
-	git_odb *odb,
-	git_indexer_options *opts)
-{
-	return indexer_new(out, prefix, GIT_OID_SHA1, mode, odb, opts);
-}
-#endif
 
 void git_indexer__set_fsync(git_indexer *idx, int do_fsync)
 {
@@ -497,9 +483,7 @@ static int store_object(git_indexer *idx)
 		goto on_error;
 	}
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	oid.type = idx->oid_type;
-#endif
 
 	entry_size = idx->off - entry_start;
 	if (entry_start > UINT31_MAX) {

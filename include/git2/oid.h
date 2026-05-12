@@ -21,14 +21,8 @@ GIT_BEGIN_DECL
 
 /** The type of object id. */
 typedef enum {
-
-#ifdef GIT_EXPERIMENTAL_SHA256
 	GIT_OID_SHA1 = 1,  /**< SHA1 */
 	GIT_OID_SHA256 = 2 /**< SHA256 */
-#else
-	GIT_OID_SHA1 = 1   /**< SHA1 */
-#endif
-
 } git_oid_t;
 
 /*
@@ -46,11 +40,7 @@ typedef enum {
 /**
  * The binary representation of the null sha1 object ID.
  */
-#ifndef GIT_EXPERIMENTAL_SHA256
-# define GIT_OID_SHA1_ZERO   { { 0 } }
-#else
-# define GIT_OID_SHA1_ZERO   { GIT_OID_SHA1, { 0 } }
-#endif
+#define GIT_OID_SHA1_ZERO   { GIT_OID_SHA1, { 0 } }
 
 /**
  * The string representation of the null sha1 object ID.
@@ -61,8 +51,6 @@ typedef enum {
  * Experimental SHA256 support is a breaking change to the API.
  * This exists for application compatibility testing.
  */
-
-#ifdef GIT_EXPERIMENTAL_SHA256
 
 /** Size (in bytes) of a raw/binary sha256 oid */
 # define GIT_OID_SHA256_SIZE     32
@@ -79,21 +67,11 @@ typedef enum {
  */
 # define GIT_OID_SHA256_HEXZERO "0000000000000000000000000000000000000000000000000000000000000000"
 
-#endif
-
 /** Maximum possible object ID size in raw format */
-#ifdef GIT_EXPERIMENTAL_SHA256
-# define GIT_OID_MAX_SIZE        GIT_OID_SHA256_SIZE
-#else
-# define GIT_OID_MAX_SIZE        GIT_OID_SHA1_SIZE
-#endif
+#define GIT_OID_MAX_SIZE        GIT_OID_SHA256_SIZE
 
 /** Maximum possible object ID size in hex format */
-#ifdef GIT_EXPERIMENTAL_SHA256
-# define GIT_OID_MAX_HEXSIZE     GIT_OID_SHA256_HEXSIZE
-#else
-# define GIT_OID_MAX_HEXSIZE     GIT_OID_SHA1_HEXSIZE
-#endif
+#define GIT_OID_MAX_HEXSIZE     GIT_OID_SHA256_HEXSIZE
 
 /** Minimum length (in number of hex characters,
  * i.e. packets of 4 bits) of an oid prefix */
@@ -101,17 +79,12 @@ typedef enum {
 
 /** Unique identity of any object (commit, tree, blob, tag). */
 typedef struct git_oid {
-
-#ifdef GIT_EXPERIMENTAL_SHA256
 	/** type of object id */
 	unsigned char type;
-#endif
 
 	/** raw binary formatted id */
 	unsigned char id[GIT_OID_MAX_SIZE];
 } git_oid;
-
-#ifdef GIT_EXPERIMENTAL_SHA256
 
 /**
  * Parse a NUL terminated hex formatted object id string into a `git_oid`.
@@ -168,7 +141,13 @@ GIT_EXTERN(int) git_oid_from_raw(
 	const unsigned char *raw,
 	git_oid_t type);
 
-#endif
+#ifndef GIT_DEPRECATE_HARD
+
+/*
+ * These functions are hardcoded to work with SHA1. They are marked as
+ * deprecated because we have new APIs that take `git_oid_t` to indicate
+ * the hash type. However, they remain for backward compatibility.
+ */
 
 /**
  * Parse a hex formatted object id into a git_oid.
@@ -216,6 +195,8 @@ GIT_EXTERN(int) git_oid_fromstrn(git_oid *out, const char *str, size_t length);
  * @return 0 on success or error code
  */
 GIT_EXTERN(int) git_oid_fromraw(git_oid *out, const unsigned char *raw);
+
+#endif /* GIT_DEPRECATE_HARD */
 
 /**
  * Format a git_oid into a hex string.

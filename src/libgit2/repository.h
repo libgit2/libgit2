@@ -282,14 +282,4 @@ int git_repository__set_objectformat(
 	git_repository *repo,
 	git_oid_t oid_type);
 
-/* SHA256 support */
-
-#ifndef GIT_EXPERIMENTAL_SHA256
-
-GIT_EXTERN(int) git_repository_new_ext(
-	git_repository **out,
-	git_repository_new_options *opts);
-
-#endif
-
 #endif
