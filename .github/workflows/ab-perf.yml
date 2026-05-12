@@ -166,7 +166,7 @@ jobs:
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
         shell: ${{ matrix.platform.shell }}
-        cmake-global-options: -DDEPRECATE_HARD=ON -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -DEXPERIMENTAL_SHA256=ON -DBUILD_BENCHMARKS=ON
+        cmake-global-options: -DDEPRECATE_HARD=ON -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -DBUILD_BENCHMARKS=ON
     - name: Build candidate
       uses: ./source/candidate/.github/actions/run-build
       with:
@@ -174,7 +174,7 @@ jobs:
         container: ${{ matrix.platform.container.name }}
         container-version: ${{ env.docker-registry-container-sha }}
         shell: ${{ matrix.platform.shell }}
-        cmake-global-options: -DDEPRECATE_HARD=ON -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DEXPERIMENTAL_SHA256=ON -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        cmake-global-options: -DDEPRECATE_HARD=ON -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
     - name: Run control benchmarks
       uses: ./source/control/.github/actions/run-build
       with:

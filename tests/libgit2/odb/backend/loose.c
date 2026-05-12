@@ -13,11 +13,7 @@ void test_odb_backend_loose__initialize(void)
 
 	cl_fixture_sandbox("testrepo.git");
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_git_pass(git_odb_backend_loose(&backend, "testrepo.git/objects", NULL));
-#else
-	cl_git_pass(git_odb_backend_loose(&backend, "testrepo.git/objects", 0, 0, 0, 0));
-#endif
 
 	cl_git_pass(git_odb_new(&_odb));
 	cl_git_pass(git_odb_add_backend(_odb, backend, 10));

@@ -76,11 +76,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size)
 		abort();
 	}
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	error = git_indexer_new(&indexer, ".", NULL);
-#else
-	error = git_indexer_new(&indexer, ".", 0, odb, NULL);
-#endif
 
 	if (error < 0) {
 		fprintf(stderr, "Failed to create the indexer: %s\n",

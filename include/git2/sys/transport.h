@@ -72,7 +72,6 @@ struct git_transport {
 		unsigned int *capabilities,
 		git_transport *transport);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	/**
 	 * Gets the object type for the remote repository.
 	 *
@@ -82,7 +81,6 @@ struct git_transport {
 	int GIT_CALLBACK(oid_type)(
 		git_oid_t *object_type,
 		git_transport *transport);
-#endif
 
 	/**
 	 * Get the list of available references in the remote repository.

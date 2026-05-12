@@ -269,9 +269,6 @@ void test_clone_local__shallow_fails(void)
 
 void test_clone_local__sha256_via_no_local(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	git_repository *repo;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 
@@ -287,14 +284,10 @@ void test_clone_local__sha256_via_no_local(void)
 
 	git_repository_free(repo);
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
-#endif
 }
 
 void test_clone_local__sha256_object_format_is_propagated(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	git_repository *repo;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 
@@ -310,14 +303,10 @@ void test_clone_local__sha256_object_format_is_propagated(void)
 
 	git_repository_free(repo);
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
-#endif
 }
 
 void test_clone_local__sha256_no_links_object_format_is_propagated(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	git_repository *repo;
 	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
 
@@ -333,5 +322,4 @@ void test_clone_local__sha256_no_links_object_format_is_propagated(void)
 
 	git_repository_free(repo);
 	cl_git_pass(git_futils_rmdir_r("./clone.git", NULL, GIT_RMDIR_REMOVE_FILES));
-#endif
 }

@@ -85,11 +85,7 @@ git_reference *git_reference__alloc(
 	ref->type = GIT_REFERENCE_DIRECT;
 	git_oid_cpy(&ref->target.oid, oid);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	oid_type = oid->type;
-#else
-	oid_type = GIT_OID_SHA1;
-#endif
 
 	if (peel != NULL)
 		git_oid_cpy(&ref->peel, peel);

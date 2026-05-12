@@ -253,9 +253,6 @@ void test_object_commit_parse__sha1_parsing_encoding_will_not_cause_oob_read(voi
 
 void test_object_commit_parse__sha256_parsing_commit_succeeds(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9ad75ed55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"author Author <author@example.com>\n"
@@ -269,14 +266,10 @@ void test_object_commit_parse__sha256_parsing_commit_succeeds(void)
 		"Committer <committer@example.com>",
 		"Encoding",
 		"Message", 0);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_without_encoding_succeeds(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9ad75ed55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"author Author <author@example.com>\n"
@@ -289,14 +282,10 @@ void test_object_commit_parse__sha256_parsing_commit_without_encoding_succeeds(v
 		"Committer <committer@example.com>",
 		NULL,
 		"Message", 0);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_with_multiple_authors_succeeds(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9ad75ed55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"author Author1 <author@example.com>\n"
@@ -312,14 +301,10 @@ void test_object_commit_parse__sha256_parsing_commit_with_multiple_authors_succe
 		"Committer <committer@example.com>",
 		NULL,
 		"Message", 0);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_with_multiple_committers_succeeds(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9ad75ed55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"author Author <author@example.com>\n"
@@ -335,14 +320,10 @@ void test_object_commit_parse__sha256_parsing_commit_with_multiple_committers_su
 		"Committer1 <committer@example.com>",
 		NULL,
 		"Message", 0);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_without_message_succeeds(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9ad75ed55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"author Author <author@example.com>\n"
@@ -353,14 +334,10 @@ void test_object_commit_parse__sha256_parsing_commit_without_message_succeeds(vo
 		"Committer <committer@example.com>",
 		NULL,
 		"", 0);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_with_unknown_fields_succeeds(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9ad75ed55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"author Author <author@example.com>\n"
@@ -375,14 +352,10 @@ void test_object_commit_parse__sha256_parsing_commit_with_unknown_fields_succeed
 		"Committer <committer@example.com>",
 		NULL,
 		"Message", 0);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_with_invalid_tree_fails(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9adxxxd55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"author Author <author@example.com>\n"
@@ -390,14 +363,10 @@ void test_object_commit_parse__sha256_parsing_commit_with_invalid_tree_fails(voi
 		"\n"
 		"Message";
 	assert_commit_fails(commit, 0, GIT_OID_SHA256);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_with_sha1_tree_fails(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree 3e7ac388cadacccdf1c6c5f3445895b71d9cb0f8\n"
 		"author Author <author@example.com>\n"
@@ -405,56 +374,40 @@ void test_object_commit_parse__sha256_parsing_commit_with_sha1_tree_fails(void)
 		"\n"
 		"Message";
 	assert_commit_fails(commit, 0, GIT_OID_SHA256);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_without_tree_fails(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"author Author <author@example.com>\n"
 		"committer Committer <committer@example.com>\n"
 		"\n"
 		"Message";
 	assert_commit_fails(commit, 0, GIT_OID_SHA256);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_without_author_fails(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9ad75ed55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"committer Committer <committer@example.com>\n"
 		"\n"
 		"Message";
 	assert_commit_fails(commit, 0, GIT_OID_SHA256);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_commit_without_committer_fails(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9ad75ed55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"author Author <author@example.com>\n"
 		"\n"
 		"Message";
 	assert_commit_fails(commit, 0, GIT_OID_SHA256);
-#endif
 }
 
 void test_object_commit_parse__sha256_parsing_encoding_will_not_cause_oob_read(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit =
 		"tree f2a108f86a3b4fd9ad75ed55e9cb3cb46e348fca3b9dba3db64f7c9f64b8a736\n"
 		"author <>\n"
@@ -472,5 +425,4 @@ void test_object_commit_parse__sha256_parsing_encoding_will_not_cause_oob_read(v
 		"<>",
 		NULL,
 		"", 0);
-#endif
 }
