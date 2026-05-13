@@ -613,6 +613,39 @@ GIT_EXTERN(int) git_commit_create_from_tree(
 	const git_commit_create_options *opts);
 
 /**
+ * Amends the HEAD commit in the repository using the staged changes;
+ * this is a near analog to `git commit --amend -m message`.
+ *
+ * @param id pointer to store the new commit's object id
+ * @param repo repository to commit changes in
+ * @param message the commit message
+ * @param opts options for creating the commit
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_commit_amend_from_stage(
+	git_oid *id,
+	git_repository *repo,
+	const char *message,
+	const git_commit_create_options *opts);
+
+/**
+ * Amends the HEAD commit in the repository using the given tree.
+ *
+ * @param id pointer to store the new commit's object id
+ * @param repo repository to commit changes in
+ * @param tree tree to point the commit to
+ * @param message the commit message
+ * @param opts options for creating the commit
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_commit_amend_from_tree(
+	git_oid *id,
+	git_repository *repo,
+	const git_tree *tree,
+	const char *message,
+	const git_commit_create_options *opts);
+
+/**
  * Amend an existing commit by replacing only non-NULL values.
  *
  * This creates a new commit that is exactly the same as the old commit,

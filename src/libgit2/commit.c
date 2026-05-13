@@ -1330,6 +1330,100 @@ int git_commit_create_from_tree(
 	return create_from_tree(out, repo, tree, message, &opts);
 }
 
+int git_commit_amend_from_stage(
+	git_oid *out,
+	git_repository *repo,
+	const char *message,
+	const git_commit_create_options *opts)
+{
+	git_index *index = NULL;
+	git_oid tree_id;
+	git_tree *tree = NULL;
+	int error = 0;
+
+	GIT_ASSERT_ARG(out && repo);
+
+	if (git_repository_index(&index, repo) < 0 ||
+	    git_index_write_tree(&tree_id, index) < 0 ||
+	    git_tree_lookup(&tree, repo, &tree_id) < 0) {
+		error = -1;
+		goto done;
+	}
+
+	error = git_commit_amend_from_tree(out, repo, tree, message, opts);
+
+done:
+	git_tree_free(tree);
+	git_index_free(index);
+	return error;
+}
+
+int git_commit_amend_from_tree(
+	git_oid *out,
+	git_repository *repo,
+	const git_tree *tree,
+	const char *given_message,
+	const git_commit_create_options *given_opts)
+{
+	git_commit_create_options opts = GIT_COMMIT_CREATE_OPTIONS_INIT;
+	git_commit_create_ext_options ext_opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
+	git_reference *head_ref = NULL;
+	git_commit *head_commit = NULL;
+	git_signature *new_committer = NULL;
+	const git_signature *author, *committer;
+	const char *message;
+	int error;
+
+	GIT_ASSERT_ARG(out && repo && tree);
+
+	if (given_opts)
+		memcpy(&opts, given_opts, sizeof(git_commit_create_options));
+
+	if ((error = git_repository_head(&head_ref, repo)) < 0 ||
+	    (error = git_reference_peel((git_object **)&head_commit, head_ref, GIT_OBJECT_COMMIT)) < 0)
+		goto done;
+
+	if (opts.author) {
+		author = opts.author;
+	} else {
+		author = git_commit_author(head_commit);
+	}
+
+	if (opts.committer) {
+		committer = opts.committer;
+	} else {
+		if ((error = git_signature_default(&new_committer, repo)) < 0)
+			goto done;
+
+		committer = new_committer;
+	}
+
+	if (given_message) {
+		message = given_message;
+		ext_opts.message_encoding = opts.message_encoding;
+	} else {
+		message = git_commit_message(head_commit);
+		ext_opts.message_encoding = git_commit_message_encoding(head_commit);
+	}
+
+	error = git_commit__create_internal(
+		out, repo, author, committer, message, git_tree_id(tree),
+		commit_parent_for_amend, (void *)head_commit, &ext_opts,
+		false);
+
+	if (!error)
+		error = git_reference__update_for_commit(
+			repo, head_ref, NULL, out, "commit");
+
+done:
+	git_signature_free(new_committer);
+	git_commit_free(head_commit);
+	git_reference_free(head_ref);
+
+	return error;
+}
+
+
 int git_commit_committer_with_mailmap(
 	git_signature **out, const git_commit *commit, const git_mailmap *mailmap)
 {
