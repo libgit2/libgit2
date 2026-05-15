@@ -582,16 +582,29 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 	} else if (strcmp(entry->value, "*") == 0) {
 		*data->is_safe = true;
 	} else {
+		bool is_prefix = false;
+
 		if (git_str_sets(&data->tmp, entry->value) < 0)
 			return -1;
+
+		/*
+		 * A value ending with slash* is treated as a prefix match.
+		 * Strip only the '*', leaving the trailing slash in place.
+		 */
+		if (data->tmp.size >= 2 &&
+		    data->tmp.ptr[data->tmp.size - 2] == '/' &&
+		    data->tmp.ptr[data->tmp.size - 1] == '*') {
+			is_prefix = true;
+			git_str_truncate(&data->tmp, data->tmp.size - 1);
+		}
 
 		if (!git_fs_path_is_root(data->tmp.ptr)) {
 			/* Input must not have trailing backslash. */
 			if (!data->tmp.size ||
-			    data->tmp.ptr[data->tmp.size - 1] == '/')
+			    (!is_prefix && data->tmp.ptr[data->tmp.size - 1] == '/'))
 				return 0;
 
-			if (git_fs_path_to_dir(&data->tmp) < 0)
+			if (!is_prefix && git_fs_path_to_dir(&data->tmp) < 0)
 				return -1;
 		}
 
@@ -623,7 +636,12 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		if (strncmp(test_path, "%(prefix)//", strlen("%(prefix)//")) == 0)
 			test_path += strlen("%(prefix)/");
 
-		if (strcmp(test_path, data->repo_path) == 0)
+		if (is_prefix) {
+			size_t len = strlen(test_path);
+
+			if (strncmp(test_path, data->repo_path, len) == 0)
+				*data->is_safe = true;
+		} else if (strcmp(test_path, data->repo_path) == 0)
 			*data->is_safe = true;
 	}
 

@@ -659,6 +659,36 @@ void test_repo_open__can_wildcard_allowlist_with_problematic_ownership(void)
 	cl_git_pass(test_safe_path("*"));
 }
 
+void test_repo_open__can_allowlist_dirs_wildcard(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(
+	        &path, "%s/*", clar_sandbox_path()));
+	cl_git_pass(test_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
+void test_repo_open__can_allowlist_dirs_wildcard_fail(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(
+	        &path, "%s/%s*", clar_sandbox_path(), "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, test_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
+void test_repo_open__can_allowlist_dirs_wildcard_fail2(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(
+	        &path, "%s/%s*", clar_sandbox_path(), "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, test_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
 void test_repo_open__can_allowlist_bare_gitdir(void)
 {
 	git_str path = GIT_STR_INIT;
@@ -666,6 +696,38 @@ void test_repo_open__can_allowlist_bare_gitdir(void)
 	cl_git_pass(git_str_printf(&path, "%s/%s",
 		clar_sandbox_path(), "testrepo.git"));
 	cl_git_pass(test_bare_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
+void test_repo_open__can_allowlist_bare_wildcard_gitdir(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(
+	        &path, "%s/*", clar_sandbox_path()));
+	cl_git_pass(test_bare_safe_path(path.ptr));
+
+	git_str_dispose(&path);
+}
+
+void test_repo_open__can_allowlist_bare_wildcard_gitdir_fail(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(&path, "%s*", clar_sandbox_path()));
+	cl_git_fail_with(GIT_EOWNER, test_bare_safe_path(path.ptr));
+
+	git_str_dispose(&path);
+}
+
+void test_repo_open__can_allowlist_bare_wildcard_gitdir_fail2(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(
+	        &path, "%s/%s*", clar_sandbox_path(), "testrepo.git"));
+	cl_git_fail_with(GIT_EOWNER, test_bare_safe_path(path.ptr));
+
 	git_str_dispose(&path);
 }
 
