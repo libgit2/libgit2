@@ -7,11 +7,10 @@ include(PkgBuildConfig)
 include(CMakePackageConfigHelpers)
 
 set(LIBGIT2_INCLUDES
-	"${PROJECT_BINARY_DIR}/src/util"
-	"${PROJECT_BINARY_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/src/libgit2"
 	"${PROJECT_SOURCE_DIR}/src/util"
-	"${PROJECT_SOURCE_DIR}/include")
+	"${PROJECT_SOURCE_DIR}/include"
+	"${PROJECT_BINARY_DIR}/gen_headers")
 
 # Collect sourcefiles
 file(GLOB SRC_H
@@ -104,7 +103,7 @@ endif()
 
 # support experimental features and functionality
 
-configure_file(experimental.h.in "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}/experimental.h")
+configure_file(experimental.h.in "${PROJECT_BINARY_DIR}/gen_headers/experimental.h")
 
 # translate filenames in the headers so that they match the install directory
 # (allows for side-by-side installs of libgit2 and libgit2-experimental.)
@@ -119,6 +118,8 @@ foreach(HEADER_SOURCE ${SRC_H})
 	file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/${HEADER_RELATIVE}.tmp" "${HEADER_CONTENTS}")
 	configure_file("${CMAKE_CURRENT_BINARY_DIR}/${HEADER_RELATIVE}.tmp" "${PROJECT_BINARY_DIR}/${HEADER_RELATIVE}" COPYONLY)
 endforeach()
+
+configure_file("${PROJECT_BINARY_DIR}/gen_headers/experimental.h" "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}/experimental.h" COPYONLY)
 
 # cmake package targets
 
