@@ -30,6 +30,11 @@ size_t git_indexer__max_objects = UINT32_MAX;
 
 GIT_HASHMAP_OID_SETUP(git_indexer_oidmap, git_oid *);
 
+#define git_indexer__off64_hash(k) ((uint32_t)((k) >> 33 ^ (k) ^ (k) << 11))
+#define git_indexer__off64_equal(a, b) ((a) == (b))
+GIT_HASHMAP_SETUP(git_indexer_offmap, off64_t, git_vector *, git_indexer__off64_hash, git_indexer__off64_equal)
+GIT_HASHMAP_OID_SETUP(git_indexer_depoidmap, git_vector *)
+
 struct entry {
 	git_oid oid;
 	uint32_t crc;
@@ -55,8 +60,11 @@ struct git_indexer {
 	git_packfile_stream stream;
 	size_t nr_objects;
 	git_vector objects;
-	git_vector deltas;
 	unsigned int fanout[256];
+	off64_t pending_base_off;
+	git_oid pending_base_oid;
+	git_indexer_offmap deps_by_offset;
+	git_indexer_depoidmap deps_by_oid;
 	git_hash_ctx hash_ctx;
 	unsigned char checksum[GIT_HASH_MAX_SIZE];
 	char name[(GIT_HASH_MAX_SIZE * 2) + 1];
@@ -78,6 +86,9 @@ struct git_indexer {
 
 struct delta_info {
 	off64_t delta_off;
+	git_object_t delta_type;
+	off64_t base_off;
+	git_oid base_oid;
 };
 
 #ifndef GIT_DEPRECATE_HARD
@@ -267,13 +278,51 @@ void git_indexer__set_fsync(git_indexer *idx, int do_fsync)
 static int store_delta(git_indexer *idx)
 {
 	struct delta_info *delta;
+	git_vector *children;
 
 	delta = git__calloc(1, sizeof(struct delta_info));
 	GIT_ERROR_CHECK_ALLOC(delta);
 	delta->delta_off = idx->entry_start;
+	delta->delta_type = idx->entry_type;
 
-	if (git_vector_insert(&idx->deltas, delta) < 0)
+	if (idx->entry_type == GIT_PACKFILE_OFS_DELTA) {
+		delta->base_off = idx->pending_base_off;
+		if (git_indexer_offmap_get(&children, &idx->deps_by_offset, delta->base_off) != 0) {
+			children = git__calloc(1, sizeof(git_vector));
+			if (!children || git_vector_init(children, 4, NULL) < 0 ||
+			    git_indexer_offmap_put(&idx->deps_by_offset, delta->base_off, children) < 0) {
+				git_vector_dispose(children);
+				git__free(children);
+				git__free(delta);
+				return -1;
+			}
+		}
+	} else {
+		git_oid *key;
+		git_oid_cpy(&delta->base_oid, &idx->pending_base_oid);
+		if (git_indexer_depoidmap_get(&children, &idx->deps_by_oid, &delta->base_oid) != 0) {
+			key = git__malloc(sizeof(*key));
+			if (!key) {
+				git__free(delta);
+				return -1;
+			}
+			git_oid_cpy(key, &delta->base_oid);
+			children = git__calloc(1, sizeof(git_vector));
+			if (!children || git_vector_init(children, 4, NULL) < 0 ||
+			    git_indexer_depoidmap_put(&idx->deps_by_oid, key, children) < 0) {
+				git_vector_dispose(children);
+				git__free(children);
+				git__free(key);
+				git__free(delta);
+				return -1;
+			}
+		}
+	}
+
+	if (git_vector_insert(children, delta) < 0) {
+		git__free(delta);
 		return -1;
+	}
 
 	return 0;
 }
@@ -322,6 +371,17 @@ static int advance_delta_offset(git_indexer *idx, git_object_t type)
 	GIT_ASSERT_ARG(type == GIT_PACKFILE_REF_DELTA || type == GIT_PACKFILE_OFS_DELTA);
 
 	if (type == GIT_PACKFILE_REF_DELTA) {
+		unsigned int left = 0;
+		unsigned char *base_info = git_mwindow_open(
+			&idx->pack->mwf, &w, idx->off,
+			git_oid_size(idx->oid_type), &left);
+		if (base_info == NULL) {
+			git_mwindow_close(&w);
+			git_error_set(GIT_ERROR_INDEXER, "failed to map delta base info");
+			return -1;
+		}
+		git_oid_from_raw(&idx->pending_base_oid, base_info, idx->oid_type);
+		git_mwindow_close(&w);
 		idx->off += git_oid_size(idx->oid_type);
 	} else {
 		off64_t base_off;
@@ -329,6 +389,7 @@ static int advance_delta_offset(git_indexer *idx, git_object_t type)
 		git_mwindow_close(&w);
 		if (error < 0)
 			return error;
+		idx->pending_base_off = base_off;
 	}
 
 	return 0;
@@ -562,7 +623,7 @@ on_error:
 	return -1;
 }
 
-GIT_INLINE(bool) has_entry(git_indexer *idx, git_oid *id)
+GIT_INLINE(bool) has_entry(git_indexer *idx, const git_oid *id)
 {
 	return git_pack_oidmap_contains(&idx->pack->idx_cache, id);
 }
@@ -597,7 +658,7 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 	return 0;
 }
 
-static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start)
+static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start, git_oid *oid_out)
 {
 	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 	git_oid oid;
@@ -627,7 +688,15 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start)
 	if (crc_object(&entry->crc, &idx->pack->mwf, entry_start, entry_size) < 0)
 		goto on_error;
 
-	return save_entry(idx, entry, pentry, entry_start);
+	if (save_entry(idx, entry, pentry, entry_start) < 0) {
+		git__free(obj->data);
+		return -1;
+	}
+
+	if (oid_out)
+		git_oid_cpy(oid_out, &oid);
+
+	return 0;
 
 on_error:
 	git__free(pentry);
@@ -924,9 +993,6 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_inde
 		if (git_vector_init(&idx->objects, total_objects, objects_cmp) < 0)
 			return -1;
 
-		if (git_vector_init(&idx->deltas, total_objects / 2, NULL) < 0)
-			return -1;
-
 		stats->total_objects = total_objects;
 		stats->indexed_objects = 0;
 		stats->received_objects = 0;
@@ -1070,123 +1136,188 @@ cleanup:
 	return error;
 }
 
-static int fix_thin_pack(git_indexer *idx, git_indexer_progress *stats)
+struct resolved_info {
+	off64_t offset;
+	git_oid oid;
+};
+
+static int resolve_one_delta(
+	git_indexer *idx,
+	git_indexer_progress *stats,
+	struct delta_info *delta,
+	git_vector *worklist)
 {
-	int error, found_ref_delta = 0;
-	unsigned int i;
-	struct delta_info *delta;
-	size_t size;
-	git_object_t type;
-	git_mwindow *w = NULL;
-	off64_t curpos = 0;
-	unsigned char *base_info;
-	unsigned int left = 0;
-	git_oid base;
+	git_rawobj obj = {0};
+	git_oid child_oid;
+	struct resolved_info *ri;
+	int error, progress_cb_result;
 
-	GIT_ASSERT(git_vector_length(&idx->deltas) > 0);
+	idx->off = delta->delta_off;
+	if ((error = git_packfile_unpack(&obj, idx->pack, &idx->off)) < 0)
+		return error;
 
-	if (idx->odb == NULL) {
-		git_error_set(GIT_ERROR_INDEXER, "cannot fix a thin pack without an ODB");
+	if (idx->do_verify)
+		check_object_connectivity(idx, &obj);
+
+	if (hash_and_save(idx, &obj, delta->delta_off, &child_oid) < 0)
+		return -1;  /* hash_and_save frees obj.data on failure */
+	git__free(obj.data);
+
+	stats->indexed_objects++;
+	stats->indexed_deltas++;
+	if ((progress_cb_result = do_progress_callback(idx, stats)) < 0)
+		return progress_cb_result;
+
+	ri = git__malloc(sizeof(*ri));
+	GIT_ERROR_CHECK_ALLOC(ri);
+	ri->offset = delta->delta_off;
+	git_oid_cpy(&ri->oid, &child_oid);
+
+	if (git_vector_insert(worklist, ri) < 0) {
+		git__free(ri);
 		return -1;
 	}
 
-	/* Loop until we find the first REF delta */
-	git_vector_foreach(&idx->deltas, i, delta) {
-		if (!delta)
-			continue;
+	return 0;
+}
 
-		curpos = delta->delta_off;
-		error = git_packfile_unpack_header(&size, &type, idx->pack, &w, &curpos);
-		if (error < 0)
-			return error;
+static int resolve_deps_for(
+	git_indexer *idx,
+	git_indexer_progress *stats,
+	off64_t resolved_off,
+	const git_oid *resolved_oid,
+	git_vector *worklist)
+{
+	git_vector *children;
+	struct delta_info *delta;
+	unsigned int i;
+	int error;
 
-		if (type == GIT_PACKFILE_REF_DELTA) {
-			found_ref_delta = 1;
-			break;
+	if (git_indexer_offmap_get(&children, &idx->deps_by_offset, resolved_off) == 0) {
+		git_vector_foreach(children, i, delta) {
+			if (!delta)
+				continue;
+			if ((error = resolve_one_delta(idx, stats, delta, worklist)) < 0)
+				return error;
+			git__free(delta);
+			git_vector_set(NULL, children, i, NULL);
 		}
 	}
 
-	if (!found_ref_delta) {
-		git_error_set(GIT_ERROR_INDEXER, "no REF_DELTA found, cannot inject object");
-		return -1;
+	if (resolved_oid != NULL &&
+	    git_indexer_depoidmap_get(&children, &idx->deps_by_oid, resolved_oid) == 0) {
+		git_vector_foreach(children, i, delta) {
+			if (!delta)
+				continue;
+			if ((error = resolve_one_delta(idx, stats, delta, worklist)) < 0)
+				return error;
+			git__free(delta);
+			git_vector_set(NULL, children, i, NULL);
+		}
 	}
-
-	/* curpos now points to the base information, which is an OID */
-	base_info = git_mwindow_open(&idx->pack->mwf, &w, curpos, git_oid_size(idx->oid_type), &left);
-	if (base_info == NULL) {
-		git_error_set(GIT_ERROR_INDEXER, "failed to map delta information");
-		return -1;
-	}
-
-	git_oid_from_raw(&base, base_info, idx->oid_type);
-	git_mwindow_close(&w);
-
-	if (has_entry(idx, &base))
-		return 0;
-
-	if (inject_object(idx, &base) < 0)
-		return -1;
-
-	stats->local_objects++;
 
 	return 0;
 }
 
 static int resolve_deltas(git_indexer *idx, git_indexer_progress *stats)
 {
+	git_vector worklist = GIT_VECTOR_INIT;
+	struct entry *entry;
+	struct resolved_info *ri;
 	unsigned int i;
-	int error;
-	struct delta_info *delta;
-	int progressed = 0, non_null = 0, progress_cb_result;
+	size_t wi = 0;
+	int error = 0;
 
-	while (idx->deltas.length > 0) {
-		progressed = 0;
-		non_null = 0;
-		git_vector_foreach(&idx->deltas, i, delta) {
-			git_rawobj obj = {0};
-
-			if (!delta)
-				continue;
-
-			non_null = 1;
-			idx->off = delta->delta_off;
-			if ((error = git_packfile_unpack(&obj, idx->pack, &idx->off)) < 0) {
-				if (error == GIT_PASSTHROUGH) {
-					/* We have not seen the base object, we'll try again later. */
-					continue;
-				}
-				return -1;
-			}
-
-			if (idx->do_verify && check_object_connectivity(idx, &obj) < 0)
-				/* TODO: error? continue? */
-				continue;
-
-			if (hash_and_save(idx, &obj, delta->delta_off) < 0)
-				continue;
-
-			git__free(obj.data);
-			stats->indexed_objects++;
-			stats->indexed_deltas++;
-			progressed = 1;
-			if ((progress_cb_result = do_progress_callback(idx, stats)) < 0)
-				return progress_cb_result;
-
-			/* remove from the list */
-			git_vector_set(NULL, &idx->deltas, i, NULL);
-			git__free(delta);
-		}
-
-		/* if none were actually set, we're done */
-		if (!non_null)
-			break;
-
-		if (!progressed && (fix_thin_pack(idx, stats) < 0)) {
-			return -1;
+	git_vector_foreach(&idx->objects, i, entry) {
+		ri = git__malloc(sizeof(*ri));
+		if (!ri) { error = -1; goto cleanup; }
+		ri->offset = entry->offset == UINT32_MAX
+			? (off64_t)entry->offset_long : (off64_t)entry->offset;
+		git_oid_cpy(&ri->oid, &entry->oid);
+		if (git_vector_insert(&worklist, ri) < 0) {
+			git__free(ri);
+			error = -1;
+			goto cleanup;
 		}
 	}
 
-	return 0;
+	while (wi < worklist.length) {
+		ri = git_vector_get(&worklist, wi++);
+		if ((error = resolve_deps_for(idx, stats, ri->offset, &ri->oid, &worklist)) < 0)
+			goto cleanup;
+	}
+
+	/*
+	 * Handle thin packs: iterate deps_by_oid looking for base OIDs not yet
+	 * in the pack. For each, inject from the ODB and resume traversal.
+	 */
+	{
+		git_hashmap_iter_t iter;
+		const git_oid *base_oid;
+		git_vector *children;
+
+restart_thin:
+		iter = GIT_HASHMAP_ITER_INIT;
+		while (git_indexer_depoidmap_iterate(
+			       &iter, &base_oid, &children, &idx->deps_by_oid) == 0) {
+			struct delta_info *d;
+			bool has_pending = false;
+
+			git_vector_foreach(children, i, d) {
+				if (d) { has_pending = true; break; }
+			}
+			if (!has_pending)
+				continue;
+
+			if (!has_entry(idx, base_oid)) {
+				struct git_pack_entry *pentry = NULL;
+
+				if (idx->odb == NULL) {
+					git_error_set(GIT_ERROR_INDEXER,
+						"cannot fix a thin pack without an ODB");
+					error = -1;
+					goto cleanup;
+				}
+				if (inject_object(idx, (git_oid *)base_oid) < 0) {
+					error = -1;
+					goto cleanup;
+				}
+				stats->local_objects++;
+
+				if (git_pack_oidmap_get(
+					    &pentry, &idx->pack->idx_cache, base_oid) < 0) {
+					error = -1;
+					goto cleanup;
+				}
+
+				ri = git__malloc(sizeof(*ri));
+				if (!ri) { error = -1; goto cleanup; }
+				ri->offset = pentry->offset;
+				git_oid_cpy(&ri->oid, base_oid);
+				if (git_vector_insert(&worklist, ri) < 0) {
+					git__free(ri);
+					error = -1;
+					goto cleanup;
+				}
+
+				while (wi < worklist.length) {
+					ri = git_vector_get(&worklist, wi++);
+					if ((error = resolve_deps_for(
+						     idx, stats,
+						     ri->offset, &ri->oid,
+						     &worklist)) < 0)
+						goto cleanup;
+				}
+				goto restart_thin;
+			}
+		}
+	}
+
+cleanup:
+	for (i = 0; i < worklist.length; i++)
+		git__free(git_vector_get(&worklist, i));
+	git_vector_dispose(&worklist);
+	return error;
 }
 
 static int update_header_and_rehash(git_indexer *idx, git_indexer_progress *stats)
@@ -1469,7 +1600,27 @@ void git_indexer_free(git_indexer *idx)
 
 	git_pack_oidmap_dispose(&idx->pack->idx_cache);
 
-	git_vector_dispose_deep(&idx->deltas);
+	{
+		git_hashmap_iter_t diter = GIT_HASHMAP_ITER_INIT;
+		git_vector *vec;
+		while (git_indexer_offmap_iterate(&diter, NULL, &vec, &idx->deps_by_offset) == 0) {
+			git_vector_dispose_deep(vec);
+			git__free(vec);
+		}
+		git_indexer_offmap_dispose(&idx->deps_by_offset);
+	}
+
+	{
+		git_hashmap_iter_t diter = GIT_HASHMAP_ITER_INIT;
+		const git_oid *key;
+		git_vector *vec;
+		while (git_indexer_depoidmap_iterate(&diter, &key, &vec, &idx->deps_by_oid) == 0) {
+			git_vector_dispose_deep(vec);
+			git__free(vec);
+			git__free((void *)key);
+		}
+		git_indexer_depoidmap_dispose(&idx->deps_by_oid);
+	}
 
 	git_packfile_free(idx->pack, !idx->pack_committed);
 
