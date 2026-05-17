@@ -508,7 +508,7 @@ GIT_EXTERN(int) git_commit_create_from_stage(
  *
  * @param author Signature with author and author time of commit
  *
- * @param committer Signature with committer and * commit time of commit
+ * @param committer Signature with committer and commit time of commit
  *
  * @param message_encoding The encoding for the message in the
  *  commit, represented with a standard encoding name.
