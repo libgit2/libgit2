@@ -33,12 +33,14 @@ struct git_commit_graph_header {
 	uint8_t base_graph_files;
 };
 
-#define COMMIT_GRAPH_OID_FANOUT_ID 0x4f494446	      /* "OIDF" */
-#define COMMIT_GRAPH_OID_LOOKUP_ID 0x4f49444c	      /* "OIDL" */
-#define COMMIT_GRAPH_COMMIT_DATA_ID 0x43444154	      /* "CDAT" */
-#define COMMIT_GRAPH_EXTRA_EDGE_LIST_ID 0x45444745    /* "EDGE" */
-#define COMMIT_GRAPH_BLOOM_FILTER_INDEX_ID 0x42494458 /* "BIDX" */
-#define COMMIT_GRAPH_BLOOM_FILTER_DATA_ID 0x42444154  /* "BDAT" */
+#define COMMIT_GRAPH_OID_FANOUT_ID 0x4f494446	            /* "OIDF" */
+#define COMMIT_GRAPH_OID_LOOKUP_ID 0x4f49444c	            /* "OIDL" */
+#define COMMIT_GRAPH_COMMIT_DATA_ID 0x43444154	            /* "CDAT" */
+#define COMMIT_GRAPH_EXTRA_EDGE_LIST_ID 0x45444745          /* "EDGE" */
+#define COMMIT_GRAPH_BLOOM_FILTER_INDEX_ID 0x42494458       /* "BIDX" */
+#define COMMIT_GRAPH_BLOOM_FILTER_DATA_ID 0x42444154        /* "BDAT" */
+#define COMMIT_GRAPH_GENERATION_DATA_ID 0x47444132          /* "GDA2" */
+#define COMMIT_GRAPH_GENERATION_DATA_OVERFLOW_ID 0x47444f32 /* "GDO2" */
 
 struct git_commit_graph_chunk {
 	off64_t offset;
@@ -275,6 +277,8 @@ int git_commit_graph_file_parse(
 
 		case COMMIT_GRAPH_BLOOM_FILTER_INDEX_ID:
 		case COMMIT_GRAPH_BLOOM_FILTER_DATA_ID:
+		case COMMIT_GRAPH_GENERATION_DATA_ID:
+		case COMMIT_GRAPH_GENERATION_DATA_OVERFLOW_ID:
 			chunk_unsupported.offset = last_chunk_offset;
 			last_chunk = &chunk_unsupported;
 			break;
