@@ -1,3 +1,17 @@
+v1.9.4
+------
+
+This release includes a few small but important bugfixes.
+
+* cmake: separate generated headers from translated headers by
+  @ethomson in https://github.com/libgit2/libgit2/pull/7263
+* Avoid uninitialized variable warnings in gcc by @ethomson in
+  https://github.com/libgit2/libgit2/pull/7258
+* fix: Recognize relative worktrees extension by @cwill747 in
+  https://github.com/libgit2/libgit2/pull/7254
+* fix(sha256): thread-safety bug in builtin SHA-256 by @weihanglo in
+  https://github.com/libgit2/libgit2/pull/7266
+
 v1.9.3
 ------
 
