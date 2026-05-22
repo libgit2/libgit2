@@ -899,11 +899,11 @@ static int refdb_reftable_write_table(struct reftable_writer *writer, void *cb_d
 		if ((error = git_reference_peel(&peeled, data->ref, GIT_OBJECT_COMMIT)) == 0 &&
 		    !git_oid_equal(git_reference_target(data->ref), git_object_id(peeled))) {
 			ref_record.value_type = REFTABLE_REF_VAL2;
-			memcpy(ref_record.value.val2.value, git_reference_target(data->ref), GIT_OID_MAX_SIZE);
+			memcpy(ref_record.value.val2.value, git_reference_target(data->ref)->id, GIT_OID_MAX_SIZE);
 			memcpy(ref_record.value.val2.target_value, git_object_id(peeled)->id, GIT_OID_MAX_SIZE);
 		} else {
 			ref_record.value_type = REFTABLE_REF_VAL1;
-			memcpy(ref_record.value.val1, git_reference_target(data->ref), GIT_OID_MAX_SIZE);
+			memcpy(ref_record.value.val1, git_reference_target(data->ref)->id, GIT_OID_MAX_SIZE);
 		}
 
 		git_object_free(peeled);
