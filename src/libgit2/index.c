@@ -1225,7 +1225,7 @@ static int canonicalize_directory_path(
 {
 	const git_index_entry *match, *best = NULL;
 	char *search, *sep;
-	size_t pos, search_len, best_len;
+	size_t pos, search_len, best_len = 0;
 
 	if (!index->ignore_case)
 		return 0;

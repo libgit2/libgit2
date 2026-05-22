@@ -460,7 +460,7 @@ int git_midx_foreach_entry(
 {
 	git_oid oid;
 	size_t oid_size, i;
-	int error;
+	int error = 0;
 
 	GIT_ASSERT_ARG(idx);
 
