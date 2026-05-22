@@ -22,7 +22,7 @@ void test_regexp__cleanup(void)
 	git_regexp_dispose(&regex);
 }
 
-static void try_set_locale(int category)
+GIT_UNUSED_FUNCTION static void try_set_locale(int category)
 {
 #if LC_ALL > 0
 	old_locales[category] = setlocale(category, NULL);
@@ -40,27 +40,30 @@ static void try_set_locale(int category)
 
 void test_regexp__compile_ignores_global_locale_ctype(void)
 {
+#if defined(GIT_WIN32) || defined(__APPLE__)
+	cl_skip();
+#else
 	try_set_locale(LC_CTYPE);
 	cl_git_pass(git_regexp_compile(&regex, "[\xc0-\xff][\x80-\xbf]", 0));
+#endif
 }
 
 void test_regexp__compile_ignores_global_locale_collate(void)
 {
-#ifdef GIT_WIN32
+#if defined(GIT_WIN32) || defined(__APPLE__)
 	cl_skip();
-#endif
-
+#else
 	try_set_locale(LC_COLLATE);
 	cl_git_pass(git_regexp_compile(&regex, "[\xc0-\xff][\x80-\xbf]", 0));
+#endif
 }
 
 void test_regexp__regex_matches_digits_with_locale(void)
 {
-	char c, str[2];
-
-#ifdef GIT_WIN32
+#if defined(GIT_WIN32) || defined(__APPLE__)
 	cl_skip();
-#endif
+#else
+	char c, str[2];
 
 	try_set_locale(LC_COLLATE);
 	try_set_locale(LC_CTYPE);
@@ -72,15 +75,15 @@ void test_regexp__regex_matches_digits_with_locale(void)
 	    str[0] = c;
 	    cl_git_pass(git_regexp_match(&regex, str));
 	}
+#endif
 }
 
 void test_regexp__regex_matches_alphabet_with_locale(void)
 {
-	char c, str[2];
-
-#ifdef GIT_WIN32
+#if defined(GIT_WIN32) || defined(__APPLE__)
 	cl_skip();
-#endif
+#else
+	char c, str[2];
 
 	try_set_locale(LC_COLLATE);
 	try_set_locale(LC_CTYPE);
@@ -96,6 +99,7 @@ void test_regexp__regex_matches_alphabet_with_locale(void)
 	    str[0] = c;
 	    cl_git_pass(git_regexp_match(&regex, str));
 	}
+#endif
 }
 
 void test_regexp__simple_search_matches(void)
