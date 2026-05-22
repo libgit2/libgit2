@@ -14,7 +14,6 @@
 
 #include "common.h"
 #include <sys/stat.h>
-#include <unistd.h>
 
 #define REPO_PATH "test-repo"
 #define CLONE_PATH "test-repo-clone"
@@ -154,13 +153,8 @@ static void display_history(git_repository *repo, const char *title, int max_com
 static void create_initial_repository(const char *path)
 {
 	git_repository *repo = NULL;
-	char cmd[256];
 
 	printf("Creating repository at %s...\n", path);
-
-	/* Remove existing repository if present */
-	snprintf(cmd, sizeof(cmd), "rm -rf %s", path);
-	system(cmd);
 
 	/* Initialize repository */
 	check_error(git_repository_init(&repo, path, 0), "Failed to initialize repository");
@@ -181,13 +175,8 @@ static void clone_repository(const char *source_path, const char *dest_path)
 {
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
 	git_repository *cloned_repo = NULL;
-	char cmd[256];
 
 	printf("Cloning repository from %s to %s...\n", source_path, dest_path);
-
-	/* Remove existing clone if present */
-	snprintf(cmd, sizeof(cmd), "rm -rf %s", dest_path);
-	system(cmd);
 
 	/* Clone the repository */
 	check_error(git_clone(&cloned_repo, source_path, dest_path, &clone_opts), "Failed to clone repository");
@@ -265,7 +254,7 @@ static char* read_blob_content(git_repository *repo, const git_oid *oid)
 		return strdup("(unable to read content)");
 	}
 
-	size = git_blob_rawsize(blob);
+	size = (size_t)git_blob_rawsize(blob);
 	content = malloc(size + 1);
 	if (content) {
 		memcpy(content, git_blob_rawcontent(blob), size);
@@ -284,7 +273,7 @@ static char** split_lines(const char *content, int *line_count)
 	char **lines = malloc(capacity * sizeof(char*));
 	const char *start = content;
 	const char *end;
-	int len;
+	size_t len;
 
 	while (*start) {
 		end = strchr(start, '\n');
