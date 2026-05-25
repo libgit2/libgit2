@@ -82,6 +82,14 @@ if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
 endif()
 
 
+# Common settings across all projects, dependencies, etc. Always support
+# 64 bit file operations, even on 32 bit platforms.
+
+if(NOT WIN32)
+	add_definitions(-D_FILE_OFFSET_BITS=64)
+endif()
+
+
 # Modules
 
 include(FeatureSummary)
