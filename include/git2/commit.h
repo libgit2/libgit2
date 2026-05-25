@@ -318,52 +318,6 @@ GIT_EXTERN(int) git_commit_header_field(
 GIT_EXTERN(int) git_commit_extract_signature(git_buf *signature, git_buf *signed_data, git_repository *repo, git_oid *commit_id, const char *field);
 
 
-typedef struct {
-	unsigned int version;
-
-	/**
-	 * Flags for creating the commit.
-	 *
-	 * If `allow_empty_commit` is specified, a commit with no changes
-	 * from the prior commit (an "empty" commit) is allowed. Otherwise,
-	 * commit creation will be stopped.
-	 */
-	unsigned int allow_empty_commit : 1;
-
-	/** The commit author, or NULL for the default. */
-	const git_signature *author;
-
-	/** The committer, or NULL for the default. */
-	const git_signature *committer;
-
-	/** Encoding for the commit message; leave NULL for default. */
-	const char *message_encoding;
-} git_commit_create_options;
-
-/** Current version for the `git_commit_create_options` structure */
-#define GIT_COMMIT_CREATE_OPTIONS_VERSION 1
-
-/** Static constructor for `git_commit_create_options` */
-#define GIT_COMMIT_CREATE_OPTIONS_INIT { GIT_COMMIT_CREATE_OPTIONS_VERSION }
-
-/**
- * Commits the staged changes in the repository; this is a near analog to
- * `git commit -m message`.
- *
- * By default, empty commits are not allowed.
- *
- * @param id pointer to store the new commit's object id
- * @param repo repository to commit changes in
- * @param message the commit message
- * @param opts options for creating the commit
- * @return 0 on success, GIT_EUNCHANGED if there were no changes to commit, or an error code
- */
-GIT_EXTERN(int) git_commit_create_from_stage(
-	git_oid *id,
-	git_repository *repo,
-	const char *message,
-	const git_commit_create_options *opts);
-
 /** The field name and value for a custom commit header entry. */
 typedef struct {
 	const char *field;
@@ -405,6 +359,65 @@ typedef int GIT_CALLBACK(git_commit_signature_cb)(
 	git_repository *repo,
 	const char *commit_content,
 	void *payload);
+
+typedef struct {
+	unsigned int version;
+
+	/**
+	 * Flags for creating the commit.
+	 *
+	 * If `allow_empty_commit` is specified, a commit with no changes
+	 * from the prior commit (an "empty" commit) is allowed. Otherwise,
+	 * commit creation will be stopped.
+	 */
+	unsigned int allow_empty_commit : 1;
+
+	/** The commit author, or NULL for the default. */
+	const git_signature *author;
+
+	/** The committer, or NULL for the default. */
+	const git_signature *committer;
+
+	/** Encoding for the commit message; leave NULL for default. */
+	const char *message_encoding;
+
+	/**
+	 * Extra headers can be specified as an array of field name and
+	 * value pairs.
+	 */
+	const git_commit_header *extra_headers;
+	size_t extra_headers_len; /**< Number of extra headers */
+
+	/** Signing callback; leave NULL for no commit signing. */
+	git_commit_signature_cb sign;
+
+	/** Callback payload (optional) */
+	void *payload;
+} git_commit_create_options;
+
+/** Current version for the `git_commit_create_options` structure */
+#define GIT_COMMIT_CREATE_OPTIONS_VERSION 1
+
+/** Static constructor for `git_commit_create_options` */
+#define GIT_COMMIT_CREATE_OPTIONS_INIT { GIT_COMMIT_CREATE_OPTIONS_VERSION }
+
+/**
+ * Commits the staged changes in the repository; this is a near analog to
+ * `git commit -m message`.
+ *
+ * By default, empty commits are not allowed.
+ *
+ * @param id pointer to store the new commit's object id
+ * @param repo repository to commit changes in
+ * @param message the commit message
+ * @param opts options for creating the commit
+ * @return 0 on success, GIT_EUNCHANGED if there were no changes to commit, or an error code
+ */
+GIT_EXTERN(int) git_commit_create_from_stage(
+	git_oid *id,
+	git_repository *repo,
+	const char *message,
+	const git_commit_create_options *opts);
 
 typedef struct {
 	unsigned int version;

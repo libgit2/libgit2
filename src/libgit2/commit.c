@@ -1230,6 +1230,20 @@ done:
 	return error;
 }
 
+static void init_ext_options(
+	git_commit_create_ext_options *ext_opts,
+	const git_commit_create_options *create_opts)
+{
+	if (!create_opts)
+		return;
+
+	ext_opts->message_encoding = create_opts->message_encoding;
+	ext_opts->extra_headers = create_opts->extra_headers;
+	ext_opts->extra_headers_len = create_opts->extra_headers_len;
+	ext_opts->sign = create_opts->sign;
+	ext_opts->payload = create_opts->payload;
+}
+
 static int create_from_tree(
 	git_oid *out,
 	git_repository *repo,
@@ -1240,10 +1254,14 @@ static int create_from_tree(
 	git_signature *default_signature = NULL;
 	const git_signature *author, *committer;
 	git_commitarray parents = { 0 };
+	git_commit_create_ext_options ext_opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
 	int error = -1;
 
-	author = opts->author;
-	committer = opts->committer;
+	init_ext_options(&ext_opts, opts);
+	ext_opts.update_ref = "HEAD";
+
+	author = opts ? opts->author : NULL;
+	committer = opts ? opts->committer : NULL;
 
 	if (!author || !committer) {
 		if (git_signature_default(&default_signature, repo) < 0)
@@ -1259,10 +1277,9 @@ static int create_from_tree(
 	if (git_repository_commit_parents(&parents, repo) < 0)
 		goto done;
 
-	error = git_commit_create(out, repo, "HEAD", author, committer,
-			opts->message_encoding, message,
-			tree, parents.count,
-			(const git_commit **)parents.commits);
+	error = git_commit_create_ext(out, repo, author, committer,
+			message, tree, parents.count,
+			parents.commits, &ext_opts);
 
 done:
 	git_commitarray_dispose(&parents);
@@ -1363,9 +1380,8 @@ int git_commit_amend_from_tree(
 	git_repository *repo,
 	const git_tree *tree,
 	const char *given_message,
-	const git_commit_create_options *given_opts)
+	const git_commit_create_options *opts)
 {
-	git_commit_create_options opts = GIT_COMMIT_CREATE_OPTIONS_INIT;
 	git_commit_create_ext_options ext_opts = GIT_COMMIT_CREATE_EXT_OPTIONS_INIT;
 	git_reference *head_ref = NULL;
 	git_commit *head_commit = NULL;
@@ -1376,21 +1392,20 @@ int git_commit_amend_from_tree(
 
 	GIT_ASSERT_ARG(out && repo && tree);
 
-	if (given_opts)
-		memcpy(&opts, given_opts, sizeof(git_commit_create_options));
+	init_ext_options(&ext_opts, opts);
 
 	if ((error = git_repository_head(&head_ref, repo)) < 0 ||
 	    (error = git_reference_peel((git_object **)&head_commit, head_ref, GIT_OBJECT_COMMIT)) < 0)
 		goto done;
 
-	if (opts.author) {
-		author = opts.author;
+	if (opts && opts->author) {
+		author = opts->author;
 	} else {
 		author = git_commit_author(head_commit);
 	}
 
-	if (opts.committer) {
-		committer = opts.committer;
+	if (opts && opts->committer) {
+		committer = opts->committer;
 	} else {
 		if ((error = git_signature_default(&new_committer, repo)) < 0)
 			goto done;
@@ -1400,7 +1415,6 @@ int git_commit_amend_from_tree(
 
 	if (given_message) {
 		message = given_message;
-		ext_opts.message_encoding = opts.message_encoding;
 	} else {
 		message = git_commit_message(head_commit);
 		ext_opts.message_encoding = git_commit_message_encoding(head_commit);
