@@ -7,7 +7,7 @@
 
 #include "regexp.h"
 
-#if defined(GIT_REGEX_BUILTIN) || defined(GIT_REGEX_PCRE)
+#if defined(GIT_REGEX_PCRE)
 
 int git_regexp_compile(git_regexp *r, const char *pattern, int flags)
 {
@@ -73,7 +73,7 @@ out:
 	return 0;
 }
 
-#elif defined(GIT_REGEX_PCRE2)
+#elif defined(GIT_REGEX_BUILTIN) || defined(GIT_REGEX_PCRE2)
 
 int git_regexp_compile(git_regexp *r, const char *pattern, int flags)
 {
