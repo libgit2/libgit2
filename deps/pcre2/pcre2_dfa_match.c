@@ -2933,6 +2933,7 @@ for (;;)
         {
         int rc;
         int *local_workspace;
+	dfa_recursion_info *ri;
         PCRE2_SIZE *local_offsets;
         RWS_anchor *rws = (RWS_anchor *)RWS;
         PCRE2_SPTR callpat = start_code + GET(code, 1);
@@ -2957,7 +2958,7 @@ for (;;)
         pointer or last used character. This should catch convoluted mutual
         recursions. (Some simple cases are caught at compile time.) */
 
-        for (dfa_recursion_info *ri = mb->recursive;
+        for (ri = mb->recursive;
              ri != NULL;
              ri = ri->prevrec)
           {

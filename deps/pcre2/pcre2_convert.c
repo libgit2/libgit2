@@ -72,7 +72,8 @@ enum { POSIX_START_REGEX, POSIX_ANCHORED, POSIX_NOT_BRACKET,
 
 #define PUTCHARS(string) \
   { \
-  for (const char *s = string; *s != 0; s++) \
+  const char *s; \
+  for (s = string; *s != 0; s++) \
     { \
     if (p >= endp) return PCRE2_ERROR_NOMEMORY; \
     *p++ = *s; \
@@ -1125,6 +1126,7 @@ PCRE2_UCHAR *use_buffer = dummy_buffer;
 PCRE2_SIZE use_length = DUMMY_BUFFER_SIZE;
 BOOL utf = (options & PCRE2_CONVERT_UTF) != 0;
 uint32_t pattype = options & TYPE_OPTIONS;
+int i;
 
 if (pattern == NULL && plength == 0)
   pattern = null_str;
@@ -1180,7 +1182,7 @@ if (buffptr != NULL && *buffptr != NULL)
 /* Call an individual converter, either just once (if a buffer was provided or
 just the length is needed), or twice (if a memory allocation is required). */
 
-for (int i = 0; i < 2; i++)
+for (i = 0; i < 2; i++)
   {
   PCRE2_UCHAR *allocated;
   BOOL dummyrun = buffptr == NULL || *buffptr == NULL;

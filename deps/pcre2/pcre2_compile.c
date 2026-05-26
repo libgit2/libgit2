@@ -6086,6 +6086,8 @@ uint32_t meta, meta_arg;
 uint32_t firstcuflags, reqcuflags;
 uint32_t zeroreqcuflags, zerofirstcuflags;
 uint32_t req_caseopt, reqvary, tempreqvary;
+uint32_t j;
+int i;
 /* Some opcodes, such as META_CAPTURE_NUMBER or META_CAPTURE_NAME,
 depends on the previous value of offset. */
 PCRE2_SIZE offset = 0;
@@ -6542,7 +6544,7 @@ for (;; pptr++)
     verbarglen = *(++pptr);
     verbculen = 0;
     tempcode = code++;
-    for (int i = 0; i < (int)verbarglen; i++)
+    for (i = 0; i < (int)verbarglen; i++)
       {
       meta = *(++pptr);
 #ifdef SUPPORT_UNICODE
@@ -7482,7 +7484,7 @@ for (;; pptr++)
             }
           *lengthptr += delta;
           }
-        else for (int i = 0; i < replicate; i++)
+        else for (i = 0; i < replicate; i++)
           {
           memcpy(code, previous, CU2BYTES(length_prevgroup));
           previous = code;
@@ -7665,7 +7667,7 @@ for (;; pptr++)
                 reqcu = firstcu;
                 reqcuflags = firstcuflags;
                 }
-              for (uint32_t i = 1; i < repeat_min; i++)
+              for (j = 1; j < repeat_min; j++)
                 {
                 memcpy(code, previous, CU2BYTES(len));
                 code += len;
@@ -7707,7 +7709,7 @@ for (;; pptr++)
 
           /* This is compiling for real */
 
-          else for (uint32_t i = repeat_max; i >= 1; i--)
+          else for (i = repeat_max; i >= 1; i--)
             {
             *code++ = OP_BRAZERO + repeat_type;
 

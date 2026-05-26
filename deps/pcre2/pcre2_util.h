@@ -141,7 +141,7 @@ and also specially-formatted comments.
 
 This macro should be used with no following semicolon, and ideally with a comment: */
 
-//  PCRE2_FALLTHROUGH /* Fall through */
+/*  PCRE2_FALLTHROUGH */  /* Fall through */
 
 #ifndef PCRE2_FALLTHROUGH
 
