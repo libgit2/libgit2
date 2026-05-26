@@ -151,6 +151,9 @@ only if it is not already set. */
 #error This project uses C99. C++ is not supported.
 #endif
 
+/* libgit2 uses pcre2 as an object library */
+#define PCRE2_EXP_DECL
+
 #ifndef PCRE2_EXP_DECL
 #  if defined(_WIN32) && !defined(PCRE2_STATIC)
 #    define PCRE2_EXP_DECL  extern __declspec(dllexport)
