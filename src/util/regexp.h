@@ -10,8 +10,13 @@
 
 #include "git2_util.h"
 
-#if defined(GIT_REGEX_BUILTIN) || defined(GIT_REGEX_PCRE)
-# include "pcre.h"
+#if defined(GIT_REGEX_BUILTIN)
+# define PCRE2_CODE_UNIT_WIDTH 8
+# include "pcre2.h"
+typedef pcre2_code *git_regexp;
+# define GIT_REGEX_INIT NULL
+#elif defined(GIT_REGEX_PCRE)
+# include <pcre.h>
 typedef pcre *git_regexp;
 # define GIT_REGEX_INIT NULL
 #elif defined(GIT_REGEX_PCRE2)
