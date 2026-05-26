@@ -156,6 +156,9 @@ fi
 echo "CTest version:"
 env PATH="${BUILD_PATH}" "${CTEST}" --version | head -1 2>&1 | indent
 
+echo "git version:"
+git --version 2>&1 | indent
+
 echo ""
 
 echo "##############################################################################"
