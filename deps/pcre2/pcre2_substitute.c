@@ -261,7 +261,7 @@ return FALSE;
 *************************************************/
 
 #define PCRE2_SUBSTITUTE_CASE_NONE                 0
-// 1, 2, 3 are PCRE2_SUBSTITUTE_CASE_LOWER, UPPER, TITLE_FIRST.
+/* 1, 2, 3 are PCRE2_SUBSTITUTE_CASE_LOWER, UPPER, TITLE_FIRST. */
 #define PCRE2_SUBSTITUTE_CASE_REVERSE_TITLE_FIRST  4
 
 typedef struct {
@@ -330,18 +330,18 @@ switch (state->to_case)
   return 0;
   /* LCOV_EXCL_STOP */
 
-  case PCRE2_SUBSTITUTE_CASE_LOWER: // Can be single_char TRUE or FALSE
-  case PCRE2_SUBSTITUTE_CASE_UPPER: // Can only be single_char FALSE
+  case PCRE2_SUBSTITUTE_CASE_LOWER: /* Can be single_char TRUE or FALSE */
+  case PCRE2_SUBSTITUTE_CASE_UPPER: /* Can only be single_char FALSE */
   next_to_upper = rest_to_upper = (state->to_case == PCRE2_SUBSTITUTE_CASE_UPPER);
   break;
 
-  case PCRE2_SUBSTITUTE_CASE_TITLE_FIRST: // Can be single_char TRUE or FALSE
+  case PCRE2_SUBSTITUTE_CASE_TITLE_FIRST: /* Can be single_char TRUE or FALSE */
   next_to_upper = TRUE;
   rest_to_upper = FALSE;
   state->to_case = PCRE2_SUBSTITUTE_CASE_LOWER;
   break;
 
-  case PCRE2_SUBSTITUTE_CASE_REVERSE_TITLE_FIRST: // Can only be single_char FALSE
+  case PCRE2_SUBSTITUTE_CASE_REVERSE_TITLE_FIRST: /* Can only be single_char FALSE */
   next_to_upper = FALSE;
   rest_to_upper = TRUE;
   state->to_case = PCRE2_SUBSTITUTE_CASE_UPPER;
@@ -470,9 +470,9 @@ switch (state->to_case)
   return 0;
   /* LCOV_EXCL_STOP */
 
-  case PCRE2_SUBSTITUTE_CASE_LOWER: // Can be single_char TRUE or FALSE
-  case PCRE2_SUBSTITUTE_CASE_UPPER: // Can only be single_char FALSE
-  case PCRE2_SUBSTITUTE_CASE_TITLE_FIRST: // Can be single_char TRUE or FALSE
+  case PCRE2_SUBSTITUTE_CASE_LOWER: /* Can be single_char TRUE or FALSE */
+  case PCRE2_SUBSTITUTE_CASE_UPPER: /* Can only be single_char FALSE */
+  case PCRE2_SUBSTITUTE_CASE_TITLE_FIRST: /* Can be single_char TRUE or FALSE */
 
   /* The easy case, where our internal casing operations align with those of
   the callout. */
@@ -492,7 +492,7 @@ switch (state->to_case)
   rest_to_case = PCRE2_SUBSTITUTE_CASE_NONE;
   break;
 
-  case PCRE2_SUBSTITUTE_CASE_REVERSE_TITLE_FIRST: // Can only be single_char FALSE
+  case PCRE2_SUBSTITUTE_CASE_REVERSE_TITLE_FIRST: /* Can only be single_char FALSE */
   ch1_to_case = PCRE2_SUBSTITUTE_CASE_LOWER;
   rest_to_case = PCRE2_SUBSTITUTE_CASE_UPPER;
   break;

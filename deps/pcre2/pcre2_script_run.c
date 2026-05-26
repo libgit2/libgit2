@@ -89,6 +89,7 @@ uint32_t require_map[FULL_MAPSIZE];
 uint32_t map[FULL_MAPSIZE];
 uint32_t require_digitset = 0;
 uint32_t c;
+int i;
 
 #if PCRE2_CODE_UNIT_WIDTH == 32
 (void)utf;    /* Avoid compiler warning */
@@ -105,7 +106,7 @@ every script, as opposed to the maps in ucd_script_sets, which only have bits
 for scripts less than ucp_Unknown - those that appear in script extension
 lists. */
 
-for (int i = 0; i < FULL_MAPSIZE; i++) require_map[i] = 0;
+for (i = 0; i < FULL_MAPSIZE; i++) require_map[i] = 0;
 
 /* Scan strings of two or more characters, checking the Unicode characteristics
 of each code point. There is special code for scripts that can be combined with
@@ -244,7 +245,7 @@ for (;;)
       case SCRIPT_MAP:
       OK = FALSE;
 
-      for (int i = 0; i < FULL_MAPSIZE; i++)
+      for (i = 0; i < FULL_MAPSIZE; i++)
         {
         if ((require_map[i] & map[i]) != 0)
           {
@@ -281,7 +282,7 @@ for (;;)
         allowed scripts for this character. */
 
         default:
-        for (int i = 0; i < FULL_MAPSIZE; i++) require_map[i] &= map[i];
+        for (i = 0; i < FULL_MAPSIZE; i++) require_map[i] &= map[i];
         break;
         }
 
