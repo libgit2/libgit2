@@ -152,7 +152,9 @@ only if it is not already set. */
 #endif
 
 /* libgit2 uses pcre2 as an object library */
-#define PCRE2_EXP_DECL
+#if defined(__MINGW32__)
+# define PCRE2_EXP_DECL
+#endif
 
 #ifndef PCRE2_EXP_DECL
 #  if defined(_WIN32) && !defined(PCRE2_STATIC)
