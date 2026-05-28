@@ -63,6 +63,7 @@ GIT_EXTERN(int) git_commit_graph_open_options_init(
  *
  * @param cgraph_out the `git_commit_graph` struct to initialize.
  * @param objects_dir the path to a git objects directory.
+ * @param options options for opening the graph
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_commit_graph_open(
