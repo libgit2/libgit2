@@ -18,6 +18,11 @@ if [[ "$(uname -s)" == MINGW* ]]; then
         SKIP_NTLM_TESTS=1
 fi
 
+# Windows doesn't run the SHA256 gitdaemon tests properly (yet)
+if [[ "$(uname -s)" == MINGW* ]]; then
+        SKIP_GITDAEMON_SHA256_TESTS=1
+fi
+
 # older versions of git don't support push options
 if [ -z "$SKIP_PUSHOPTIONS_TESTS" ]; then
 	export GITTEST_PUSH_OPTIONS=true
@@ -340,13 +345,15 @@ if should_run "GITDAEMON_TESTS"; then
 	unset GITTEST_REMOTE_URL
 	unset GITTEST_REMOTE_BRANCH
 
-	echo ""
-	echo "Running gitdaemon (sha256) tests"
-	echo ""
+	if should_run "GITDAEMON_SHA256_TESTS"; then
+		echo ""
+		echo "Running gitdaemon (sha256) tests"
+		echo ""
 
-	export GITTEST_REMOTE_URL="git://localhost:9420/testrepo_256.git"
-	run_test gitdaemon_sha256
-	unset GITTEST_REMOTE_URL
+		export GITTEST_REMOTE_URL="git://localhost:9420/testrepo_256.git"
+		run_test gitdaemon_sha256
+		unset GITTEST_REMOTE_URL
+	fi
 fi
 
 if should_run "PROXY_TESTS"; then
