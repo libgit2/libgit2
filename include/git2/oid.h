@@ -116,6 +116,7 @@ GIT_EXTERN(int) git_oid_from_string(
  *
  * @param out oid structure the result is written into.
  * @param str input hex prefix
+ * @param len the length of the given prefix
  * @param type object id type
  * @return 0 or an error code
  */
