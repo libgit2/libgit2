@@ -95,7 +95,7 @@ typedef struct {
  * A filter that can transform file data
  *
  * This represents a filter that can be used to transform or even replace
- * file data.  Libgit2 includes one built in filter and it is possible to
+ * file data.  Libgit2 includes two built in filter and it is possible to
  * write your own (see git2/sys/filter.h for information on that).
  *
  * The two builtin filters are:
