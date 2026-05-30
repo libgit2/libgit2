@@ -10,6 +10,12 @@ void test_core_features__basic(void)
 	cl_assert((caps & GIT_FEATURE_THREADS) == 0);
 #endif
 
+#ifdef GIT_HTTP
+	cl_assert((caps & GIT_FEATURE_HTTP) != 0);
+#else
+	cl_assert((caps & GIT_FEATURE_HTTP) == 0);
+#endif
+
 #ifdef GIT_HTTPS
 	cl_assert((caps & GIT_FEATURE_HTTPS) != 0);
 #endif
@@ -53,6 +59,7 @@ void test_core_features__basic(void)
 	 * added that the backends test (below) is updated as well.
 	 */
 	cl_assert((caps & ~(GIT_FEATURE_THREADS |
+	                    GIT_FEATURE_HTTP |
 	                    GIT_FEATURE_HTTPS |
 	                    GIT_FEATURE_SSH |
 	                    GIT_FEATURE_NSEC |
@@ -70,6 +77,7 @@ void test_core_features__basic(void)
 void test_core_features__backends(void)
 {
 	const char *threads = git_libgit2_feature_backend(GIT_FEATURE_THREADS);
+	const char *http = git_libgit2_feature_backend(GIT_FEATURE_HTTP);
 	const char *https = git_libgit2_feature_backend(GIT_FEATURE_HTTPS);
 	const char *ssh = git_libgit2_feature_backend(GIT_FEATURE_SSH);
 	const char *nsec = git_libgit2_feature_backend(GIT_FEATURE_NSEC);
@@ -91,6 +99,9 @@ void test_core_features__backends(void)
 #else
 	cl_assert(threads == NULL);
 #endif
+
+	/* HTTP has no backend selection */
+	cl_assert(http == NULL);
 
 #if defined(GIT_HTTPS_OPENSSL)
 	cl_assert_equal_s("openssl", https);

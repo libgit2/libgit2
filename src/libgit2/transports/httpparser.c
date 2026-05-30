@@ -9,6 +9,8 @@
 
 #include <string.h>
 
+#ifdef GIT_HTTP
+
 #if defined(GIT_HTTPPARSER_HTTPPARSER)
 
 #include "http_parser.h"
@@ -126,3 +128,5 @@ size_t git_http_parser_execute(
 #else
 # error unknown http-parser
 #endif
+
+#endif /* GIT_HTTP */

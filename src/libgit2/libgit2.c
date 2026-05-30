@@ -86,6 +86,9 @@ int git_libgit2_features(void)
 #ifdef GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
+#ifdef GIT_HTTP
+		| GIT_FEATURE_HTTP
+#endif
 #ifdef GIT_HTTPS
 		| GIT_FEATURE_HTTPS
 #endif
@@ -125,6 +128,10 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 #elif defined(GIT_THREADS)
 		GIT_ASSERT_WITH_RETVAL(!"Unknown threads backend", NULL);
 #endif
+		break;
+
+	case GIT_FEATURE_HTTP:
+		/* HTTP has no backend selection; presence is reported via git_libgit2_features() */
 		break;
 
 	case GIT_FEATURE_HTTPS:
