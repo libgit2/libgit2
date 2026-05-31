@@ -103,6 +103,7 @@ set(PCRE2POSIX_SOURCES pcre2posix.c)
 
 add_definitions(-DHAVE_CONFIG_H)
 add_definitions(-DPCRE2_CODE_UNIT_WIDTH=8)
+add_definitions(-DPCRE2_STATIC)
 
 if(MSVC)
   add_compile_definitions(_CRT_SECURE_NO_DEPRECATE _CRT_SECURE_NO_WARNINGS)

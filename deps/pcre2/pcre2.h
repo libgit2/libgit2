@@ -53,11 +53,6 @@ don't change existing definitions of PCRE2_EXP_DECL.
 
 By default, we use the standard "extern" declarations. */
 
-/* libgit2 uses pcre2 as an object library */
-#if defined(__MINGW32__)
-# define PCRE2_EXP_DECL
-#endif
-
 #ifndef PCRE2_EXP_DECL
 #  if defined(_WIN32) && !defined(PCRE2_STATIC)
 #    define PCRE2_EXP_DECL  extern __declspec(dllimport)
