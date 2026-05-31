@@ -113,3 +113,4 @@ include_directories(${PROJECT_BINARY_DIR})
 add_library(pcre2 OBJECT
 	${PCRE2_HEADERS} ${PCRE2_SOURCES}
 	${PCRE2POSIX_HEADERS} ${PCRE2POSIX_SOURCES})
+target_compile_definitions(pcre2 PRIVATE PCRE2_STATIC)
