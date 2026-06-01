@@ -38,10 +38,6 @@
 #cmakedefine EBCDIC_IGNORING_COMPILER 1
 #cmakedefine NEVER_BACKSLASH_C 1
 
-#define PCRE2_STATIC            @PCRE2_STATIC@
-#define PCRE2_EXPORT            @PCRE2_EXPORT@
-#define PCRE2_EXP_DECL          @PCRE2_EXP_DECL@
-#define PCRE2_EXP_DEFN          @PCRE2_EXP_DEFN@
 #define LINK_SIZE               @PCRE2_LINK_SIZE@
 #define HEAP_LIMIT              @PCRE2_HEAP_LIMIT@
 #define MATCH_LIMIT             @PCRE2_MATCH_LIMIT@
