@@ -56,6 +56,11 @@ elseif(USE_REGEX STREQUAL "builtin")
 	add_feature_info("Regular expressions" ON "using bundled implementation")
 	set(GIT_REGEX_BUILTIN 1)
 
+	add_definitions(-DPCRE2_STATIC)
+	add_definitions(-DPCRE2_EXPORT=)
+	add_definitions(-DPCRE2_EXP_DECL=)
+	add_definitions(-DPCRE2_EXP_DEFN=)
+
 	add_subdirectory("${PROJECT_SOURCE_DIR}/deps/pcre2" "${PROJECT_BINARY_DIR}/deps/pcre2")
 	list(APPEND LIBGIT2_DEPENDENCY_INCLUDES "${PROJECT_SOURCE_DIR}/deps/pcre2")
 	list(APPEND LIBGIT2_DEPENDENCY_OBJECTS $<TARGET_OBJECTS:pcre2>)
