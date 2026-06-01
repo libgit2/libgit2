@@ -659,6 +659,26 @@ void test_repo_open__can_wildcard_allowlist_with_problematic_ownership(void)
 	cl_git_pass(test_safe_path("*"));
 }
 
+void test_repo_open__can_allowlist_dirs_wildcard(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(
+	        &path, "%s/*", clar_sandbox_path()));
+	cl_git_pass(test_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
+void test_repo_open__allowlist_dirs_cannot_have_wildcard_suffix(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(
+	        &path, "%s/%s*", clar_sandbox_path(), "empty_standard_repo"));
+	cl_git_fail_with(GIT_EOWNER, test_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
 void test_repo_open__can_allowlist_bare_gitdir(void)
 {
 	git_str path = GIT_STR_INIT;
@@ -666,6 +686,38 @@ void test_repo_open__can_allowlist_bare_gitdir(void)
 	cl_git_pass(git_str_printf(&path, "%s/%s",
 		clar_sandbox_path(), "testrepo.git"));
 	cl_git_pass(test_bare_safe_path(path.ptr));
+	git_str_dispose(&path);
+}
+
+void test_repo_open__can_allowlist_bare_wildcard_gitdir(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(
+	        &path, "%s/*", clar_sandbox_path()));
+	cl_git_pass(test_bare_safe_path(path.ptr));
+
+	git_str_dispose(&path);
+}
+
+void test_repo_open__allowlist_bare_dirs_cannot_have_wildcard_suffix(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(
+	        &path, "%s/%s*", clar_sandbox_path(), "testrepo.git"));
+	cl_git_fail_with(GIT_EOWNER, test_bare_safe_path(path.ptr));
+
+	git_str_dispose(&path);
+}
+
+void test_repo_open__allowlist_relative_bare_dirs_cannot_have_wildcard_suffix(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_printf(&path, "%s*", clar_sandbox_path()));
+	cl_git_fail_with(GIT_EOWNER, test_bare_safe_path(path.ptr));
+
 	git_str_dispose(&path);
 }
 
@@ -686,6 +738,23 @@ void test_repo_open__can_handle_prefixed_safe_paths(void)
 	 */
 	cl_git_pass(git_str_printf(&path, "%%(prefix)/%s/%s",
 		clar_sandbox_path(), "empty_standard_repo"));
+	cl_git_pass(test_safe_path(path.ptr));
+	git_str_dispose(&path);
+#endif
+}
+
+void test_repo_open__can_handle_prefixed_wildcard_safe_paths(void)
+{
+#ifndef GIT_WIN32
+	git_str path = GIT_STR_INIT;
+
+	/*
+	 * Using "%(prefix)/" becomes "%(prefix)//tmp/foo" - so
+	 * "%(prefix)/" is stripped and means the literal path
+	 * follows.
+	 */
+	cl_git_pass(git_str_printf(&path, "%%(prefix)/%s/*",
+		clar_sandbox_path()));
 	cl_git_pass(test_safe_path(path.ptr));
 	git_str_dispose(&path);
 #endif
