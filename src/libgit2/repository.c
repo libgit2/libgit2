@@ -582,7 +582,7 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 	} else if (strcmp(entry->value, "*") == 0) {
 		*data->is_safe = true;
 	} else {
-		bool is_prefix = false;
+		bool is_prefix = false, match;
 
 		if (git_str_sets(&data->tmp, entry->value) < 0)
 			return -1;
@@ -591,11 +591,9 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		 * A value ending with slash* is treated as a prefix match.
 		 * Strip only the '*', leaving the trailing slash in place.
 		 */
-		if (data->tmp.size >= 2 &&
-		    data->tmp.ptr[data->tmp.size - 2] == '/' &&
-		    data->tmp.ptr[data->tmp.size - 1] == '*') {
+		if (git__suffixcmp(data->tmp.ptr, "/*") == 0) {
 			is_prefix = true;
-			git_str_truncate(&data->tmp, data->tmp.size - 1);
+			git_str_shorten(&data->tmp, 1);
 		}
 
 		if (!git_fs_path_is_root(data->tmp.ptr)) {
@@ -636,12 +634,11 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 		if (strncmp(test_path, "%(prefix)//", strlen("%(prefix)//")) == 0)
 			test_path += strlen("%(prefix)/");
 
-		if (is_prefix) {
-			size_t len = strlen(test_path);
+		match = is_prefix ?
+			(git__prefixcmp(data->repo_path, test_path) == 0) :
+			(strcmp(test_path, data->repo_path) == 0);
 
-			if (strncmp(test_path, data->repo_path, len) == 0)
-				*data->is_safe = true;
-		} else if (strcmp(test_path, data->repo_path) == 0)
+		if (match)
 			*data->is_safe = true;
 	}
 
