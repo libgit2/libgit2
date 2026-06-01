@@ -14,7 +14,7 @@
 
 static int print_spec_args(git_str *out, const cli_opt_spec *spec)
 {
-	GIT_ASSERT(!is_switch_or_value(spec));
+	CLI_ASSERT(!is_switch_or_value(spec));
 
 	if (spec->type == CLI_OPT_TYPE_ARG)
 		return git_str_printf(out, "<%s>", spec->value_name);
@@ -23,13 +23,13 @@ static int print_spec_args(git_str *out, const cli_opt_spec *spec)
 	if (spec->type == CLI_OPT_TYPE_LITERAL)
 		return git_str_printf(out, "--");
 
-	GIT_ASSERT(!"unknown option spec type");
+	CLI_ASSERT(!"unknown option spec type");
 	return -1;
 }
 
 GIT_INLINE(int) print_spec_alias(git_str *out, const cli_opt_spec *spec)
 {
-	GIT_ASSERT(is_switch_or_value(spec) && spec->alias);
+	CLI_ASSERT(is_switch_or_value(spec) && spec->alias);
 
 	if (spec->type == CLI_OPT_TYPE_VALUE &&
 	    !(spec->usage & CLI_OPT_USAGE_VALUE_OPTIONAL))
@@ -42,7 +42,7 @@ GIT_INLINE(int) print_spec_alias(git_str *out, const cli_opt_spec *spec)
 
 GIT_INLINE(int) print_spec_name(git_str *out, const cli_opt_spec *spec)
 {
-	GIT_ASSERT(is_switch_or_value(spec) && spec->name);
+	CLI_ASSERT(is_switch_or_value(spec) && spec->name);
 
 	if (spec->type == CLI_OPT_TYPE_VALUE &&
 	    !(spec->usage & CLI_OPT_USAGE_VALUE_OPTIONAL))
