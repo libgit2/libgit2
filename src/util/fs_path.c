@@ -1853,9 +1853,10 @@ static PSID *sid_dup(PSID sid)
 	return dup;
 }
 
-static int current_user_sid(PSID *out)
+static int current_user_sid(PSID *out, HANDLE *out_linked_token)
 {
 	TOKEN_USER *info = NULL;
+	TOKEN_ELEVATION_TYPE elevationType = 0;
 	HANDLE token = NULL;
 	DWORD len = 0;
 	int error = -1;
@@ -1877,6 +1878,20 @@ static int current_user_sid(PSID *out)
 	if (!GetTokenInformation(token, TokenUser, info, len, &len)) {
 		git_error_set(GIT_ERROR_OS, "could not lookup current user");
 		goto done;
+	}
+
+	if (GetTokenInformation(
+	            token, TokenElevationType, &elevationType,
+	            sizeof(elevationType), &len) &&
+	    elevationType == TokenElevationTypeLimited) {
+		/*
+		 * The current process is run by a member of the Administrators
+		 * group, but the process is not running elevated.
+		 */
+		if (!GetTokenInformation(
+		            token, TokenLinkedToken, out_linked_token,
+		            sizeof(*out_linked_token), &len))
+			out_linked_token = NULL; /* there is no linked token */
 	}
 
 	if ((*out = sid_dup(info->User.Sid)))
@@ -1926,6 +1941,7 @@ int git_fs_path_owner_is(
 	git_fs_path_owner_t owner_type)
 {
 	PSID owner_sid = NULL, user_sid = NULL;
+	HANDLE linked_token = NULL;
 	BOOL is_admin, admin_owned;
 	int error;
 
@@ -1937,14 +1953,13 @@ int git_fs_path_owner_is(
 	if ((error = file_owner_sid(&owner_sid, path)) < 0)
 		goto done;
 
-	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0) {
-		if ((error = current_user_sid(&user_sid)) < 0)
-			goto done;
+	if ((error = current_user_sid(&user_sid, &linked_token)) < 0)
+		goto done;
 
-		if (EqualSid(owner_sid, user_sid)) {
-			*out = true;
-			goto done;
-		}
+	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0 &&
+	    EqualSid(owner_sid, user_sid)) {
+		*out = true;
+		goto done;
 	}
 
 	admin_owned =
@@ -1959,8 +1974,10 @@ int git_fs_path_owner_is(
 
 	if (admin_owned &&
 	    (owner_type & GIT_FS_PATH_USER_IS_ADMINISTRATOR) != 0 &&
-	    CheckTokenMembership(NULL, owner_sid, &is_admin) &&
-	    is_admin) {
+	    ((CheckTokenMembership(NULL, owner_sid, &is_admin) && is_admin) ||
+	     (linked_token &&
+	             CheckTokenMembership(linked_token, owner_sid, &is_admin) &&
+	             is_admin))) {
 		*out = true;
 		goto done;
 	}
