@@ -9,6 +9,7 @@
 
 #include "commit.h"
 #include "odb.h"
+#include "pathspec.h"
 #include "pool.h"
 
 #include "git2/revparse.h"
@@ -468,6 +469,169 @@ static int still_interesting(git_commit_list *list, int64_t time, int slop)
 	return slop - 1;
 }
 
+static bool include_path_delta(git_revwalk *walk,
+	git_tree *commit_tree,
+	git_tree *parent_tree,
+	git_diff_options *diffopts)
+{
+	bool include = false;
+	git_diff *diff;
+	if (git_diff_tree_to_tree(&diff, walk->repo, parent_tree, commit_tree, diffopts) == 0) {
+		size_t num_deltas = git_diff_num_deltas(diff);
+		size_t i;
+		for (i = 0; i < num_deltas && !include; i++) {
+			const git_diff_delta *delta = git_diff_get_delta(diff, i);
+			if (delta->new_file.path
+				&& git_pathspec__match(&walk->pathspec->pathspec,
+					delta->new_file.path, false, false, NULL, NULL)) {
+				include = true;
+			}
+			else if (delta->old_file.path
+				&& git_pathspec__match(&walk->pathspec->pathspec,
+					delta->old_file.path, false, false, NULL, NULL)) {
+				include = true;
+			}
+		}
+		git_diff_free(diff);
+	}
+	return include;
+}
+
+static bool include_path_wildcard(git_revwalk *walk, git_commit *commit, git_tree *commit_tree)
+{
+	unsigned int parents = git_commit_parentcount(commit);
+	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
+	bool include = false;
+
+	/* We could narrow this down further by copying over the entire pathspec,
+	 * but that doesn't seem to make any difference in performance.
+	 * So for now, the just the prefix */
+	if (walk->pathspec->prefix) {
+		diffopts.pathspec.strings = &walk->pathspec->prefix;
+		diffopts.pathspec.count = 1;
+	}
+
+	if (parents == 0) {
+		include = include_path_delta(walk, commit_tree, NULL, &diffopts);
+	}
+	else {
+		unsigned int i;
+		include = true;
+		/* Loop through all parents, and ensure that it matches with all 
+		 *  parents before including the commit
+		 */
+		for (i = 0; i < parents && include; i++) {
+			git_commit *parent = NULL;
+			git_tree *parent_tree = NULL;
+			/*Assume it's to be excluded unless the delta matches*/
+			include = false;
+			if (git_commit_parent(&parent, commit, i) == 0
+				&& git_commit_tree(&parent_tree, parent) == 0) {
+				if (include_path_delta(walk, commit_tree, parent_tree, &diffopts))
+					include = true;
+			}
+			git_tree_free(parent_tree);
+			git_commit_free(parent);
+		}
+	}
+	return include;
+}
+
+static bool include_path_exact_root(git_revwalk *walk, git_tree *commit_tree)
+{
+	size_t i;
+	git_attr_fnmatch *match;
+	/* If it's a root commit, we just need to find the first path that matches */
+	git_vector_foreach(&walk->pathspec->pathspec, i, match) {
+		git_tree_entry *entry=NULL;
+		if (git_tree_entry_bypath(&entry, commit_tree, match->pattern)) {
+			git_tree_entry_free(entry);
+			return true;
+		}
+	}
+	return false;
+}
+
+static bool include_path_exact_parent(git_revwalk *walk, git_tree *commit_tree, git_tree *parent_tree)
+{
+	size_t i;
+	git_attr_fnmatch *match;
+	bool include = false;
+	git_vector_foreach(&walk->pathspec->pathspec, i, match) {
+		git_tree_entry *commit_entry=NULL;
+		git_tree_entry *parent_entry=NULL;
+
+		/* Given we are working with full paths here, we only need to look at OIDs
+		 * to know if the path is touched by the commit */
+		git_tree_entry_bypath(&commit_entry, commit_tree, match->pattern);
+		git_tree_entry_bypath(&parent_entry, parent_tree, match->pattern);
+
+		/* If the existance of an entry is different, it means we deal with
+		 * an add or remove case. We don't need to think about renaming here
+		 * since that would still count as a change */
+		if ((commit_entry == NULL) != (parent_entry == NULL)) {
+			include = true;
+		}
+		/* Both trees have an entry. Include if the OID is different between the trees */
+		else if (commit_entry && parent_entry
+			&& git_oid_equal(
+				git_tree_entry_id(commit_entry),
+				git_tree_entry_id(parent_entry)) == 0) {
+			include = true;
+		}
+		git_tree_entry_free(commit_entry);
+		git_tree_entry_free(parent_entry);
+		if (include)
+			return include;
+	}
+	return false;
+}
+
+static bool include_path_exact(git_revwalk *walk, git_commit *commit, git_tree *commit_tree) {
+	unsigned int parents = git_commit_parentcount(commit);
+	if (parents == 0) {
+		return include_path_exact_root(walk, commit_tree);
+	}
+	else {
+		unsigned int p;
+		bool include_commit = true;
+		/* Loop through all parents, and ensure that it matches with all 
+		 *  parents before including the commit
+		 */
+		for (p = 0; p < parents && include_commit; p++) {
+			git_commit *parent = NULL;
+			git_tree *parent_tree = NULL;
+			if (git_commit_parent(&parent, commit, p) == 0
+				&& git_commit_tree(&parent_tree, parent) == 0) {
+				if (!include_path_exact_parent(walk, commit_tree, parent_tree))
+					include_commit = false;
+			}
+			git_tree_free(parent_tree);
+			git_commit_free(parent);
+		}
+		return include_commit;
+	}
+}
+
+static bool include_path(git_revwalk *walk, git_commit_list_node *commit_node)
+{
+	git_commit *commit = NULL;
+	git_tree *commit_tree = NULL;
+	bool include = false;
+
+	if (git_commit_lookup(&commit, walk->repo, &commit_node->oid) == 0
+		&& git_commit_tree(&commit_tree, commit) == 0) {
+		if (walk->pathspec_wildcard)
+			include = include_path_wildcard(walk, commit, commit_tree);
+		else
+			include = include_path_exact(walk, commit, commit_tree);
+	}
+
+	git_tree_free(commit_tree);
+	git_commit_free(commit);
+	return include;
+}
+
 static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list *commits)
 {
 	int error, slop = SLOP;
@@ -491,6 +655,9 @@ static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list 
 
 			break;
 		}
+
+		if (walk->pathspec && !include_path(walk, commit))
+			continue;
 
 		if (walk->hide_cb && walk->hide_cb(&commit->oid, walk->hide_cb_payload))
 			continue;
@@ -796,6 +963,33 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 		git_oid_cpy(oid, &next->oid);
 
 	return error;
+}
+
+static bool pathspec_has_wildcard(git_pathspec *pathspec)
+{
+	size_t i;
+	git_attr_fnmatch *match;
+	git_vector_foreach(&pathspec->pathspec, i, match) {
+		if (match->flags & GIT_ATTR_FNMATCH_HASWILD) {
+			return true;
+		}
+	}
+	return false;
+}
+
+int git_revwalk_pathspec(git_revwalk *walk, git_pathspec *pathspec) {
+	GIT_ASSERT_ARG(walk);
+
+	if (walk->walking)
+		git_revwalk_reset(walk);
+
+	if (pathspec) {
+		walk->pathspec = pathspec;
+		walk->pathspec_wildcard = pathspec_has_wildcard(pathspec);
+		walk->limited = 1;
+	}
+
+	return 0;
 }
 
 int git_revwalk_reset(git_revwalk *walk)

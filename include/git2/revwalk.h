@@ -10,6 +10,7 @@
 #include "common.h"
 #include "types.h"
 #include "oid.h"
+#include "pathspec.h"
 
 /**
  * @file git2/revwalk.h
@@ -228,6 +229,17 @@ GIT_EXTERN(int) git_revwalk_next(git_oid *out, git_revwalk *walk);
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
+
+/**
+ * Set a git_pathspec object to filter commits on
+ * 
+ * Changing the pathspec rests the walker
+ * 
+ * @param walk the walker being used for the traversal.
+ * @param pathspec Paths to filter commits on
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_revwalk_pathspec(git_revwalk *walk, git_pathspec *pathspec);
 
 /**
  * Push and hide the respective endpoints of the given range.
