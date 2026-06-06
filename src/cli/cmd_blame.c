@@ -97,9 +97,13 @@ static int print_standard(git_blame *blame)
 	/* Compute the maximum size of things */
 	for (i = 0; i < git_blame_hunkcount(blame); i++) {
 		const git_blame_hunk *hunk = git_blame_hunk_byindex(blame, i);
-		size_t hunk_author_len = strlen(hunk->orig_signature->name);
-		size_t hunk_path_len = strlen(hunk->orig_path);
-		size_t hunk_max_line_number =
+		size_t hunk_author_len, hunk_path_len, hunk_max_line_number;
+
+		CLI_ASSERT(hunk);
+
+		hunk_author_len = strlen(hunk->orig_signature->name);
+		hunk_path_len = strlen(hunk->orig_path);
+		hunk_max_line_number =
 			hunk->orig_start_line_number + hunk->lines_in_hunk;
 
 		if (hunk_max_line_number > max_line_number)
