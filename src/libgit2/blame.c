@@ -461,6 +461,12 @@ static int blame_internal(git_blame *blame)
 
 	for (ent = blame->ent; ent; ent = ent->next) {
 		git_blame_hunk *h = hunk_from_entry(ent, blame);
+
+		if (!h) {
+			error = -1;
+			goto on_error;
+		}
+
 		git_vector_insert(&blame->hunks, h);
 	}
 
