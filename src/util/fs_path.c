@@ -1853,12 +1853,15 @@ static PSID *sid_dup(PSID sid)
 	return dup;
 }
 
-static int current_user_sid(PSID *out)
+static int current_user_sid(PSID *sid, HANDLE *linked_token)
 {
 	TOKEN_USER *info = NULL;
+	TOKEN_ELEVATION_TYPE elevationType = 0;
 	HANDLE token = NULL;
 	DWORD len = 0;
 	int error = -1;
+	TOKEN_ELEVATION_TYPE elevation_type;
+	DWORD size;
 
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
 		git_error_set(GIT_ERROR_OS, "could not lookup process information");
@@ -1879,7 +1882,19 @@ static int current_user_sid(PSID *out)
 		goto done;
 	}
 
-	if ((*out = sid_dup(info->User.Sid)))
+	if (GetTokenInformation(token, TokenElevationType, &elevation_type, sizeof(elevation_type), &size) &&
+	    elevation_type == TokenElevationTypeLimited) {
+		/*
+		 * The current process is run by a member of the Administrators group
+		 * but is not running elevated.
+		 */
+		if (!GetTokenInformation(token, TokenLinkedToken, linked_token, sizeof(HANDLE), &size)) {
+			CloseHandle(*linked_token);
+			*linked_token = NULL;
+		}
+	}
+
+	if ((*sid = sid_dup(info->User.Sid)))
 		error = 0;
 
 done:
@@ -1926,6 +1941,7 @@ int git_fs_path_owner_is(
 	git_fs_path_owner_t owner_type)
 {
 	PSID owner_sid = NULL, user_sid = NULL;
+	HANDLE linked_token = NULL;
 	BOOL is_admin, admin_owned;
 	int error;
 
@@ -1934,17 +1950,14 @@ int git_fs_path_owner_is(
 		return 0;
 	}
 
-	if ((error = file_owner_sid(&owner_sid, path)) < 0)
+	if ((error = file_owner_sid(&owner_sid, path)) < 0 ||
+	    (error = current_user_sid(&user_sid, &linked_token)) < 0)
 		goto done;
 
-	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0) {
-		if ((error = current_user_sid(&user_sid)) < 0)
-			goto done;
-
-		if (EqualSid(owner_sid, user_sid)) {
-			*out = true;
-			goto done;
-		}
+	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0 &&
+	    EqualSid(owner_sid, user_sid)) {
+		*out = true;
+		goto done;
 	}
 
 	admin_owned =
@@ -1960,6 +1973,7 @@ int git_fs_path_owner_is(
 	if (admin_owned &&
 	    (owner_type & GIT_FS_PATH_USER_IS_ADMINISTRATOR) != 0 &&
 	    CheckTokenMembership(NULL, owner_sid, &is_admin) &&
+	    CheckTokenMembership(linked_token, owner_sid, &is_admin) &&
 	    is_admin) {
 		*out = true;
 		goto done;
@@ -1968,6 +1982,9 @@ int git_fs_path_owner_is(
 	*out = false;
 
 done:
+	if (linked_token)
+	    CloseHandle(linked_token);
+
 	git__free(owner_sid);
 	git__free(user_sid);
 	return error;
