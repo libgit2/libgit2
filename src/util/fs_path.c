@@ -1856,7 +1856,6 @@ static PSID *sid_dup(PSID sid)
 static int current_user_sid(PSID *sid, HANDLE *linked_token)
 {
 	TOKEN_USER *info = NULL;
-	TOKEN_ELEVATION_TYPE elevationType = 0;
 	HANDLE token = NULL;
 	DWORD len = 0;
 	int error = -1;
