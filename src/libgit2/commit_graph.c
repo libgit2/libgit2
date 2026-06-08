@@ -367,25 +367,18 @@ int git_commit_graph_validate(git_commit_graph *cgraph) {
 
 int git_commit_graph_open(
 	git_commit_graph **cgraph_out,
-	const char *objects_dir
-#ifdef GIT_EXPERIMENTAL_SHA256
-	, const git_commit_graph_open_options *opts
-#endif
-	)
+	const char *objects_dir,
+	const git_commit_graph_open_options *opts)
 {
 	git_oid_t oid_type;
 	int error;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	GIT_ERROR_CHECK_VERSION(opts,
 		GIT_COMMIT_GRAPH_OPEN_OPTIONS_VERSION,
 		"git_commit_graph_open_options");
 
 	oid_type = opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT;
 	GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
-#else
-	oid_type = GIT_OID_SHA1;
-#endif
 
 	error = git_commit_graph_new(cgraph_out, objects_dir, true,
 			oid_type);
@@ -718,18 +711,12 @@ int git_commit_graph_writer_new(
 	git_commit_graph_writer *w;
 	git_oid_t oid_type;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	GIT_ERROR_CHECK_VERSION(opts,
 		GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION,
 		"git_commit_graph_writer_options");
 
 	oid_type = opts && opts->oid_type ? opts->oid_type : GIT_OID_DEFAULT;
 	GIT_ASSERT_ARG(git_oid_type_is_valid(oid_type));
-#else
-	GIT_UNUSED(opts);
-	oid_type = GIT_OID_SHA1;
-#endif
-
 	GIT_ASSERT_ARG(out && objects_info_dir);
 
 	w = git__calloc(1, sizeof(git_commit_graph_writer));

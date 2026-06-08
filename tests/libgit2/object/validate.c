@@ -42,13 +42,8 @@
 #define INVALID_TREE_SHA256 \
 	"100644 HEADER \x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42\x42"
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-# define sha1_rawcontent_is_valid(v, c, l, t) \
-         git_object_rawcontent_is_valid(v, c, l, t, GIT_OID_SHA1)
-#else
-# define sha1_rawcontent_is_valid(v, c, l, t) \
-         git_object_rawcontent_is_valid(v, c, l, t)
-#endif
+#define sha1_rawcontent_is_valid(v, c, l, t) \
+	git_object_rawcontent_is_valid(v, c, l, t, GIT_OID_SHA1)
 
 void test_object_validate__valid_sha1(void)
 {
@@ -98,9 +93,6 @@ void test_object_validate__invalid_sha1(void)
 
 void test_object_validate__valid_sha256(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	int valid;
 
 	cl_git_pass(git_object_rawcontent_is_valid(&valid, "", 0, GIT_OBJECT_BLOB, GIT_OID_SHA256));
@@ -114,14 +106,10 @@ void test_object_validate__valid_sha256(void)
 
 	cl_git_pass(git_object_rawcontent_is_valid(&valid, VALID_TREE_SHA256, CONST_STRLEN(VALID_TREE_SHA256), GIT_OBJECT_TREE, GIT_OID_SHA256));
 	cl_assert_equal_i(1, valid);
-#endif
 }
 
 void test_object_validate__invalid_sha256(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	int valid;
 
 	cl_git_pass(git_object_rawcontent_is_valid(&valid, "", 0, GIT_OBJECT_COMMIT, GIT_OID_SHA256));
@@ -135,14 +123,10 @@ void test_object_validate__invalid_sha256(void)
 
 	cl_git_pass(git_object_rawcontent_is_valid(&valid, INVALID_TREE_SHA256, CONST_STRLEN(INVALID_TREE_SHA256), GIT_OBJECT_TREE, GIT_OID_SHA256));
 	cl_assert_equal_i(0, valid);
-#endif
 }
 
 void test_object_validate__cannot_parse_sha1_as_sha256(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	int valid;
 
 	cl_git_pass(git_object_rawcontent_is_valid(&valid, VALID_COMMIT_SHA1, CONST_STRLEN(INVALID_COMMIT_SHA1), GIT_OBJECT_COMMIT, GIT_OID_SHA256));
@@ -150,5 +134,4 @@ void test_object_validate__cannot_parse_sha1_as_sha256(void)
 
 	cl_git_pass(git_object_rawcontent_is_valid(&valid, INVALID_TREE_SHA1, CONST_STRLEN(INVALID_TREE_SHA1), GIT_OBJECT_TREE, GIT_OID_SHA256));
 	cl_assert_equal_i(0, valid);
-#endif
 }

@@ -243,18 +243,12 @@ Advanced Options
 
 You can specify a number of options to `cmake` that will change the
 way `libgit2` is built. To use this, specify `-Doption=value` during
-the initial `cmake` configuration. For example, to enable SHA256
-compatibility:
+the initial `cmake` configuration. For example, to build the fuzzer
+suite:
 
 	$ mkdir build && cd build
-	$ cmake -DEXPERIMENTAL_SHA256=ON ..
+	$ cmake -DBUILD_FUZZERS=ON ..
 	$ cmake --build .
-
-libgit2 options:
-
-* `EXPERIMENTAL_SHA256=ON`: turns on SHA256 compatibility; note that
-  this is an API-incompatible change, hence why it is labeled
-  "experimental"
 
 Build options:
 

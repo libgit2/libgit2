@@ -255,8 +255,6 @@ GIT_EXTERN(int) git_index_open(
 	git_index **index_out,
 	const char *index_path);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 /**
  * Creates a new bare Git index object, without a repository to back
  * it. This index object is capable of storing SHA256 objects.
@@ -270,8 +268,6 @@ GIT_EXTERN(int) git_index_open_ext(
 	git_index **index_out,
 	const char *index_path,
 	const git_index_options *opts);
-
-#endif
 
 /**
  * Create an in-memory index object.
@@ -289,8 +285,6 @@ GIT_EXTERN(int) git_index_open_ext(
  */
 GIT_EXTERN(int) git_index_new(git_index **index_out);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 /**
  * Create an in-memory index object.
  *
@@ -301,8 +295,6 @@ GIT_EXTERN(int) git_index_new(git_index **index_out);
 GIT_EXTERN(int) git_index_new_ext(
 	git_index **index_out,
 	const git_index_options *opts);
-
-#endif
 
 /**
  * Free an existing index object.

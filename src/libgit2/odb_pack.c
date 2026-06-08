@@ -314,11 +314,7 @@ static int pack_entry_find_prefix(
 	struct git_pack_file *last_found = backend->last_found, *p;
 	git_midx_entry midx_entry;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_oid_clear(&found_full_oid, short_oid->type);
-#else
-	git_oid_clear(&found_full_oid, GIT_OID_SHA1);
-#endif
 
 	if (backend->midx) {
 		error = git_midx_entry_find(&midx_entry, backend->midx, short_oid, len);
@@ -741,17 +737,12 @@ static int pack_backend__writepack(struct git_odb_writepack **out,
 	writepack = git__calloc(1, sizeof(struct pack_writepack));
 	GIT_ERROR_CHECK_ALLOC(writepack);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	opts.odb = odb;
 	opts.oid_type = backend->opts.oid_type;
 
 	error = git_indexer_new(&writepack->indexer,
 		backend->pack_folder,
 		&opts);
-#else
-	error = git_indexer_new(&writepack->indexer,
-		backend->pack_folder, 0, odb, &opts);
-#endif
 
 	if (error < 0)
 		return -1;
@@ -796,23 +787,16 @@ static int pack_backend__writemidx(git_odb_backend *_backend)
 	size_t i;
 	int error = 0;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_midx_writer_options midx_opts = GIT_MIDX_WRITER_OPTIONS_INIT;
-#endif
 
 	GIT_ASSERT_ARG(_backend);
 
 	backend = (struct pack_backend *)_backend;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	midx_opts.oid_type = backend->opts.oid_type;
-#endif
 
-	error = git_midx_writer_new(&w, backend->pack_folder
-#ifdef GIT_EXPERIMENTAL_SHA256
-		, &midx_opts
-#endif
-		);
+	error = git_midx_writer_new(&w, backend->pack_folder,
+		&midx_opts);
 
 	if (error < 0)
 		return error;
@@ -920,23 +904,13 @@ static int pack_backend__alloc(
 	return 0;
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 int git_odb_backend_one_pack(
 	git_odb_backend **backend_out,
 	const char *idx,
 	const git_odb_backend_pack_options *opts)
-#else
-int git_odb_backend_one_pack(
-	git_odb_backend **backend_out,
-	const char *idx)
-#endif
 {
 	struct pack_backend *backend = NULL;
 	struct git_pack_file *packfile = NULL;
-
-#ifndef GIT_EXPERIMENTAL_SHA256
-	git_odb_backend_pack_options *opts = NULL;
-#endif
 
 	git_oid_t oid_type = opts ? opts->oid_type : 0;
 
@@ -953,24 +927,14 @@ int git_odb_backend_one_pack(
 	return 0;
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 int git_odb_backend_pack(
 	git_odb_backend **backend_out,
 	const char *objects_dir,
 	const git_odb_backend_pack_options *opts)
-#else
-int git_odb_backend_pack(
-	git_odb_backend **backend_out,
-	const char *objects_dir)
-#endif
 {
 	int error = 0;
 	struct pack_backend *backend = NULL;
 	git_str path = GIT_STR_INIT;
-
-#ifndef GIT_EXPERIMENTAL_SHA256
-	git_odb_backend_pack_options *opts = NULL;
-#endif
 
 	if (pack_backend__alloc(&backend, 8, opts) < 0)
 		return -1;

@@ -43,9 +43,6 @@ void test_repo_objectformat__sha1(void)
 
 void test_repo_objectformat__sha256(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	git_repository *other;
 
 	cl_git_pass(git_config_set_string(config, "extensions.objectformat", "sha256"));
@@ -53,7 +50,6 @@ void test_repo_objectformat__sha256(void)
 	cl_git_pass(git_repository_open(&other, "empty_bare.git"));
 	cl_assert_equal_i(GIT_OID_SHA256, git_repository_oid_type(other));
 	git_repository_free(other);
-#endif
 }
 
 void test_repo_objectformat__invalid(void)

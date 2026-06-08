@@ -1354,9 +1354,6 @@ void test_online_clone__namespace_with_specified_branch(void)
 
 void test_online_clone__sha256(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	git_clone_options options = GIT_CLONE_OPTIONS_INIT;
 	git_reference *head;
 
@@ -1368,7 +1365,6 @@ void test_online_clone__sha256(void)
 	cl_assert_equal_i(GIT_REFERENCE_SYMBOLIC, git_reference_type(head));
 
 	git_reference_free(head);
-#endif
 }
 
 void test_online_clone__connect_timeout_configurable(void)

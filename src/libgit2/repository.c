@@ -2937,10 +2937,8 @@ int git_repository_init_ext(
 
 	GIT_ERROR_CHECK_VERSION(opts, GIT_REPOSITORY_INIT_OPTIONS_VERSION, "git_repository_init_options");
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	if (opts->oid_type)
 		oid_type = opts->oid_type;
-#endif
 	if (opts->refdb_type)
 		refdb_type = opts->refdb_type;
 

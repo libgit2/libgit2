@@ -703,9 +703,7 @@ static int id_from_fd(
 	memset(out, 0, sizeof(git_oid));
 	error = git_hash_final(out->id, &ctx);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = opts->oid_type;
-#endif
 
 done:
 	git_hash_ctx_cleanup(&ctx);
@@ -868,9 +866,7 @@ static int id_from_buffer(
 
 	memset(id, 0, sizeof(git_oid));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	id->type = opts->oid_type;
-#endif
 
 	return git_hash_vec(id->id, vec, 2, algorithm);
 }
@@ -910,18 +906,11 @@ int git_object_rawcontent_is_valid(
 	int *valid,
 	const char *buf,
 	size_t len,
-	git_object_t object_type
-#ifdef GIT_EXPERIMENTAL_SHA256
-	, git_oid_t oid_type
-#endif
-	)
+	git_object_t object_type,
+	git_oid_t oid_type)
 {
 	git_object *obj = NULL;
 	int error;
-
-#ifndef GIT_EXPERIMENTAL_SHA256
-	git_oid_t oid_type = GIT_OID_SHA1;
-#endif
 
 	GIT_ASSERT_ARG(valid);
 	GIT_ASSERT_ARG(buf);

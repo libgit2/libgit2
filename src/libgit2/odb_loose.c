@@ -751,9 +751,7 @@ GIT_INLINE(int) filename_to_oid(struct loose_backend *backend, git_oid *oid, con
 		oid->id[1 + i/2] = (unsigned char) v;
 	}
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	oid->type = backend->options.oid_type;
-#endif
 
 	return 0;
 }
@@ -1220,7 +1218,6 @@ int git_odb__backend_loose(
 }
 
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 int git_odb_backend_loose(
 	git_odb_backend **backend_out,
 	const char *objects_dir,
@@ -1228,27 +1225,3 @@ int git_odb_backend_loose(
 {
 	return git_odb__backend_loose(backend_out, objects_dir, opts);
 }
-#else
-int git_odb_backend_loose(
-	git_odb_backend **backend_out,
-	const char *objects_dir,
-	int compression_level,
-	int do_fsync,
-	unsigned int dir_mode,
-	unsigned int file_mode)
-{
-	git_odb_backend_loose_flag_t flags = 0;
-	git_odb_backend_loose_options opts = GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT;
-
-	if (do_fsync)
-		flags |= GIT_ODB_BACKEND_LOOSE_FSYNC;
-
-	opts.flags = flags;
-	opts.compression_level = compression_level;
-	opts.dir_mode = dir_mode;
-	opts.file_mode = file_mode;
-	opts.oid_type = GIT_OID_DEFAULT;
-
-	return git_odb__backend_loose(backend_out, objects_dir, &opts);
-}
-#endif

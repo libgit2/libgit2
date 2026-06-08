@@ -49,9 +49,7 @@ int git_oid_from_prefix(git_oid *out, const char *str, size_t len, git_oid_t typ
 
 	memset(out, 0, sizeof(git_oid));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = type;
-#endif
 
 	for (p = 0; p < len; p++) {
 		v = git__fromhex(str[p]);
@@ -89,13 +87,13 @@ int git_oid_from_raw(git_oid *out, const unsigned char *raw, git_oid_t type)
 
 	memset(out, 0, sizeof(git_oid));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	out->type = type;
-#endif
 
 	memcpy(out->id, raw, size);
 	return 0;
 }
+
+#ifndef GIT_DEPRECATE_HARD
 
 int git_oid_fromstrn(
 	git_oid *out,
@@ -114,6 +112,8 @@ int git_oid_fromstr(git_oid *out, const char *str)
 {
 	return git_oid_from_prefix(out, str, GIT_OID_SHA1_HEXSIZE, GIT_OID_SHA1);
 }
+
+#endif /* GIT_DEPRECATE_HARD */
 
 int git_oid_nfmt(char *str, size_t n, const git_oid *oid)
 {
@@ -228,10 +228,14 @@ char *git_oid_tostr(char *out, size_t n, const git_oid *oid)
 	return out;
 }
 
+#ifndef GIT_DEPRECATE_HARD
+
 int git_oid_fromraw(git_oid *out, const unsigned char *raw)
 {
 	return git_oid_from_raw(out, raw, GIT_OID_SHA1);
 }
+
+#endif
 
 int git_oid_cpy(git_oid *out, const git_oid *src)
 {
@@ -251,10 +255,8 @@ int git_oid_equal(const git_oid *a, const git_oid *b)
 
 int git_oid_ncmp(const git_oid *oid_a, const git_oid *oid_b, size_t len)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	if (oid_a->type != oid_b->type)
 		return oid_a->type - oid_b->type;
-#endif
 
 	return git_oid_raw_ncmp(oid_a->id, oid_b->id, len);
 }

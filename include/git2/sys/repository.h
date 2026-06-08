@@ -80,8 +80,6 @@ GIT_EXTERN(int) git_repository_new_options_init(
  */
 GIT_EXTERN(int) git_repository_new(git_repository **out);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 /**
  * Create a new repository with no backends.
  *
@@ -92,8 +90,6 @@ GIT_EXTERN(int) git_repository_new(git_repository **out);
 GIT_EXTERN(int) git_repository_new_ext(
 	git_repository **out,
 	git_repository_new_options *opts);
-
-#endif
 
 /**
  * Reset all the internal state in a repository.

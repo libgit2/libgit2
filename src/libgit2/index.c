@@ -94,10 +94,8 @@ struct entry_common {
 typedef entry_short(GIT_OID_SHA1_SIZE) index_entry_short_sha1;
 typedef entry_long(GIT_OID_SHA1_SIZE) index_entry_long_sha1;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 typedef entry_short(GIT_OID_SHA256_SIZE) index_entry_short_sha256;
 typedef entry_long(GIT_OID_SHA256_SIZE) index_entry_long_sha256;
-#endif
 
 #undef entry_short
 #undef entry_long
@@ -2447,12 +2445,10 @@ GIT_INLINE(size_t) index_entry_path_offset(
 			offsetof(index_entry_long_sha1, path) :
 			offsetof(index_entry_short_sha1, path);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	else if (oid_type == GIT_OID_SHA256)
 		return (flags & GIT_INDEX_ENTRY_EXTENDED) ?
 			offsetof(index_entry_long_sha256, path) :
 			offsetof(index_entry_short_sha256, path);
-#endif
 
 	git_error_set(GIT_ERROR_INTERNAL, "invalid oid type");
 	return 0;
@@ -2463,10 +2459,8 @@ GIT_INLINE(size_t) index_entry_flags_offset(git_oid_t oid_type)
 	if (oid_type == GIT_OID_SHA1)
 		return offsetof(index_entry_long_sha1, flags_extended);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	else if (oid_type == GIT_OID_SHA256)
 		return offsetof(index_entry_long_sha256, flags_extended);
-#endif
 
 	git_error_set(GIT_ERROR_INTERNAL, "invalid oid type");
 	return 0;
@@ -2512,9 +2506,7 @@ static int read_entry(
 	const char *path_ptr;
 	struct entry_common *source_common = NULL;
 	index_entry_short_sha1 source_sha1;
-#ifdef GIT_EXPERIMENTAL_SHA256
 	index_entry_short_sha256 source_sha256;
-#endif
 	git_index_entry entry = {{0}};
 	bool compressed = index->version >= INDEX_VERSION_NUMBER_COMP;
 	char *tmp_path = NULL;
@@ -2530,12 +2522,10 @@ static int read_entry(
 		source_common = &source_sha1.common;
 		memcpy(&source_sha1, buffer, sizeof(source_sha1));
 		break;
-#ifdef GIT_EXPERIMENTAL_SHA256
 	case GIT_OID_SHA256:
 		source_common = &source_sha256.common;
 		memcpy(&source_sha256, buffer, sizeof(source_sha256));
 		break;
-#endif
 	default:
 		GIT_ASSERT(!"invalid oid type");
 	}
@@ -2558,14 +2548,12 @@ static int read_entry(
 			return -1;
 		entry.flags = ntohs(source_sha1.flags);
 		break;
-#ifdef GIT_EXPERIMENTAL_SHA256
 	case GIT_OID_SHA256:
 		if (git_oid_from_raw(&entry.id, source_sha256.oid,
 		                     GIT_OID_SHA256) < 0)
 			return -1;
 		entry.flags = ntohs(source_sha256.flags);
 		break;
-#endif
 	default:
 		GIT_ASSERT(!"invalid oid type");
 	}
@@ -2871,20 +2859,16 @@ static int write_disk_entry(
 
 	index_entry_short_sha1 ondisk_sha1;
 	index_entry_long_sha1 ondisk_ext_sha1;
-#ifdef GIT_EXPERIMENTAL_SHA256
 	index_entry_short_sha256 ondisk_sha256;
 	index_entry_long_sha256 ondisk_ext_sha256;
-#endif
 
 	switch (index->oid_type) {
 	case GIT_OID_SHA1:
 		ondisk_common = &ondisk_sha1.common;
 		break;
-#ifdef GIT_EXPERIMENTAL_SHA256
 	case GIT_OID_SHA256:
 		ondisk_common = &ondisk_sha256.common;
 		break;
-#endif
 	default:
 		GIT_ASSERT(!"invalid oid type");
 	}
@@ -2938,12 +2922,10 @@ static int write_disk_entry(
 		git_oid_raw_cpy(ondisk_sha1.oid, entry->id.id, GIT_OID_SHA1_SIZE);
 		ondisk_sha1.flags = htons(entry->flags);
 		break;
-#ifdef GIT_EXPERIMENTAL_SHA256
 	case GIT_OID_SHA256:
 		git_oid_raw_cpy(ondisk_sha256.oid, entry->id.id, GIT_OID_SHA256_SIZE);
 		ondisk_sha256.flags = htons(entry->flags);
 		break;
-#endif
 	default:
 		GIT_ASSERT(!"invalid oid type");
 	}
@@ -2962,14 +2944,12 @@ static int write_disk_entry(
 			ondisk_ext_sha1.flags_extended = flags_extended;
 			ondisk_ext = &ondisk_ext_sha1.common;
 			break;
-#ifdef GIT_EXPERIMENTAL_SHA256
 		case GIT_OID_SHA256:
 			memcpy(&ondisk_ext_sha256, &ondisk_sha256,
 				sizeof(index_entry_short_sha256));
 			ondisk_ext_sha256.flags_extended = flags_extended;
 			ondisk_ext = &ondisk_ext_sha256.common;
 			break;
-#endif
 		default:
 			GIT_ASSERT(!"invalid oid type");
 		}
@@ -2980,11 +2960,9 @@ static int write_disk_entry(
 		case GIT_OID_SHA1:
 			memcpy(mem, &ondisk_sha1, path_offset);
 			break;
-#ifdef GIT_EXPERIMENTAL_SHA256
 		case GIT_OID_SHA256:
 			memcpy(mem, &ondisk_sha256, path_offset);
 			break;
-#endif
 		default:
 			GIT_ASSERT(!"invalid oid type");
 		}

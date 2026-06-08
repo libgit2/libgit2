@@ -152,7 +152,6 @@ GIT_INLINE(void) clar__assert_equal_oid(
 		git_oid_fmt(&err[47], two);
 
 		clar__fail(file, func, line, desc, err, 1);
-#ifdef GIT_EXPERIMENTAL_SHA256
 	} else if (one->type == GIT_OID_SHA256) {
 		char err[] = "\"................................................................\" != \"................................................................\"";
 
@@ -160,7 +159,6 @@ GIT_INLINE(void) clar__assert_equal_oid(
 		git_oid_fmt(&err[71], one);
 
 		clar__fail(file, func, line, desc, err, 1);
-#endif
 	} else {
 		clar__fail(file, func, line, desc, "unknown oid types", 1);
 	}

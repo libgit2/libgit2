@@ -131,7 +131,6 @@ static int refdb_reftable_stack_for(refdb_reftable_stack **out,
 
 	*out = NULL;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	switch (backend->repo->oid_type) {
 	case GIT_OID_SHA1:
 		options.hash_id = REFTABLE_HASH_SHA1;
@@ -143,9 +142,7 @@ static int refdb_reftable_stack_for(refdb_reftable_stack **out,
 		error = GIT_EINVALID;
 		goto out;
 	}
-#else
-	options.hash_id = REFTABLE_HASH_SHA1;
-#endif
+
 	options.lock_timeout_ms = 100;
 
 	switch (which) {
@@ -392,11 +389,7 @@ static int refdb_reftable_check_ref(refdb_reftable_stack *stack,
 	}
 
 	if (expected_oid && reftable_ref_record_val1(&ref) != NULL) {
-#ifdef GIT_EXPERIMENTAL_SHA256
 		git_oid_t oid_type = expected_oid->type;
-#else
-		git_oid_t oid_type = GIT_OID_SHA1;
-#endif
 		git_oid oid;
 
 		if ((error = git_oid_from_raw(&oid, reftable_ref_record_val1(&ref), oid_type)) < 0)
@@ -899,11 +892,11 @@ static int refdb_reftable_write_table(struct reftable_writer *writer, void *cb_d
 		if ((error = git_reference_peel(&peeled, data->ref, GIT_OBJECT_COMMIT)) == 0 &&
 		    !git_oid_equal(git_reference_target(data->ref), git_object_id(peeled))) {
 			ref_record.value_type = REFTABLE_REF_VAL2;
-			memcpy(ref_record.value.val2.value, git_reference_target(data->ref), GIT_OID_MAX_SIZE);
+			memcpy(ref_record.value.val2.value, git_reference_target(data->ref)->id, GIT_OID_MAX_SIZE);
 			memcpy(ref_record.value.val2.target_value, git_object_id(peeled)->id, GIT_OID_MAX_SIZE);
 		} else {
 			ref_record.value_type = REFTABLE_REF_VAL1;
-			memcpy(ref_record.value.val1, git_reference_target(data->ref), GIT_OID_MAX_SIZE);
+			memcpy(ref_record.value.val1, git_reference_target(data->ref)->id, GIT_OID_MAX_SIZE);
 		}
 
 		git_object_free(peeled);

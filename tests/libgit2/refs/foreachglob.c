@@ -10,7 +10,7 @@ void test_refs_foreachglob__initialize(void)
 
 	repo = cl_git_sandbox_init("testrepo.git");
 
-	cl_git_pass(git_oid_fromstr(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644"));
+	cl_git_pass(git_oid_from_string(&id, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
 	cl_git_pass(git_reference_create(&fake_remote, repo, "refs/remotes/nulltoken/master", &id, 0, NULL));
 }
 

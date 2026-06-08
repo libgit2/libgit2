@@ -769,11 +769,7 @@ int git_pkt_buffer_wants(
 	git_oid_t oid_type;
 	size_t oid_hexsize, want_len, i = 0;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	oid_type = wants->refs_len > 0 ? wants->refs[0]->oid.type : GIT_OID_SHA1;
-#else
-	oid_type = GIT_OID_SHA1;
-#endif
 
 	oid_hexsize = git_oid_hexsize(oid_type);
 
@@ -848,11 +844,7 @@ int git_pkt_buffer_have(git_oid *oid, git_str *buf)
 	git_oid_t oid_type;
 	size_t oid_hexsize, have_len;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	oid_type = oid->type;
-#else
-	oid_type = GIT_OID_SHA1;
-#endif
 
 	oid_hexsize = git_oid_hexsize(oid_type);
 	have_len = PKT_LEN_SIZE + CONST_STRLEN(PKT_HAVE_PREFIX) +

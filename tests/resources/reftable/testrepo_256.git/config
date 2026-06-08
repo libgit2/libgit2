@@ -1,0 +1,11 @@
+[extensions]
+	refstorage = reftable
+	objectformat = sha256
+[core]
+	repositoryformatversion = 1
+	filemode = true
+	bare = true
+	ignorecase = true
+	precomposeunicode = true
+[remote "origin"]
+	url = /Users/ethomson/Projects/libgit2/libgit2-main/tests/resources/testrepo_256.git

@@ -28,10 +28,8 @@ GIT_BEGIN_DECL
 typedef struct {
 	unsigned int version;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	/** The object ID type that this commit graph contains. */
 	git_oid_t oid_type;
-#endif
 } git_commit_graph_open_options;
 
 /** Current version for the `git_commit_graph_open_options` structure */
@@ -65,15 +63,13 @@ GIT_EXTERN(int) git_commit_graph_open_options_init(
  *
  * @param cgraph_out the `git_commit_graph` struct to initialize.
  * @param objects_dir the path to a git objects directory.
+ * @param options options for opening the graph
  * @return Zero on success; -1 on failure.
  */
 GIT_EXTERN(int) git_commit_graph_open(
 	git_commit_graph **cgraph_out,
-	const char *objects_dir
-#ifdef GIT_EXPERIMENTAL_SHA256
-	, const git_commit_graph_open_options *options
-#endif
-	);
+	const char *objects_dir,
+	const git_commit_graph_open_options *options);
 
 /**
  * Frees commit-graph data. This should only be called when memory allocated
@@ -107,10 +103,8 @@ typedef enum {
 typedef struct {
 	unsigned int version;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	/** The object ID type that this commit graph contains. */
 	git_oid_t oid_type;
-#endif
 
 	/**
 	 * The strategy to use when adding new commits to a pre-existing commit-graph

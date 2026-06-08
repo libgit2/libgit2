@@ -390,9 +390,7 @@ int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opt
 	if ((error = (flush_hunk(&args.result, &args))) < 0)
 		goto out;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	args.result.type = diff->opts.oid_type;
-#endif
 
 	git_oid_cpy(out, &args.result);
 

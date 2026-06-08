@@ -28,10 +28,8 @@ GIT_BEGIN_DECL
 typedef struct {
 	unsigned int version;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	/** The object ID type that this commit graph contains. */
 	git_oid_t oid_type;
-#endif
 } git_midx_writer_options;
 
 /** Current version for the `git_midx_writer_options` structure */
@@ -63,15 +61,13 @@ GIT_EXTERN(int) git_midx_writer_options_init(
  * @param out location to store the writer pointer.
  * @param pack_dir the directory where the `.pack` and `.idx` files are. The
  * `multi-pack-index` file will be written in this directory, too.
+ * @param options the options to create the writer with
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_midx_writer_new(
 		git_midx_writer **out,
-		const char *pack_dir
-#ifdef GIT_EXPERIMENTAL_SHA256
-		, git_midx_writer_options *options
-#endif
-		);
+		const char *pack_dir,
+		git_midx_writer_options *options);
 
 /**
  * Free the multi-pack-index writer and its resources.

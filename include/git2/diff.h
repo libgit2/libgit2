@@ -1361,8 +1361,6 @@ GIT_EXTERN(int) git_diff_from_buffer(
 	const char *content,
 	size_t content_len);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 /**
  * Read the contents of a git patch file into a `git_diff` object.
  *
@@ -1388,8 +1386,6 @@ GIT_EXTERN(int) git_diff_from_buffer_ext(
 	const char *content,
 	size_t content_len,
 	git_diff_parse_options *opts);
-
-#endif
 
 /**
  * This is an opaque structure which is allocated by `git_diff_get_stats`.
