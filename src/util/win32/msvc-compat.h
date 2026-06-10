@@ -10,7 +10,16 @@
 #if defined(_MSC_VER)
 
 typedef unsigned short mode_t;
+
+/*
+ * `ssize_t` is also defined by our public `git2/sys/stream.h` header
+ * (for Win32 consumers of the custom stream API); both definitions
+ * honor `_SSIZE_T_DEFINED` so that they do not collide.
+ */
+#ifndef _SSIZE_T_DEFINED
 typedef SSIZE_T ssize_t;
+# define _SSIZE_T_DEFINED
+#endif
 
 #ifdef _WIN64
 # define SSIZE_MAX _I64_MAX
