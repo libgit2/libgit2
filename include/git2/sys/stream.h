@@ -11,6 +11,20 @@
 #include "git2/types.h"
 #include "git2/proxy.h"
 
+/*
+ * The stream read and write callbacks use `ssize_t`, a POSIX type that
+ * MSVC and clang-cl do not provide. Define it to match the definition
+ * that libgit2 itself is built with (`SSIZE_T`) so that this header
+ * remains consumable on Win32. MinGW provides the type itself; the
+ * `_SSIZE_T_DEFINED` guard is the convention that it and other projects
+ * that define `ssize_t` use to avoid conflicting definitions.
+ */
+#if defined(_WIN32) && !defined(__MINGW32__) && !defined(_SSIZE_T_DEFINED)
+# include <basetsd.h>
+typedef SSIZE_T ssize_t;
+# define _SSIZE_T_DEFINED
+#endif
+
 /**
  * @file git2/sys/stream.h
  * @brief Streaming file I/O functionality
