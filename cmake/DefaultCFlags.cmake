@@ -112,9 +112,11 @@ else()
 
 	if(MINGW OR MSYS) # MinGW and MSYS always do PIC and complain if we tell them to
 		string(REGEX REPLACE "-fPIC" "" CMAKE_SHARED_LIBRARY_C_FLAGS "${CMAKE_SHARED_LIBRARY_C_FLAGS}")
-	elseif(BUILD_SHARED_LIBS)
-		add_c_flag_IF_SUPPORTED(-fvisibility=hidden)
+	else()
+		add_c_flag_if_supported(-fvisibility=hidden)
+	endif()
 
+	if(BUILD_SHARED_LIBS)
 		set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC")
 	endif()
 
