@@ -364,6 +364,13 @@ typedef int GIT_CALLBACK(git_commit_signature_cb)(
 	const char *commit_content,
 	void *payload);
 
+/**
+ * Commit creation options for the simple commit creation options.
+ *
+ * @options[version] GIT_COMMIT_CREATE_OPTIONS_VERSION
+ * @options[init_macro] GIT_COMMIT_CREATE_OPTIONS_INIT
+ * @options[init_function] git_commit_create_options_init
+ */
 typedef struct {
 	unsigned int version;
 
@@ -423,6 +430,13 @@ GIT_EXTERN(int) git_commit_create_from_stage(
 	const char *message,
 	const git_commit_create_options *opts);
 
+/**
+ * Commit creation options for the extended commit creation options.
+ *
+ * @options[version] GIT_COMMIT_CREATE_EXT_OPTIONS_VERSION
+ * @options[init_macro] GIT_COMMIT_CREATE_EXT_OPTIONS_INIT
+ * @options[init_function] git_commit_create_ext_options_init
+ */
 typedef struct {
 	unsigned int version;
 

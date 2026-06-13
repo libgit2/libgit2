@@ -22,6 +22,10 @@ GIT_BEGIN_DECL
 
 /**
  * Options for revert
+ *
+ * @options[version] GIT_REVERT_OPTIONS_VERSION
+ * @options[init_macro] GIT_REVERT_OPTIONS_INIT
+ * @options[init_function] git_revert_options_init
  */
 typedef struct {
 	unsigned int version;

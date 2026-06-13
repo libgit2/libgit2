@@ -25,9 +25,11 @@
 GIT_BEGIN_DECL
 
 /**
- * Rebase options
+ * Rebase options. Use to tell the rebase machinery how to operate.
  *
- * Use to tell the rebase machinery how to operate.
+ * @options[version] GIT_REBASE_OPTIONS_VERSION
+ * @options[init_macro] GIT_REBASE_OPTIONS_INIT
+ * @options[init_function] git_rebase_options_init
  */
 typedef struct {
 	unsigned int version;

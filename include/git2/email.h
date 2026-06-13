@@ -40,6 +40,10 @@ typedef enum {
 
 /**
  * Options for controlling the formatting of the generated e-mail.
+ *
+ * @options[version] GIT_EMAIL_CREATE_OPTIONS_VERSION
+ * @options[init_macro] GIT_EMAIL_CREATE_OPTIONS_INIT
+ * @options[init_function] git_email_create_options_init
  */
 typedef struct {
 	unsigned int version;

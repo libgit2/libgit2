@@ -144,7 +144,12 @@ GIT_EXTERN(int) git_config_add_backend(
 	const git_repository *repo,
 	int force);
 
-/** Options for in-memory configuration backends. */
+/**
+ * Options for in-memory configuration backends.
+ * @options[version] GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION
+ * @options[init_macro] GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT
+ * @options[init_function] git_config_backend_memory_options_init
+ */
 typedef struct {
 	unsigned int version;
 

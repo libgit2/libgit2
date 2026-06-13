@@ -218,6 +218,9 @@ typedef enum {
  * Initialize with `GIT_STATUS_OPTIONS_INIT`. Alternatively, you can
  * use `git_status_options_init`.
  *
+ * @options[version] GIT_STATUS_OPTIONS_VERSION
+ * @options[init_macro] GIT_STATUS_OPTIONS_INIT
+ * @options[init_function] git_status_options_init
  */
 typedef struct {
 	/**

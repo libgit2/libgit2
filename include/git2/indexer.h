@@ -69,6 +69,10 @@ typedef int GIT_CALLBACK(git_indexer_progress_cb)(const git_indexer_progress *st
 
 /**
  * Options for indexer configuration
+ *
+ * @options[version] GIT_INDEXER_OPTIONS_VERSION
+ * @options[init_macro] GIT_INDEXER_OPTIONS_INIT
+ * @options[init_function] git_indexer_options_init
  */
 typedef struct git_indexer_options {
 	unsigned int version;

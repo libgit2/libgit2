@@ -93,6 +93,9 @@ typedef enum {
  * Initialize with `GIT_REMOTE_CREATE_OPTIONS_INIT`. Alternatively, you can
  * use `git_remote_create_options_init`.
  *
+ * @options[version] GIT_REMOTE_CREATE_OPTIONS_VERSION
+ * @options[init_macro] GIT_REMOTE_CREATE_OPTIONS_INIT
+ * @options[init_function] git_remote_create_options_init
  */
 typedef struct git_remote_create_options {
 	unsigned int version;
@@ -786,10 +789,13 @@ typedef enum {
 /**
  * Fetch options structure.
  *
- * Zero out for defaults.  Initialize with `GIT_FETCH_OPTIONS_INIT` macro to
- * correctly set the `version` field.  E.g.
+ * Initialize with `GIT_FETCH_OPTIONS_INIT` macro to correctly set
+ * the `version` field. e.g.
+ * git_fetch_options opts = GIT_FETCH_OPTIONS_INIT;
  *
- *		git_fetch_options opts = GIT_FETCH_OPTIONS_INIT;
+ * @options[version] GIT_FETCH_OPTIONS_VERSION
+ * @options[init_macro] GIT_FETCH_OPTIONS_INIT
+ * @options[init_function] git_fetch_options_init
  */
 typedef struct {
 	int version;
@@ -874,6 +880,10 @@ GIT_EXTERN(int) git_fetch_options_init(
 
 /**
  * Controls the behavior of a git_push object.
+ *
+ * @options[version] GIT_PUSH_OPTIONS_VERSION
+ * @options[init_macro] GIT_PUSH_OPTIONS_INIT
+ * @options[init_function] git_push_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -942,6 +952,9 @@ GIT_EXTERN(int) git_push_options_init(
  * Initialize with `GIT_REMOTE_CREATE_OPTIONS_INIT`. Alternatively, you can
  * use `git_remote_create_options_init`.
  *
+ * @options[version] GIT_REMOTE_CONNECT_OPTIONS_VERSION
+ * @options[init_macro] GIT_REMOTE_CONNECT_OPTIONS_INIT
+ * @options[init_function] git_remote_connect_options_init
  */
 typedef struct {
 	unsigned int version;

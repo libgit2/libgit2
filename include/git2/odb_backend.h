@@ -20,7 +20,13 @@
  */
 GIT_BEGIN_DECL
 
-/** Options for configuring a packfile object backend. */
+/**
+ * Options for configuring a packfile object backend.
+ *
+ * @options[version] GIT_ODB_BACKEND_PACK_OPTIONS_VERSION
+ * @options[init_macro] GIT_ODB_BACKEND_PACK_OPTIONS_INIT
+ * @options[init_function] git_odb_backend_pack_options_init
+ */
 typedef struct {
 	unsigned int version; /**< version for the struct */
 
@@ -45,7 +51,13 @@ typedef enum {
 	GIT_ODB_BACKEND_LOOSE_FSYNC = (1 << 0)
 } git_odb_backend_loose_flag_t;
 
-/** Options for configuring a loose object backend. */
+/**
+ * Options for configuring a loose object backend.
+ *
+ * @options[version] GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION
+ * @options[init_macro] GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT
+ * @options[init_function] git_odb_backend_loose_options_init
+ */
 typedef struct {
 	unsigned int version; /**< version for the struct */
 

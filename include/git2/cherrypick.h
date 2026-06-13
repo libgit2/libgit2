@@ -25,6 +25,10 @@ GIT_BEGIN_DECL
 
 /**
  * Cherry-pick options
+ *
+ * @options[version] GIT_CHERRYPICK_OPTIONS_VERSION
+ * @options[init_macro] GIT_CHERRYPICK_OPTIONS_INIT
+ * @options[init_function] git_cherrypick_options_init
  */
 typedef struct {
 	unsigned int version;

@@ -150,6 +150,10 @@ GIT_EXTERN(git_attr_value_t) git_attr_value(const char *attr);
 
 /**
 * An options structure for querying attributes.
+*
+* @options[version] GIT_ATTR_OPTIONS_VERSION
+* @options[init_macro] GIT_ATTR_OPTIONS_INIT
+* @options[init_function] git_attr_options_init
 */
 typedef struct {
 	unsigned int version;

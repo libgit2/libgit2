@@ -43,6 +43,9 @@ typedef enum {
  * Initialize with `GIT_DESCRIBE_OPTIONS_INIT`. Alternatively, you can
  * use `git_describe_options_init`.
  *
+ * @options[version] GIT_DESCRIBE_OPTIONS_VERSION
+ * @options[init_macro] GIT_DESCRIBE_OPTIONS_INIT
+ * @options[init_function] git_describe_options_init
  */
 typedef struct git_describe_options {
 	unsigned int version;
@@ -96,6 +99,9 @@ GIT_EXTERN(int) git_describe_options_init(git_describe_options *opts, unsigned i
  * Initialize with `GIT_DESCRIBE_FORMAT_OPTIONS_INIT`. Alternatively, you can
  * use `git_describe_format_options_init`.
  *
+ * @options[version] GIT_DESCRIBE_FORMAT_OPTIONS_VERSION
+ * @options[init_macro] GIT_DESCRIBE_FORMAT_OPTIONS_INIT
+ * @options[init_function] git_describe_format_options_init
  */
 typedef struct {
 	unsigned int version;

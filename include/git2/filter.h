@@ -65,6 +65,10 @@ typedef enum {
 
 /**
  * Filtering options
+ *
+ * @options[version] GIT_FILTER_OPTIONS_VERSION
+ * @options[init_macro] GIT_FILTER_OPTIONS_INIT
+ * @options[init_function] git_filter_options_init
  */
 typedef struct {
 	unsigned int version;

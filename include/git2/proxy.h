@@ -46,6 +46,10 @@ typedef enum {
  *
  * Note that not all types may be supported, depending on the platform
  * and compilation options.
+ *
+ * @options[version] GIT_PROXY_OPTIONS_VERSION
+ * @options[init_macro] GIT_PROXY_OPTIONS_INIT
+ * @options[init_function] git_proxy_options_init
  */
 typedef struct {
 	unsigned int version;

@@ -91,6 +91,10 @@ typedef enum {
  *
  * @see git_apply_to_tree
  * @see git_apply
+ *
+ * @options[version] GIT_APPLY_OPTIONS_VERSION
+ * @options[init_macro] GIT_APPLY_OPTIONS_INIT
+ * @options[init_function] git_apply_options_init
  */
 typedef struct {
 	unsigned int version; /**< The version */

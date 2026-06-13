@@ -24,6 +24,10 @@ GIT_BEGIN_DECL
  *
  * Initialize with `GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT`. Alternatively,
  * you can use `git_commit_graph_open_options_init`.
+ *
+ * @options[version] GIT_COMMIT_GRAPH_OPEN_OPTIONS_VERSION
+ * @options[init_macro] GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT
+ * @options[init_function] git_commit_graph_open_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -103,6 +107,10 @@ typedef enum {
  *
  * Initialize with `GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT`. Alternatively,
  * you can use `git_commit_graph_writer_options_init`.
+ *
+ * @options[version] GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION
+ * @options[init_macro] GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT
+ * @options[init_function] git_commit_graph_writer_options_init
  */
 typedef struct {
 	unsigned int version;

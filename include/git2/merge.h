@@ -191,6 +191,10 @@ typedef enum {
 
 /**
  * Options for merging a file
+ *
+ * @options[version] GIT_MERGE_FILE_OPTIONS_VERSION
+ * @options[init_macro] GIT_MERGE_FILE_OPTIONS_INIT
+ * @options[init_function] git_merge_file_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -270,6 +274,10 @@ typedef struct {
 
 /**
  * Merging options
+ *
+ * @options[version] GIT_MERGE_OPTIONS_VERSION
+ * @options[init_macro] GIT_MERGE_OPTIONS_INIT
+ * @options[init_function] git_merge_options_init
  */
 typedef struct {
 	unsigned int version;

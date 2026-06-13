@@ -320,6 +320,10 @@ typedef enum {
  *
  * This contains extra options for `git_repository_init_ext` that enable
  * additional initialization features.
+ *
+ * @options[version] GIT_REPOSITORY_INIT_OPTIONS_VERSION
+ * @options[init_macro] GIT_REPOSITORY_INIT_OPTIONS_INIT
+ * @options[init_function] git_repository_init_options_init
  */
 typedef struct {
 	unsigned int version;

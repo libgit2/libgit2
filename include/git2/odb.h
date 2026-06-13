@@ -42,7 +42,13 @@ typedef enum {
  */
 typedef int GIT_CALLBACK(git_odb_foreach_cb)(const git_oid *id, void *payload);
 
-/** Options for configuring a loose object backend. */
+/**
+ * Options for configuring a loose object backend.
+ *
+ * @options[version] GIT_ODB_OPTIONS_VERSION
+ * @options[init_macro] GIT_ODB_OPTIONS_INIT
+ * @options[init_function] git_odb_options_init
+ */
 typedef struct {
 	unsigned int version; /**< version for the struct */
 

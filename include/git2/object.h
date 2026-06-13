@@ -231,6 +231,10 @@ GIT_EXTERN(int) git_object_dup(git_object **dest, git_object *source);
  *
  * Initialize with `GIT_OBJECT_ID_OPTIONS_INIT`. Alternatively, you can
  * use `git_object_id_options_init`.
+ *
+ * @options[version] GIT_OBJECT_ID_OPTIONS_VERSION
+ * @options[init_macro] GIT_OBJECT_ID_OPTIONS_INIT
+ * @options[init_function] git_object_id_options_init
  */
 typedef struct {
 	unsigned int version; /**< version for the struct */
