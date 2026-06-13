@@ -604,7 +604,7 @@ GIT_EXTERN(void) git_merge_file_result_free(git_merge_file_result *result);
  *
  * The returned index must be freed explicitly with `git_index_free`.
  *
- * @param out pointer to store the index result in
+ * @param[out] out pointer to store the index result in
  * @param repo repository that contains the given trees
  * @param ancestor_tree the common ancestor between the trees (or null if none)
  * @param our_tree the tree that reflects the destination tree
@@ -628,7 +628,7 @@ GIT_EXTERN(int) git_merge_trees(
  *
  * The returned index must be freed explicitly with `git_index_free`.
  *
- * @param out pointer to store the index result in
+ * @param[out] out pointer to store the index result in
  * @param repo repository that contains the given trees
  * @param our_commit the commit that reflects the destination tree
  * @param their_commit the commit to merge in to `our_commit`

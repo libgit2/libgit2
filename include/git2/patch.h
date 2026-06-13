@@ -51,7 +51,7 @@ GIT_EXTERN(git_repository *) git_patch_owner(const git_patch *patch);
  * It is okay to pass NULL for either of the output parameters; if you pass
  * NULL for the `git_patch`, then the text diff will not be calculated.
  *
- * @param out Output parameter for the delta patch object
+ * @param[out] out Output parameter for the delta patch object
  * @param diff Diff list object
  * @param idx Index into diff list
  * @return 0 on success, other value < 0 on error
@@ -67,7 +67,7 @@ GIT_EXTERN(int) git_patch_from_diff(
  * standard `git_patch` accessor functions to read the patch data, and
  * you must call `git_patch_free()` on the patch when done.
  *
- * @param out The generated patch; NULL on error
+ * @param[out] out The generated patch; NULL on error
  * @param old_blob Blob for old side of diff, or NULL for empty blob
  * @param old_as_path Treat old blob as if it had this filename; can be NULL
  * @param new_blob Blob for new side of diff, or NULL for empty blob
@@ -91,7 +91,7 @@ GIT_EXTERN(int) git_patch_from_blobs(
  * use the standard `git_patch` accessor functions to read the patch
  * data, and you must call `git_patch_free()` on the patch when done.
  *
- * @param out The generated patch; NULL on error
+ * @param[out] out The generated patch; NULL on error
  * @param old_blob Blob for old side of diff, or NULL for empty blob
  * @param old_as_path Treat old blob as if it had this filename; can be NULL
  * @param buffer Raw data for new side of diff, or NULL for empty
@@ -117,7 +117,7 @@ GIT_EXTERN(int) git_patch_from_blob_and_buffer(
  * use the standard `git_patch` accessor functions to read the patch
  * data, and you must call `git_patch_free()` on the patch when done.
  *
- * @param out The generated patch; NULL on error
+ * @param[out] out The generated patch; NULL on error
  * @param old_buffer Raw data for old side of diff, or NULL for empty
  * @param old_len Length of the raw data for old side of the diff
  * @param old_as_path Treat old buffer as if it had this filename; can be NULL
@@ -171,9 +171,9 @@ GIT_EXTERN(size_t) git_patch_num_hunks(const git_patch *patch);
  *
  * All outputs are optional. Pass NULL if you don't need a particular count.
  *
- * @param total_context Count of context lines in output, can be NULL.
- * @param total_additions Count of addition lines in output, can be NULL.
- * @param total_deletions Count of deletion lines in output, can be NULL.
+ * @param[out] total_context Count of context lines in output, can be NULL.
+ * @param[out] total_additions Count of addition lines in output, can be NULL.
+ * @param[out] total_deletions Count of deletion lines in output, can be NULL.
  * @param patch The git_patch object
  * @return 0 on success, <0 on error
  */
@@ -190,8 +190,8 @@ GIT_EXTERN(int) git_patch_line_stats(
  * information about that hunk.  Any of the output pointers can be passed
  * as NULL if you don't care about that particular piece of information.
  *
- * @param out Output pointer to git_diff_hunk of hunk
- * @param lines_in_hunk Output count of total lines in this hunk
+ * @param[out] out Output pointer to git_diff_hunk of hunk
+ * @param[out] lines_in_hunk Output count of total lines in this hunk
  * @param patch Input pointer to patch object
  * @param hunk_idx Input index of hunk to get information about
  * @return 0 on success, GIT_ENOTFOUND if hunk_idx out of range, <0 on error
@@ -221,7 +221,7 @@ GIT_EXTERN(int) git_patch_num_lines_in_hunk(
  * index larger than the number of hunks or a line index larger than
  * the number of lines in the hunk, this will return -1.
  *
- * @param out The git_diff_line data for this line
+ * @param[out] out The git_diff_line data for this line
  * @param patch The patch to look in
  * @param hunk_idx The index of the hunk
  * @param line_of_hunk The index of the line in the hunk

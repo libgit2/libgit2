@@ -60,7 +60,7 @@ GIT_EXTERN(int) git_midx_writer_options_init(
 /**
  * Create a new writer for `multi-pack-index` files.
  *
- * @param out location to store the writer pointer.
+ * @param[out] out location to store the writer pointer.
  * @param pack_dir the directory where the `.pack` and `.idx` files are. The
  * `multi-pack-index` file will be written in this directory, too.
  * @return 0 or an error code

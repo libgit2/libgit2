@@ -172,7 +172,7 @@ typedef struct {
  * Create an in-memory configuration backend from a string in standard
  * git configuration file format.
  *
- * @param out the new backend
+ * @param[out] out the new backend
  * @param cfg the configuration that is to be parsed
  * @param len the length of the string pointed to by `cfg`
  * @param opts the options to initialize this backend with, or NULL
@@ -188,7 +188,7 @@ extern int git_config_backend_from_string(
  * Create an in-memory configuration backend from a list of name/value
  * pairs.
  *
- * @param out the new backend
+ * @param[out] out the new backend
  * @param values the configuration values to set (in "key=value" format)
  * @param len the length of the values array
  * @param opts the options to initialize this backend with, or NULL

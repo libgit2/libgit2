@@ -63,7 +63,7 @@ GIT_EXTERN(int) git_commit_graph_open_options_init(
  *
  * This finds, opens, and validates the `commit-graph` file.
  *
- * @param cgraph_out the `git_commit_graph` struct to initialize.
+ * @param[out] cgraph_out the `git_commit_graph` struct to initialize.
  * @param objects_dir the path to a git objects directory.
  * @return Zero on success; -1 on failure.
  */
@@ -156,9 +156,9 @@ GIT_EXTERN(int) git_commit_graph_writer_options_init(
 /**
  * Create a new writer for `commit-graph` files.
  *
- * @param out Location to store the writer pointer.
+ * @param[out] out Location to store the writer pointer.
  * @param objects_info_dir The `objects/info` directory.
- * The `commit-graph` file will be written in this directory.
+ *        The `commit-graph` file will be written in this directory.
  * @param options The options for the commit graph writer.
  * @return 0 or an error code
  */

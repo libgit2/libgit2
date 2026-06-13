@@ -372,13 +372,17 @@ GIT_EXTERN(int) git_odb_write(git_oid *out, git_odb *odb, const void *data, size
  *
  * @see git_odb_stream
  *
- * @param out pointer where to store the stream
+ * @param[out] out pointer where to store the stream
  * @param db object database where the stream will write
  * @param size final size of the object that will be written
  * @param type type of the object that will be written
  * @return 0 if the stream was created; error code otherwise
  */
-GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **out, git_odb *db, git_object_size_t size, git_object_t type);
+GIT_EXTERN(int) git_odb_open_wstream(
+	git_odb_stream **out,
+	git_odb *db,
+	git_object_size_t size,
+	git_object_t type);
 
 /**
  * Write to an odb stream
@@ -446,8 +450,8 @@ GIT_EXTERN(void) git_odb_stream_free(git_odb_stream *stream);
  *
  * @see git_odb_stream
  *
- * @param out pointer where to store the stream
- * @param len pointer where to store the length of the object
+ * @param[out] out pointer where to store the stream
+ * @param[out] len pointer where to store the length of the object
  * @param type pointer where to store the type of the object
  * @param db object database where the stream will read from
  * @param oid oid of the object the stream will read from
@@ -471,7 +475,7 @@ GIT_EXTERN(int) git_odb_open_rstream(
  *
  * @see git_odb_writepack
  *
- * @param out pointer to the writepack functions
+ * @param[out] out pointer to the writepack functions
  * @param db object database where the stream will read from
  * @param progress_cb function to call with progress information.
  * Be aware that this is called inline with network and indexing operations,
@@ -613,7 +617,7 @@ GIT_EXTERN(size_t) git_odb_num_backends(git_odb *odb);
 /**
  * Lookup an ODB backend object by index
  *
- * @param out output pointer to ODB backend at pos
+ * @param[out] out output pointer to ODB backend at pos
  * @param odb object database
  * @param pos index into object database backend list
  * @return 0 on success, GIT_ENOTFOUND if pos is invalid, other errors < 0

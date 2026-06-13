@@ -38,7 +38,7 @@ GIT_EXTERN(int) git_tree_lookup(
  *
  * @see git_object_lookup_prefix
  *
- * @param out pointer to the looked up tree
+ * @param[out] out pointer to the looked up tree
  * @param repo the repo to use when locating the tree.
  * @param id identity of the tree to locate.
  * @param len the length of the short identifier
@@ -134,7 +134,7 @@ GIT_EXTERN(const git_tree_entry *) git_tree_entry_byid(
  * Unlike the other lookup functions, the returned tree entry is owned by
  * the user and must be freed explicitly with `git_tree_entry_free()`.
  *
- * @param out Pointer where to store the tree entry
+ * @param[out] out Pointer where to store the tree entry
  * @param root Previously loaded tree which is the root of the relative path
  * @param path Path to the contained entry
  * @return 0 on success; GIT_ENOTFOUND if the path does not exist
@@ -246,7 +246,7 @@ GIT_EXTERN(int) git_tree_entry_to_object(
  * If the `source` parameter is NULL, the tree builder will start with no
  * entries and will have to be filled manually.
  *
- * @param out Pointer where to store the tree builder
+ * @param[out] out Pointer where to store the tree builder
  * @param repo Repository in which to store the object
  * @param source Source tree to initialize the builder (optional)
  * @return 0 on success; error code otherwise
@@ -313,7 +313,7 @@ GIT_EXTERN(const git_tree_entry *) git_treebuilder_get(
  * correct type.  If you do not want this behavior, set the
  * `GIT_OPT_ENABLE_STRICT_OBJECT_CREATION` library option to false.
  *
- * @param out Pointer to store the entry (optional)
+ * @param[out] out Pointer to store the entry (optional)
  * @param bld Tree builder
  * @param filename Filename of the entry
  * @param id SHA1 oid of the entry
@@ -427,7 +427,7 @@ GIT_EXTERN(int) git_tree_walk(
  * Create an in-memory copy of a tree. The copy must be explicitly
  * free'd or it will leak.
  *
- * @param out Pointer to store the copy of the tree
+ * @param[out] out Pointer to store the copy of the tree
  * @param source Original tree to copy
  * @return 0
  */

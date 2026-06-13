@@ -322,7 +322,7 @@ GIT_EXTERN(const git_blame_hunk *) git_blame_get_hunk_byline(
 /**
  * Get the blame for a single file in the repository.
  *
- * @param out pointer that will receive the blame object
+ * @param[out] out pointer that will receive the blame object
  * @param repo repository whose history is to be walked
  * @param path path to file to consider
  * @param options options for the blame operation or NULL
@@ -339,7 +339,7 @@ GIT_EXTERN(int) git_blame_file(
  * buffer contents as the uncommitted changes of the file (the working
  * directory contents).
  *
- * @param out pointer that will receive the blame object
+ * @param[out] out pointer that will receive the blame object
  * @param repo repository whose history is to be walked
  * @param path path to file to consider
  * @param contents the uncommitted changes
@@ -364,7 +364,7 @@ GIT_EXTERN(int) git_blame_file_from_buffer(
  * Lines that differ between the buffer and the committed version are
  * marked as having a zero OID for their final_commit_id.
  *
- * @param out pointer that will receive the resulting blame data
+ * @param[out] out pointer that will receive the resulting blame data
  * @param base cached blame from the history of the file (usually the output
  *                  from git_blame_file)
  * @param buffer the (possibly) modified contents of the file

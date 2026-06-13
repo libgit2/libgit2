@@ -37,12 +37,15 @@ typedef int GIT_CALLBACK(git_transport_message_cb)(const char *str, int len, voi
 /**
  * Signature of a function which creates a transport.
  *
- * @param out the transport generate
+ * @param[out] out the transport generate
  * @param owner the owner for the transport
  * @param param the param to the transport creation
  * @return 0 on success or an error code
  */
-typedef int GIT_CALLBACK(git_transport_cb)(git_transport **out, git_remote *owner, void *param);
+typedef int GIT_CALLBACK(git_transport_cb)(
+	git_transport **out,
+	git_remote *owner,
+	void *param);
 
 /** @} */
 GIT_END_DECL

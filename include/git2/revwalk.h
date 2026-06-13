@@ -67,7 +67,7 @@ typedef enum {
  * it is possible to have several revision walkers in
  * several different threads walking the same repository.
  *
- * @param out pointer to the new revision walker
+ * @param[out] out pointer to the new revision walker
  * @param repo the repo to walk through
  * @return 0 or an error code
  */
@@ -232,9 +232,9 @@ GIT_EXTERN(int) git_revwalk_sorting(git_revwalk *walk, unsigned int sort_mode);
 
 /**
  * Set a git_pathspec object to filter commits on
- * 
+ *
  * Changing the pathspec rests the walker
- * 
+ *
  * @param walk the walker being used for the traversal.
  * @param pathspec Paths to filter commits on
  * @return 0 or an error code

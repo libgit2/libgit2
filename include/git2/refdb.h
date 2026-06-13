@@ -33,8 +33,8 @@ typedef enum {
  * Before the Ref DB can be used for read/writing, a custom database
  * backend must be manually set using `git_refdb_set_backend()`
  *
- * @param out location to store the database pointer, if opened.
- *			Set to NULL if the open failed.
+ * @param[out] out location to store the database pointer, if opened.
+ *             Set to NULL if the open failed.
  * @param repo the repository
  * @return 0 or an error code
  */
@@ -47,8 +47,8 @@ GIT_EXTERN(int) git_refdb_new(git_refdb **out, git_repository *repo);
  *  - git_refdb_dir: read and write loose and packed refs
  *      from disk, assuming the repository dir as the folder
  *
- * @param out location to store the database pointer, if opened.
- *			Set to NULL if the open failed.
+ * @param[out] out location to store the database pointer, if opened.
+ *             Set to NULL if the open failed.
  * @param repo the repository
  * @return 0 or an error code
  */

@@ -37,7 +37,7 @@ GIT_BEGIN_DECL
  * The special value 'GIT_OBJECT_ANY' may be passed to let
  * the method guess the object's type.
  *
- * @param object pointer to the looked-up object
+ * @param[out] object pointer to the looked-up object
  * @param repo the repository to look up the object
  * @param id the unique identifier for the object
  * @param type the type of the object
@@ -69,7 +69,7 @@ GIT_EXTERN(int) git_object_lookup(
  * The special value `GIT_OBJECT_ANY` may be passed to let
  * the method guess the object's type.
  *
- * @param object_out pointer where to store the looked-up object
+ * @param[out] object_out pointer where to store the looked-up object
  * @param repo the repository to look up the object
  * @param id a short identifier for the object
  * @param len the length of the short identifier
@@ -87,8 +87,8 @@ GIT_EXTERN(int) git_object_lookup_prefix(
 /**
  * Lookup an object that represents a tree entry.
  *
- * @param out buffer that receives a pointer to the object (which must be freed
- *            by the caller)
+ * @param[out] out buffer that receives a pointer to the object
+ *             (which must be freed by the caller)
  * @param treeish root object that can be peeled to a tree
  * @param path relative path from the root object to the desired object
  * @param type type of object desired
@@ -220,7 +220,7 @@ GIT_EXTERN(int) git_object_peel(
  * Create an in-memory copy of a Git object. The copy must be
  * explicitly free'd or it will leak.
  *
- * @param dest Pointer to store the copy of the object
+ * @param[out] dest Pointer to store the copy of the object
  * @param source Original object to copy
  * @return 0 or an error code
  */

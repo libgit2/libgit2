@@ -208,7 +208,7 @@ GIT_EXTERN(int) git_rebase_options_init(
  * process, call `git_rebase_next`.  When you have finished with this
  * object, call `git_rebase_free`.
  *
- * @param out Pointer to store the rebase object
+ * @param[out] out Pointer to store the rebase object
  * @param repo The repository to perform the rebase
  * @param branch The terminal commit to rebase, or NULL to rebase the
  *               current branch
@@ -231,7 +231,7 @@ GIT_EXTERN(int) git_rebase_init(
  * Opens an existing rebase that was previously started by either an
  * invocation of `git_rebase_init` or by another client.
  *
- * @param out Pointer to store the rebase object
+ * @param[out] out Pointer to store the rebase object
  * @param repo The repository that has a rebase in-progress
  * @param opts Options to specify how rebase is performed
  * @return Zero on success; -1 on failure.

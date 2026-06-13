@@ -29,7 +29,7 @@ GIT_BEGIN_DECL
 /**
  * Add a remote with the default fetch refspec to the repository's configuration.
  *
- * @param out the resulting remote
+ * @param[out] out the resulting remote
  * @param repo the repository in which to create the remote
  * @param name the remote's name
  * @param url the remote's url
@@ -143,7 +143,7 @@ GIT_EXTERN(int) git_remote_create_options_init(
  *
  * Passing NULL as the opts argument will result in a detached remote.
  *
- * @param out the resulting remote
+ * @param[out] out the resulting remote
  * @param url the remote's url
  * @param opts the remote creation options
  * @return 0, GIT_EINVALIDSPEC, GIT_EEXISTS or an error code
@@ -157,7 +157,7 @@ GIT_EXTERN(int) git_remote_create_with_opts(
  * Add a remote with the provided fetch refspec (or default if NULL) to the repository's
  * configuration.
  *
- * @param out the resulting remote
+ * @param[out] out the resulting remote
  * @param repo the repository in which to create the remote
  * @param name the remote's name
  * @param url the remote's url
@@ -177,7 +177,7 @@ GIT_EXTERN(int) git_remote_create_with_fetchspec(
  * Create a remote with the given url in-memory. You can use this when
  * you have a URL instead of a remote's name.
  *
- * @param out pointer to the new remote objects
+ * @param[out] out pointer to the new remote objects
  * @param repo the associated repository
  * @param url the remote repository's URL
  * @return 0 or an error code
@@ -197,7 +197,7 @@ GIT_EXTERN(int) git_remote_create_anonymous(
  * will not consider any repo configuration values (such as insteadof url
  * substitutions).
  *
- * @param out pointer to the new remote objects
+ * @param[out] out pointer to the new remote objects
  * @param url the remote repository's URL
  * @return 0 or an error code
  */
@@ -211,12 +211,15 @@ GIT_EXTERN(int) git_remote_create_detached(
  * The name will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
  *
- * @param out pointer to the new remote object
+ * @param[out] out pointer to the new remote object
  * @param repo the associated repository
  * @param name the remote's name
  * @return 0, GIT_ENOTFOUND, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_remote_lookup(git_remote **out, git_repository *repo, const char *name);
+GIT_EXTERN(int) git_remote_lookup(
+	git_remote **out,
+	git_repository *repo,
+	const char *name);
 
 /**
  * Create a copy of an existing remote.  All internal strings are also
@@ -399,12 +402,15 @@ GIT_EXTERN(const git_refspec *)git_remote_get_refspec(const git_remote *remote, 
  * as a new connection is not initiated, but it is recommended that
  * you make a copy in order to make use of the data.
  *
- * @param out pointer to the array
- * @param size the number of remote heads
+ * @param[out] out pointer to the array
+ * @param[out] size the number of remote heads
  * @param remote the remote
  * @return 0 on success, or an error code
  */
-GIT_EXTERN(int) git_remote_ls(const git_remote_head ***out,  size_t *size, git_remote *remote);
+GIT_EXTERN(int) git_remote_ls(
+	const git_remote_head ***out,
+	size_t *size,
+	git_remote *remote);
 
 /**
  * Check whether the remote is connected

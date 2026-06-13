@@ -64,7 +64,7 @@ GIT_EXTERN(int) git_cherrypick_options_init(
  *
  * The returned index must be freed explicitly with `git_index_free`.
  *
- * @param out pointer to store the index result in
+ * @param[out] out pointer to store the index result in
  * @param repo the repository that contains the given commits
  * @param cherrypick_commit the commit to cherry-pick
  * @param our_commit the commit to cherry-pick against (eg, HEAD)

@@ -61,7 +61,7 @@ GIT_EXTERN(int) git_revert_options_init(
  *
  * The returned index must be freed explicitly with `git_index_free`.
  *
- * @param out pointer to store the index result in
+ * @param[out] out pointer to store the index result in
  * @param repo the repository that contains the given commits
  * @param revert_commit the commit to revert
  * @param our_commit the commit to revert against (eg, HEAD)

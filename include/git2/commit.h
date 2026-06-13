@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
  * The returned object should be released with `git_commit_free` when no
  * longer needed.
  *
- * @param commit pointer to the looked up commit
+ * @param[out] commit pointer to the looked up commit
  * @param repo the repo to use when locating the commit.
  * @param id identity of the commit to locate. If the object is
  *		an annotated tag it will be peeled back to the commit.
@@ -182,13 +182,15 @@ GIT_EXTERN(const git_signature *) git_commit_author(const git_commit *commit);
  *
  * Call `git_signature_free` to free the signature.
  *
- * @param out a pointer to store the resolved signature.
+ * @param[out] out a pointer to store the resolved signature.
  * @param commit a previously loaded commit.
  * @param mailmap the mailmap to resolve with. (may be NULL)
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_commit_committer_with_mailmap(
-	git_signature **out, const git_commit *commit, const git_mailmap *mailmap);
+	git_signature **out,
+	const git_commit *commit,
+	const git_mailmap *mailmap);
 
 /**
  * Get the author of a commit, using the mailmap to map names and email
@@ -196,13 +198,15 @@ GIT_EXTERN(int) git_commit_committer_with_mailmap(
  *
  * Call `git_signature_free` to free the signature.
  *
- * @param out a pointer to store the resolved signature.
+ * @param[out] out a pointer to store the resolved signature.
  * @param commit a previously loaded commit.
  * @param mailmap the mailmap to resolve with. (may be NULL)
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_commit_author_with_mailmap(
-	git_signature **out, const git_commit *commit, const git_mailmap *mailmap);
+	git_signature **out,
+	const git_commit *commit,
+	const git_mailmap *mailmap);
 
 /**
  * Get the full raw text of the commit header.
@@ -215,7 +219,7 @@ GIT_EXTERN(const char *) git_commit_raw_header(const git_commit *commit);
 /**
  * Get the tree pointed to by a commit.
  *
- * @param tree_out pointer where to store the tree object
+ * @param[out] tree_out pointer where to store the tree object
  * @param commit a previously loaded commit.
  * @return 0 or an error code
  */
@@ -242,7 +246,7 @@ GIT_EXTERN(unsigned int) git_commit_parentcount(const git_commit *commit);
 /**
  * Get the specified parent of the commit.
  *
- * @param out Pointer where to store the parent commit
+ * @param[out] out Pointer where to store the parent commit
  * @param commit a previously loaded commit.
  * @param n the position of the parent (from 0 to `parentcount`)
  * @return 0 or an error code
@@ -791,7 +795,7 @@ GIT_EXTERN(int) git_commit_create_with_signature(
  * Create an in-memory copy of a commit. The copy must be explicitly
  * free'd or it will leak.
  *
- * @param out Pointer to store the copy of the commit
+ * @param[out] out Pointer to store the copy of the commit
  * @param source Original commit to copy
  * @return 0
  */

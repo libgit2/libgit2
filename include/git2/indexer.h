@@ -134,7 +134,7 @@ GIT_EXTERN(int) git_indexer_new(
 /**
  * Create a new indexer instance
  *
- * @param out where to store the indexer instance
+ * @param[out] out where to store the indexer instance
  * @param path to the directory where the packfile should be stored
  * @param mode permissions to use creating packfile or 0 for defaults
  * @param odb object database from which to read base objects when

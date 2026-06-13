@@ -126,7 +126,7 @@ typedef struct git_filter_list git_filter_list;
  * This will return 0 (success) but set the output git_filter_list to NULL
  * if no filters are requested for the given file.
  *
- * @param filters Output newly created git_filter_list (or NULL)
+ * @param[out] filters Output newly created git_filter_list (or NULL)
  * @param repo Repository object that contains `path`
  * @param blob The blob to which the filter will be applied (if known)
  * @param path Relative path of the file to be filtered

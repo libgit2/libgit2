@@ -150,7 +150,7 @@ typedef struct git_describe_result git_describe_result;
  *
  * Perform the describe operation on the given committish object.
  *
- * @param result pointer to store the result. You must free this once
+ * @param[out] result pointer to store the result. You must free this once
  * you're done with it.
  * @param committish a committish to describe
  * @param opts the lookup options (or NULL for defaults)
@@ -168,7 +168,7 @@ GIT_EXTERN(int) git_describe_commit(
  * worktree. After performing describe on HEAD, a status is run and the
  * description is considered to be dirty if there are.
  *
- * @param out pointer to store the result. You must free this once
+ * @param[out] out pointer to store the result. You must free this once
  * you're done with it.
  * @param repo the repository in which to perform the describe
  * @param opts the lookup options (or NULL for defaults)

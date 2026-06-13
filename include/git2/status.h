@@ -386,7 +386,7 @@ GIT_EXTERN(int) git_status_file(
  * not be accurate.  To do rename detection properly, this must be called
  * with no `pathspec` so that all files can be considered.
  *
- * @param out Pointer to store the status results in
+ * @param[out] out Pointer to store the status results in
  * @param repo Repository object
  * @param opts Status options structure
  * @return 0 on success or error code

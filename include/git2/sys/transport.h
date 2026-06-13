@@ -175,12 +175,15 @@ GIT_EXTERN(int) git_transport_init(
  * is scanned to find a transport that implements the scheme of the URI (i.e.
  * git:// or http://) and a transport object is returned to the caller.
  *
- * @param out The newly created transport (out)
+ * @param[out] out The newly created transport (out)
  * @param owner The git_remote which will own this transport
  * @param url The URL to connect to
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_transport_new(git_transport **out, git_remote *owner, const char *url);
+GIT_EXTERN(int) git_transport_new(
+	git_transport **out,
+	git_remote *owner,
+	const char *url);
 
 /**
  * Create an ssh transport with custom git command paths
@@ -191,12 +194,15 @@ GIT_EXTERN(int) git_transport_new(git_transport **out, git_remote *owner, const 
  * The payload argument must be a strarray pointer with the paths for
  * the `git-upload-pack` and `git-receive-pack` at index 0 and 1.
  *
- * @param out the resulting transport
+ * @param[out] out the resulting transport
  * @param owner the owning remote
  * @param payload a strarray with the paths
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_transport_ssh_with_paths(git_transport **out, git_remote *owner, void *payload);
+GIT_EXTERN(int) git_transport_ssh_with_paths(
+	git_transport **out,
+	git_remote *owner,
+	void *payload);
 
 /**
  * Add a custom transport definition, to be used in addition to the built-in
@@ -236,7 +242,7 @@ GIT_EXTERN(int) git_transport_unregister(
 /**
  * Create an instance of the dummy transport.
  *
- * @param out The newly created transport (out)
+ * @param[out] out The newly created transport (out)
  * @param owner The git_remote which will own this transport
  * @param payload You must pass NULL for this parameter.
  * @return 0 or an error code
@@ -249,7 +255,7 @@ GIT_EXTERN(int) git_transport_dummy(
 /**
  * Create an instance of the local transport.
  *
- * @param out The newly created transport (out)
+ * @param[out] out The newly created transport (out)
  * @param owner The git_remote which will own this transport
  * @param payload You must pass NULL for this parameter.
  * @return 0 or an error code
@@ -262,7 +268,7 @@ GIT_EXTERN(int) git_transport_local(
 /**
  * Create an instance of the smart transport.
  *
- * @param out The newly created transport (out)
+ * @param[out] out The newly created transport (out)
  * @param owner The git_remote which will own this transport
  * @param payload A pointer to a git_smart_subtransport_definition
  * @return 0 or an error code
@@ -284,12 +290,16 @@ GIT_EXTERN(int) git_transport_smart(
  *         refused to validate the certificate and callers should behave as
  *         if no callback was set), or < 0 for an error
  */
-GIT_EXTERN(int) git_transport_smart_certificate_check(git_transport *transport, git_cert *cert, int valid, const char *hostname);
+GIT_EXTERN(int) git_transport_smart_certificate_check(
+	git_transport *transport,
+	git_cert *cert,
+	int valid,
+	const char *hostname);
 
 /**
  * Call the credentials callback for this transport
  *
- * @param out the pointer where the creds are to be stored
+ * @param[out] out the pointer where the creds are to be stored
  * @param transport a smart transport
  * @param user the user we saw on the url (if any)
  * @param methods available methods for authentication
@@ -298,7 +308,11 @@ GIT_EXTERN(int) git_transport_smart_certificate_check(git_transport *transport, 
  *         refused to provide credentials and callers should behave as if no
  *         callback was set), or < 0 for an error
  */
-GIT_EXTERN(int) git_transport_smart_credentials(git_credential **out, git_transport *transport, const char *user, int methods);
+GIT_EXTERN(int) git_transport_smart_credentials(
+	git_credential **out,
+	git_transport *transport,
+	const char *user,
+	int methods);
 
 /**
  * Get a copy of the remote connect options
@@ -399,7 +413,7 @@ struct git_smart_subtransport {
 /**
  * A function that creates a new subtransport for the smart transport
  *
- * @param out the smart subtransport
+ * @param[out] out the smart subtransport
  * @param owner the transport owner
  * @param param the input parameter
  * @return 0 on success, or an error code
@@ -444,7 +458,7 @@ typedef struct git_smart_subtransport_definition {
  *
  * This subtransport also supports https.
  *
- * @param out The newly created subtransport
+ * @param[out] out The newly created subtransport
  * @param owner The smart transport to own this subtransport
  * @param param custom parameters for the subtransport
  * @return 0 or an error code
@@ -457,7 +471,7 @@ GIT_EXTERN(int) git_smart_subtransport_http(
 /**
  * Create an instance of the git subtransport.
  *
- * @param out The newly created subtransport
+ * @param[out] out The newly created subtransport
  * @param owner The smart transport to own this subtransport
  * @param param custom parameters for the subtransport
  * @return 0 or an error code
@@ -470,7 +484,7 @@ GIT_EXTERN(int) git_smart_subtransport_git(
 /**
  * Create an instance of the ssh subtransport.
  *
- * @param out The newly created subtransport
+ * @param[out] out The newly created subtransport
  * @param owner The smart transport to own this subtransport
  * @param param custom parameters for the subtransport
  * @return 0 or an error code

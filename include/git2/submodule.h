@@ -220,7 +220,7 @@ GIT_EXTERN(int) git_submodule_update(git_submodule *submodule, int init, git_sub
  *
  * You must call `git_submodule_free` when done with the submodule.
  *
- * @param out Output ptr to submodule; pass NULL to just get return code
+ * @param[out] out Output ptr to submodule; pass NULL to just get return code
  * @param repo The parent repository
  * @param name The name of or path to the submodule; trailing slashes okay
  * @return 0 on success, GIT_ENOTFOUND if submodule does not exist,
@@ -236,7 +236,7 @@ GIT_EXTERN(int) git_submodule_lookup(
  * Create an in-memory copy of a submodule. The copy must be explicitly
  * free'd or it will leak.
  *
- * @param out Pointer to store the copy of the submodule.
+ * @param[out] out Pointer to store the copy of the submodule.
  * @param source Original submodule to copy.
  * @return 0
  */
@@ -289,7 +289,7 @@ GIT_EXTERN(int) git_submodule_foreach(
  *
  * You must call `git_submodule_free` on the submodule object when done.
  *
- * @param out The newly created submodule ready to open for clone
+ * @param[out] out The newly created submodule ready to open for clone
  * @param repo The repository in which you want to create the submodule
  * @param url URL for the submodule's remote
  * @param path Path at which the submodule should be created
@@ -310,7 +310,7 @@ GIT_EXTERN(int) git_submodule_add_setup(
  *
  * This performs the necessary `git_clone` to setup a newly-created submodule.
  *
- * @param out The newly created repository object. Optional.
+ * @param[out] out The newly created repository object. Optional.
  * @param submodule The submodule currently waiting for its clone.
  * @param opts The options to use.
  *
@@ -583,7 +583,7 @@ GIT_EXTERN(int) git_submodule_init(git_submodule *submodule, int overwrite);
  * repository from a submodule in preparation to clone it from
  * its remote.
  *
- * @param out Output pointer to the created git repository.
+ * @param[out] out Output pointer to the created git repository.
  * @param sm The submodule to create a new subrepository from.
  * @param use_gitlink Should the workdir contain a gitlink to
  *        the repo in .git/modules vs. repo directly in workdir.

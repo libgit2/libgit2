@@ -229,7 +229,7 @@ GIT_EXTERN(int) git_config_find_programdata(git_buf *out);
  * and opens them into a single prioritized config object that can be
  * used when accessing default config data outside a repository.
  *
- * @param out Pointer to store the config instance
+ * @param[out] out Pointer to store the config instance
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_open_default(git_config **out);
@@ -240,7 +240,7 @@ GIT_EXTERN(int) git_config_open_default(git_config **out);
  * This object is empty, so you have to add a file to it before you
  * can do anything with it.
  *
- * @param out pointer to the new configuration
+ * @param[out] out pointer to the new configuration
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_config_new(git_config **out);
@@ -287,7 +287,7 @@ GIT_EXTERN(int) git_config_add_file_ondisk(
  *	- git_config_new
  *	- git_config_add_file_ondisk
  *
- * @param out The configuration instance to create
+ * @param[out] out The configuration instance to create
  * @param path Path to the on-disk file to open
  * @return 0 on success, or an error code
  */
@@ -303,7 +303,7 @@ GIT_EXTERN(int) git_config_open_ondisk(git_config **out, const char *path);
  * will return different config instances, but containing the same config_file
  * instance.
  *
- * @param out The configuration instance to create
+ * @param[out] out The configuration instance to create
  * @param parent Multi-level config to search for the given level
  * @param level Configuration level to search for
  * @return 0, GIT_ENOTFOUND if the passed level cannot be found in the
@@ -323,7 +323,7 @@ GIT_EXTERN(int) git_config_open_level(
  * created it explicitly. With this function you'll open the correct
  * one to write to.
  *
- * @param out pointer in which to store the config object
+ * @param[out] out pointer in which to store the config object
  * @param config the config object in which to look
  * @return 0 or an error code.
  */
@@ -355,7 +355,7 @@ GIT_EXTERN(int) git_config_set_writeorder(
  * The string returned when querying such a config object is valid
  * until it is freed.
  *
- * @param out pointer in which to store the snapshot config object
+ * @param[out] out pointer in which to store the snapshot config object
  * @param config configuration to snapshot
  * @return 0 or an error code
  */
@@ -373,7 +373,7 @@ GIT_EXTERN(void) git_config_free(git_config *cfg);
  *
  * Free the git_config_entry after use with `git_config_entry_free()`.
  *
- * @param out pointer to the variable git_config_entry
+ * @param[out] out pointer to the variable git_config_entry
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @return 0 or an error code
@@ -390,12 +390,15 @@ GIT_EXTERN(int) git_config_get_entry(
  * defined level. A higher level means a higher priority. The
  * first occurrence of the variable will be returned here.
  *
- * @param out pointer to the variable where the value should be stored
+ * @param[out] out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_int32(int32_t *out, const git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_get_int32(
+	int32_t *out,
+	const git_config *cfg,
+	const char *name);
 
 /**
  * Get the value of a long integer config variable.
@@ -404,12 +407,15 @@ GIT_EXTERN(int) git_config_get_int32(int32_t *out, const git_config *cfg, const 
  * defined level. A higher level means a higher priority. The
  * first occurrence of the variable will be returned here.
  *
- * @param out pointer to the variable where the value should be stored
+ * @param[out] out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_int64(int64_t *out, const git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_get_int64(
+	int64_t *out,
+	const git_config *cfg,
+	const char *name);
 
 /**
  * Get the value of a boolean config variable.
@@ -421,12 +427,15 @@ GIT_EXTERN(int) git_config_get_int64(int64_t *out, const git_config *cfg, const 
  * defined level. A higher level means a higher priority. The
  * first occurrence of the variable will be returned here.
  *
- * @param out pointer to the variable where the value should be stored
+ * @param[out] out pointer to the variable where the value should be stored
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_bool(int *out, const git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_get_bool(
+	int *out,
+	const git_config *cfg,
+	const char *name);
 
 /**
  * Get the value of a path config variable.
@@ -444,7 +453,10 @@ GIT_EXTERN(int) git_config_get_bool(int *out, const git_config *cfg, const char 
  * @param name the variable's name
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_path(git_buf *out, const git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_get_path(
+	git_buf *out,
+	const git_config *cfg,
+	const char *name);
 
 /**
  * Get the value of a string config variable.
@@ -457,12 +469,15 @@ GIT_EXTERN(int) git_config_get_path(git_buf *out, const git_config *cfg, const c
  * defined level. A higher level means a higher priority. The
  * first occurrence of the variable will be returned here.
  *
- * @param out pointer to the string
+ * @param[out] out pointer to the string
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_get_string(
+	const char **out,
+	const git_config *cfg,
+	const char *name);
 
 /**
  * Get the value of a string config variable.
@@ -478,7 +493,10 @@ GIT_EXTERN(int) git_config_get_string(const char **out, const git_config *cfg, c
  * @param name the variable's name
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_get_string_buf(git_buf *out, const git_config *cfg, const char *name);
+GIT_EXTERN(int) git_config_get_string_buf(
+	git_buf *out,
+	const git_config *cfg,
+	const char *name);
 
 /**
  * Get each value of a multivar in a foreach callback
@@ -492,12 +510,17 @@ GIT_EXTERN(int) git_config_get_string_buf(git_buf *out, const git_config *cfg, c
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param regexp regular expression to filter which variables we're
- * interested in. Use NULL to indicate all
+ *               interested in. Use NULL to indicate all
  * @param callback the function to be called on each value of the variable
  * @param payload opaque pointer to pass to the callback
  * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const char *name, const char *regexp, git_config_foreach_cb callback, void *payload);
+GIT_EXTERN(int) git_config_get_multivar_foreach(
+	const git_config *cfg,
+	const char *name,
+	const char *regexp,
+	git_config_foreach_cb callback,
+	void *payload);
 
 /**
  * Get each value of a multivar
@@ -506,14 +529,18 @@ GIT_EXTERN(int) git_config_get_multivar_foreach(const git_config *cfg, const cha
  * the variable name: the section and variable parts are lower-cased. The
  * subsection is left unchanged.
  *
- * @param out pointer to store the iterator
+ * @param[out] out pointer to store the iterator
  * @param cfg where to look for the variable
  * @param name the variable's name
  * @param regexp regular expression to filter which variables we're
  * interested in. Use NULL to indicate all
  * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_config_multivar_iterator_new(git_config_iterator **out, const git_config *cfg, const char *name, const char *regexp);
+GIT_EXTERN(int) git_config_multivar_iterator_new(
+	git_config_iterator **out,
+	const git_config *cfg,
+	const char *name,
+	const char *regexp);
 
 /**
  * Return the current entry and advance the iterator
@@ -521,11 +548,13 @@ GIT_EXTERN(int) git_config_multivar_iterator_new(git_config_iterator **out, cons
  * The pointers returned by this function are valid until the next call
  * to `git_config_next` or until the iterator is freed.
  *
- * @param entry pointer to store the entry
+ * @param[out] entry pointer to store the entry
  * @param iter the iterator
  * @return 0 or an error code. GIT_ITEROVER if the iteration has completed
  */
-GIT_EXTERN(int) git_config_next(git_config_entry **entry, git_config_iterator *iter);
+GIT_EXTERN(int) git_config_next(
+	git_config_entry **entry,
+	git_config_iterator *iter);
 
 /**
  * Free a config iterator
@@ -579,7 +608,10 @@ GIT_EXTERN(int) git_config_set_bool(git_config *cfg, const char *name, int value
  * @param value the string to store.
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const char *value);
+GIT_EXTERN(int) git_config_set_string(
+	git_config *cfg,
+	const char *name,
+	const char *value);
 
 /**
  * Set a multivar in the local config file.
@@ -592,7 +624,11 @@ GIT_EXTERN(int) git_config_set_string(git_config *cfg, const char *name, const c
  * @param value the new value.
  * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_config_set_multivar(git_config *cfg, const char *name, const char *regexp, const char *value);
+GIT_EXTERN(int) git_config_set_multivar(
+	git_config *cfg,
+	const char *name,
+	const char *regexp,
+	const char *value);
 
 /**
  * Delete a config variable from the config file
@@ -615,7 +651,10 @@ GIT_EXTERN(int) git_config_delete_entry(git_config *cfg, const char *name);
  *
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_config_delete_multivar(git_config *cfg, const char *name, const char *regexp);
+GIT_EXTERN(int) git_config_delete_multivar(
+	git_config *cfg,
+	const char *name,
+	const char *regexp);
 
 /**
  * Perform an operation on each config variable.
@@ -644,11 +683,13 @@ GIT_EXTERN(int) git_config_foreach(
  * Use `git_config_next` to advance the iteration and
  * `git_config_iterator_free` when done.
  *
- * @param out pointer to store the iterator
+ * @param[out] out pointer to store the iterator
  * @param cfg where to get the variables from
  * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_config_iterator_new(git_config_iterator **out, const git_config *cfg);
+GIT_EXTERN(int) git_config_iterator_new(
+	git_config_iterator **out,
+	const git_config *cfg);
 
 /**
  * Iterate over all the config variables whose name matches a pattern
@@ -660,12 +701,15 @@ GIT_EXTERN(int) git_config_iterator_new(git_config_iterator **out, const git_con
  * the variable name: the section and variable parts are lower-cased. The
  * subsection is left unchanged.
  *
- * @param out pointer to store the iterator
+ * @param[out] out pointer to store the iterator
  * @param cfg where to ge the variables from
  * @param regexp regular expression to match the names
  * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_config_iterator_glob_new(git_config_iterator **out, const git_config *cfg, const char *regexp);
+GIT_EXTERN(int) git_config_iterator_glob_new(
+	git_config_iterator **out,
+	const git_config *cfg,
+	const char *regexp);
 
 /**
  * Perform an operation on each config variable matching a regular expression.
@@ -720,7 +764,7 @@ GIT_EXTERN(int) git_config_foreach_match(
  * If not a single match can be made to store in `out`, an error code will be
  * returned.
  *
- * @param out place to store the result of the mapping
+ * @param[out] out place to store the result of the mapping
  * @param cfg config file to get the variables from
  * @param name name of the config variable to lookup
  * @param maps array of `git_configmap` objects specifying the possible mappings
@@ -737,7 +781,7 @@ GIT_EXTERN(int) git_config_get_mapped(
 /**
  * Maps a string value to an integer constant
  *
- * @param out place to store the result of the parsing
+ * @param[out] out place to store the result of the parsing
  * @param maps array of `git_configmap` objects specifying the possible mappings
  * @param map_n number of mapping objects in `maps`
  * @param value value to parse
@@ -756,7 +800,7 @@ GIT_EXTERN(int) git_config_lookup_map_value(
  *  number different from 0
  * Valid values for false are: 'false', 'no', 'off', 0
  *
- * @param out place to store the result of the parsing
+ * @param[out] out place to store the result of the parsing
  * @param value value to parse
  * @return 0 or an error code.
  */
@@ -769,7 +813,7 @@ GIT_EXTERN(int) git_config_parse_bool(int *out, const char *value);
  * cause the value to be multiplied by 1024, 1048576,
  * or 1073741824 prior to output.
  *
- * @param out place to store the result of the parsing
+ * @param[out] out place to store the result of the parsing
  * @param value value to parse
  * @return 0 or an error code.
  */
@@ -782,7 +826,7 @@ GIT_EXTERN(int) git_config_parse_int32(int32_t *out, const char *value);
  * cause the value to be multiplied by 1024, 1048576,
  * or 1073741824 prior to output.
  *
- * @param out place to store the result of the parsing
+ * @param[out] out place to store the result of the parsing
  * @param value value to parse
  * @return 0 or an error code.
  */
