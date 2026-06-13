@@ -284,6 +284,15 @@ static int backend_sort_cmp(const void *a, const void *b)
 	return (backend_b->priority - backend_a->priority);
 }
 
+int git_odb_options_init(git_odb_options *opts, unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_odb_options, GIT_ODB_OPTIONS_INIT);
+	return 0;
+}
+
 static void normalize_options(
 	git_odb_options *opts,
 	const git_odb_options *given_opts)

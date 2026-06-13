@@ -92,6 +92,20 @@ typedef struct {
 }
 
 /**
+ * Initialize a `git_email_create_options` with default values.
+ * Equivalent to creating an instance with
+ * GIT_EMAIL_CREATE_OPTIONS_INIT.
+ *
+ * @param opts The `git_email_create_options` struct to initialize.
+ * @param version The struct version; pass
+ *                `GIT_EMAIL_CREATE_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_email_create_options_init(
+	git_email_create_options *opts,
+	unsigned int version);
+
+/**
  * Create a diff for a commit in mbox format for sending via email.
  * The commit must not be a merge commit.
  *

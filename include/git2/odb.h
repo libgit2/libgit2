@@ -69,6 +69,20 @@ typedef struct {
 #define GIT_ODB_OPTIONS_INIT { GIT_ODB_OPTIONS_VERSION }
 
 /**
+ * Initialize git_odb_options_options structure
+ *
+ * Initialize a `git_odb_options` with default values. Equivalent to
+ * creating an instance with GIT_ODB_OPTIONS_INIT.
+ *
+ * @param opts The `git_odb_options` struct to initialize.
+ * @param version The struct version; pass `GIT_ODB_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_odb_options_init(
+	git_odb_options *opts,
+	unsigned int version);
+
+/**
  * Create a new object database with no backends.
  *
  * Before the ODB can be used for read/writing, a custom database

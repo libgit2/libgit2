@@ -1151,6 +1151,19 @@ static void loose_backend__free(git_odb_backend *_backend)
 	git__free(_backend);
 }
 
+
+int git_odb_backend_loose_options_init(
+	git_odb_backend_loose_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_odb_backend_loose_options,
+		GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT);
+	return 0;
+}
+
 static void normalize_options(
 	git_odb_backend_loose_options *opts,
 	const git_odb_backend_loose_options *given_opts)

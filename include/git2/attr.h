@@ -181,6 +181,20 @@ typedef struct {
 #define GIT_ATTR_OPTIONS_INIT {GIT_ATTR_OPTIONS_VERSION}
 
 /**
+ * Initialize git_attr_options structure
+ *
+ * Initialize a `git_attr_options` with default values. Equivalent to
+ * creating an instance with GIT_ATTR_OPTIONS_INIT.
+ *
+ * @param opts The `git_attr_options` struct to initialize.
+ * @param version The struct version; pass `GIT_ATTR_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_attr_options_init(
+	git_attr_options *opts,
+	unsigned int version);
+
+/**
  * Look up the value of one git attribute for path.
  *
  * @param value_out Output of the value of the attribute.  Use the GIT_ATTR_...

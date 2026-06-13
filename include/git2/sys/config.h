@@ -172,6 +172,23 @@ typedef struct {
 /** Static constructor for `git_config_backend_memory_options` */
 #define GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT { GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION }
 
+/**
+ * Initialize git_config_backend_memory_options structure
+ *
+ * Initialize a `git_config_backend_memory_options` with default values.
+ * Equivalent to creating an instance with
+ * GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT.
+ *
+ * @param opts The `git_config_backend_memory_options` struct to
+ *             initialize.
+ * @param version The struct version; pass
+ *                `GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_config_backend_memory_options_init(
+	git_config_backend_memory_options *opts,
+	unsigned int version);
+
 
 /**
  * Create an in-memory configuration backend from a string in standard

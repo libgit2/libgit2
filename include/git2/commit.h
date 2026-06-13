@@ -413,6 +413,21 @@ typedef struct {
 #define GIT_COMMIT_CREATE_OPTIONS_INIT { GIT_COMMIT_CREATE_OPTIONS_VERSION }
 
 /**
+ * Initialize git_commit_create_options structure
+ *
+ * Initialize a `git_commit_create_options` with default values.
+ * Equivalent to creating an instance with GIT_COMMIT_CREATE_OPTIONS_INIT.
+ *
+ * @param opts The `git_commit_create_options` struct to initialize.
+ * @param version The struct version; pass
+ *                `GIT_COMMIT_CREATE_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_commit_create_options_init(
+	git_commit_create_options *opts,
+	unsigned int version);
+
+/**
  * Commits the staged changes in the repository; this is a near analog to
  * `git commit -m message`.
  *
@@ -473,6 +488,22 @@ typedef struct {
 
 /** Static constructor for `git_commit_create_ext_options` */
 #define GIT_COMMIT_CREATE_EXT_OPTIONS_INIT { GIT_COMMIT_CREATE_EXT_OPTIONS_VERSION }
+
+/**
+ * Initialize git_commit_create_ext_options structure
+ *
+ * Initialize a `git_commit_create_ext_options` with default values.
+ * Equivalent to creating an instance with
+ * GIT_COMMIT_CREATE_EXT_OPTIONS_INIT.
+ *
+ * @param opts The `git_commit_create_ext_options` struct to initialize.
+ * @param version The struct version; pass
+ *                `GIT_COMMIT_CREATE_EXT_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_commit_create_ext_options_init(
+	git_commit_create_ext_options *opts,
+	unsigned int version);
 
 /**
  * Create a new commit object and write it to the object database.

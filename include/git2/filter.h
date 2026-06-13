@@ -96,6 +96,20 @@ typedef struct {
 #define GIT_FILTER_OPTIONS_INIT {GIT_FILTER_OPTIONS_VERSION}
 
 /**
+ * Initialize git_filter_options structure
+ *
+ * Initialize a `git_filter_options` with default values. Equivalent to
+ * creating an instance with GIT_FILTER_OPTIONS_VERSION.
+ *
+ * @param opts The `git_filter_options` struct to initialize.
+ * @param version The struct version; pass `GIT_FILTER_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_filter_options_init(
+	git_filter_options *opts,
+	unsigned int version);
+
+/**
  * A filter that can transform file data
  *
  * This represents a filter that can be used to transform or even replace

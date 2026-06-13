@@ -507,6 +507,18 @@ static int packfile__cmp(const void *a_, const void *b_)
 	return strcmp(a->pack_name, b->pack_name);
 }
 
+int git_midx_writer_options_init(
+	git_midx_writer_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_midx_writer_options,
+		GIT_MIDX_WRITER_OPTIONS_INIT);
+	return 0;
+}
+
 int git_midx_writer_new(
 	git_midx_writer **out,
 	const char *pack_dir

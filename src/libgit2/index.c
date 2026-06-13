@@ -386,6 +386,15 @@ void git_index__set_ignore_case(git_index *index, bool ignore_case)
 	git_vector_sort(&index->reuc);
 }
 
+int git_index_options_init(git_index_options *opts, unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_index_options, GIT_INDEX_OPTIONS_INIT);
+	return 0;
+}
+
 int git_index_open_ext(
 	git_index **index_out,
 	const char *index_path,

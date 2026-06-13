@@ -877,6 +877,19 @@ static void pack_backend__free(git_odb_backend *_backend)
 	git__free(backend);
 }
 
+
+int git_odb_backend_pack_options_init(
+	git_odb_backend_pack_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_odb_backend_pack_options,
+		GIT_ODB_BACKEND_PACK_OPTIONS_INIT);
+	return 0;
+}
+
 static int pack_backend__alloc(
 	struct pack_backend **out,
 	size_t initial_size,

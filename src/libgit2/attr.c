@@ -43,6 +43,15 @@ static int collect_attr_files(
 
 static void release_attr_files(git_vector *files);
 
+int git_attr_options_init(git_attr_options *opts, unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_attr_options, GIT_ATTR_OPTIONS_INIT);
+	return 0;
+}
+
 int git_attr_get_ext(
 	const char **value,
 	git_repository *repo,
