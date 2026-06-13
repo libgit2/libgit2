@@ -544,7 +544,7 @@ static bool include_path_exact_root(git_revwalk *walk, git_tree *commit_tree)
 	/* If it's a root commit, we just need to find the first path that matches */
 	git_vector_foreach(&walk->pathspec->pathspec, i, match) {
 		git_tree_entry *entry=NULL;
-		if (git_tree_entry_bypath(&entry, commit_tree, match->pattern)) {
+		if (git_tree_entry_bypath(&entry, commit_tree, match->pattern) == 0) {
 			git_tree_entry_free(entry);
 			return true;
 		}
