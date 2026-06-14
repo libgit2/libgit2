@@ -19,7 +19,7 @@
 #include "grafts.h"
 #include "tag.h"
 #include "blob.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "sysdir.h"
 #include "git2/filebuf.h"
 #include "index.h"

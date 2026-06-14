@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 #include "refs.h"
 
 void test_refs_pseudoref__cleanup(void)

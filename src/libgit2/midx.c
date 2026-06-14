@@ -10,7 +10,7 @@
 #include "git2/array.h"
 #include "buf.h"
 #include "git2/filebuf.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "hash.h"
 #include "odb.h"
 #include "pack.h"

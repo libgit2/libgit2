@@ -18,7 +18,7 @@
 
 #include "checkout.h"
 #include "remote.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "refs.h"
 #include "git2/fs_path.h"
 #include "repository.h"

@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 
 #include "git2/filebuf.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "posix.h"
 
 #define TEST_CONFIG "git-new-config"

@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 #include "repository.h"
 #include "config.h"
 #include "git2/config.h"

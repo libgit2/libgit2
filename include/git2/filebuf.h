@@ -9,7 +9,7 @@
 
 #include "git2/git2_util.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 #include "hash.h"
 #include <zlib.h>
 

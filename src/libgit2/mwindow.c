@@ -8,7 +8,7 @@
 #include "mwindow.h"
 
 #include "git2/vector.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "map.h"
 #include "runtime.h"
 #include "pack.h"

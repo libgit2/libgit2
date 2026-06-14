@@ -7,7 +7,7 @@
 
 #include "git2/filebuf.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 
 static const size_t WRITE_BUFFER_SIZE = (4096 * 2);
 

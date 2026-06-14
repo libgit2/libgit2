@@ -2,7 +2,7 @@
 #include "posix.h"
 #include "reset_helpers.h"
 #include "path.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "index.h"
 
 static git_repository *repo;

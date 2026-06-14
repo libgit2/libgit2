@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "posix.h"
 
 void test_copy__file(void)

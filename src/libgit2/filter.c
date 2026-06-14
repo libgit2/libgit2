@@ -9,7 +9,7 @@
 
 #include "buf.h"
 #include "common.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "hash.h"
 #include "repository.h"
 #include "runtime.h"

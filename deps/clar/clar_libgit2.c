@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "git2/fs_path.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "git2/sys/repository.h"
 
 void cl_git_report_failure(

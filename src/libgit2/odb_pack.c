@@ -12,7 +12,7 @@
 #include "git2/indexer.h"
 #include "git2/sys/odb_backend.h"
 #include "delta.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "hash.h"
 #include "midx.h"
 #include "mwindow.h"

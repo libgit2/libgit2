@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "pack.h"
 #include "hash.h"
 #include "git2/iterator.h"

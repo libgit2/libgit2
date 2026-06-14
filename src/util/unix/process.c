@@ -12,7 +12,7 @@
 
 #include "git2/git2_util.h"
 #include "git2/vector.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "process.h"
 #include "strlist.h"
 

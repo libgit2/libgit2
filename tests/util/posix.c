@@ -10,7 +10,7 @@
 #endif
 
 #include "clar_libgit2.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "posix.h"
 
 void test_posix__initialize(void)

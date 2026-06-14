@@ -13,7 +13,7 @@
 
 #include "common.h"
 #include "git2/str.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "hash.h"
 #include "commit_graph.h"
 

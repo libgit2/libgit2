@@ -2,7 +2,7 @@
 
 #include "git2/clone.h"
 #include "clone.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "repository.h"
 
 static git_str path = GIT_STR_INIT;

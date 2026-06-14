@@ -5,7 +5,7 @@
 #include "git2/clone.h"
 #include "git2/cred_helpers.h"
 #include "remote.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "refs.h"
 #include "git2/str.h"
 #include "streams/openssl.h"

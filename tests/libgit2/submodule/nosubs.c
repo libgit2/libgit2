@@ -2,7 +2,7 @@
 
 #include "clar_libgit2.h"
 #include "posix.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 void test_submodule_nosubs__cleanup(void)
 {

@@ -10,7 +10,7 @@
 #include "git2/git2_util.h"
 
 #include "util.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "git2/vector.h"
 #include "git2/thread.h"
 #include "pool.h"

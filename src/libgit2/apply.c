@@ -14,7 +14,7 @@
 #include "git2/repository.h"
 #include "git2/array.h"
 #include "patch.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "delta.h"
 #include "zstream.h"
 #include "reader.h"

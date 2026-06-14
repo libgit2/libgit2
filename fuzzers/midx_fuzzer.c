@@ -12,7 +12,7 @@
 #include "git2.h"
 
 #include "common.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "hash.h"
 #include "midx.h"
 

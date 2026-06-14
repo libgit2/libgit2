@@ -4,7 +4,7 @@
 #include <git2/sys/commit_graph.h>
 
 #include "commit_graph.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 void test_graph_commitgraph__parse(void)
 {

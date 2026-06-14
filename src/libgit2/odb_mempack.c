@@ -8,7 +8,7 @@
 #include "common.h"
 
 #include "buf.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "hash.h"
 #include "odb.h"
 #include "git2/array.h"

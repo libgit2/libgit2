@@ -2,7 +2,7 @@
 #include "posix.h"
 #include "path.h"
 #include "submodule_helpers.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "repository.h"
 
 static git_repository *g_repo = NULL;

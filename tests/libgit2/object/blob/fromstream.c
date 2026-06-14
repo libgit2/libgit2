@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "posix.h"
 #include "path.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 static git_repository *repo;
 static char textual_content[] = "libgit2\n\r\n\0";

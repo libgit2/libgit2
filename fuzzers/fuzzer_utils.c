@@ -10,7 +10,7 @@
 #include <string.h>
 
 #include "git2.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 #include "fuzzer_utils.h"
 

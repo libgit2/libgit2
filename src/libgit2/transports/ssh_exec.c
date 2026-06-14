@@ -14,7 +14,7 @@
 #include "config.h"
 #include "net.h"
 #include "path.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "process.h"
 #include "transports/smart.h"
 

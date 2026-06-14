@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "git2/attr.h"
 #include "ignore.h"
 #include "attr.h"

@@ -6,7 +6,7 @@
 #include "posix.h"
 #include "util.h"
 #include "path.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 static git_repository *repo;
 

@@ -14,7 +14,7 @@
 #include "git2/vector.h"
 #include "pool.h"
 #include "git2/str.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_INREPO	"attributes"

@@ -5,7 +5,7 @@
 #include "push_util.h"
 #include "refspec.h"
 #include "remote.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 static git_repository *_repo;
 

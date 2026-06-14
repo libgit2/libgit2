@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "futils.h"
+#include "git2/futils.h"
 
 #include "runtime.h"
 #include "hash.h"

@@ -14,7 +14,7 @@
 #include "progress.h"
 
 #include "git2/fs_path.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 #define COMMAND_NAME "clone"
 

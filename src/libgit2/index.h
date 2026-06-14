@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 #include "git2/filebuf.h"
 #include "git2/vector.h"
 #include "tree-cache.h"
