@@ -4,8 +4,8 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#ifndef INCLUDE_iterator_h__
-#define INCLUDE_iterator_h__
+#ifndef INCLUDE_git_iterator_h__
+#define INCLUDE_git_iterator_h__
 
 #include "common.h"
 
@@ -13,6 +13,15 @@
 #include "vector.h"
 #include "str.h"
 #include "ignore.h"
+
+/**
+ * @file git2/iterator.h
+ * @brief Traverse (walk) tree objects
+ * @defgroup git_iterator Traverse (walk) tree objects
+ * @ingroup Git
+ * @{
+ */
+GIT_BEGIN_DECL
 
 typedef struct git_iterator git_iterator;
 
@@ -105,14 +114,14 @@ struct git_iterator {
 	unsigned int flags;
 };
 
-extern int git_iterator_for_nothing(
+GIT_EXTERN(int) git_iterator_for_nothing(
 	git_iterator **out,
 	git_iterator_options *options);
 
 /* tree iterators will match the ignore_case value from the index of the
  * repository, unless you override with a non-zero flag value
  */
-extern int git_iterator_for_tree(
+GIT_EXTERN(int) git_iterator_for_tree(
 	git_iterator **out,
 	git_tree *tree,
 	git_iterator_options *options);
@@ -120,13 +129,13 @@ extern int git_iterator_for_tree(
 /* index iterators will take the ignore_case value from the index; the
  * ignore_case flags are not used
  */
-extern int git_iterator_for_index(
+GIT_EXTERN(int) git_iterator_for_index(
 	git_iterator **out,
 	git_repository *repo,
 	git_index *index,
 	git_iterator_options *options);
 
-extern int git_iterator_for_workdir_ext(
+GIT_EXTERN(int) git_iterator_for_workdir_ext(
 	git_iterator **out,
 	git_repository *repo,
 	const char *repo_workdir,
@@ -150,12 +159,12 @@ GIT_INLINE(int) git_iterator_for_workdir(
 /* for filesystem iterators, you have to explicitly pass in the ignore_case
  * behavior that you desire
  */
-extern int git_iterator_for_filesystem(
+GIT_EXTERN(int) git_iterator_for_filesystem(
 	git_iterator **out,
 	const char *root,
 	git_iterator_options *options);
 
-extern void git_iterator_free(git_iterator *iter);
+GIT_EXTERN(void) git_iterator_free(git_iterator *iter);
 
 /* Return a git_index_entry structure for the current value the iterator
  * is looking at or NULL if the iterator is at the end.
@@ -238,7 +247,7 @@ GIT_INLINE(int) git_iterator_reset(git_iterator *iter)
  * Go back to the start of the iteration after updating the `start` and
  * `end` pathname boundaries of the iteration.
  */
-extern int git_iterator_reset_range(
+GIT_EXTERN(int) git_iterator_reset_range(
 	git_iterator *iter, const char *start, const char *end);
 
 GIT_INLINE(git_iterator_t) git_iterator_type(git_iterator *iter)
@@ -266,25 +275,25 @@ GIT_INLINE(bool) git_iterator_ignore_case(git_iterator *iter)
 	return ((iter->flags & GIT_ITERATOR_IGNORE_CASE) != 0);
 }
 
-extern int git_iterator_set_ignore_case(
+GIT_EXTERN(int) git_iterator_set_ignore_case(
 	git_iterator *iter, bool ignore_case);
 
-extern int git_iterator_current_tree_entry(
+GIT_EXTERN(int) git_iterator_current_tree_entry(
 	const git_tree_entry **entry_out, git_iterator *iter);
 
-extern int git_iterator_current_parent_tree(
+GIT_EXTERN(int) git_iterator_current_parent_tree(
 	const git_tree **tree_out, git_iterator *iter, size_t depth);
 
-extern bool git_iterator_current_is_ignored(git_iterator *iter);
+GIT_EXTERN(bool) git_iterator_current_is_ignored(git_iterator *iter);
 
-extern bool git_iterator_current_tree_is_ignored(git_iterator *iter);
+GIT_EXTERN(bool) git_iterator_current_tree_is_ignored(git_iterator *iter);
 
 /**
  * Get full path of the current item from a workdir iterator.  This will
  * return NULL for a non-workdir iterator.  The git_str is still owned by
  * the iterator; this is exposed just for efficiency.
  */
-extern int git_iterator_current_workdir_path(
+GIT_EXTERN(int) git_iterator_current_workdir_path(
 	git_str **path, git_iterator *iter);
 
 /**
@@ -292,7 +301,7 @@ extern int git_iterator_current_workdir_path(
  *
  * Only implemented for the workdir and index iterators.
  */
-extern git_index *git_iterator_index(git_iterator *iter);
+GIT_EXTERN(git_index *) git_iterator_index(git_iterator *iter);
 
 typedef int (*git_iterator_foreach_cb)(
 	const git_index_entry *entry,
@@ -302,7 +311,7 @@ typedef int (*git_iterator_foreach_cb)(
  * Walk the given iterator and invoke the callback for each path
  * contained in the iterator.
  */
-extern int git_iterator_foreach(
+GIT_EXTERN(int) git_iterator_foreach(
 	git_iterator *iterator,
 	git_iterator_foreach_cb cb,
 	void *data);
@@ -316,10 +325,13 @@ typedef int (*git_iterator_walk_cb)(
  * called for each unique path, with the index entry in each iterator
  * (or NULL if the given iterator does not contain that path).
  */
-extern int git_iterator_walk(
+GIT_EXTERN(int) git_iterator_walk(
 	git_iterator **iterators,
 	size_t cnt,
 	git_iterator_walk_cb cb,
 	void *data);
+
+/** @} */
+GIT_END_DECL
 
 #endif
