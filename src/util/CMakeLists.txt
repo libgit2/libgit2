@@ -2,12 +2,14 @@
 
 add_library(util OBJECT)
 
-configure_file(git2_features.h.in "${PROJECT_BINARY_DIR}/gen_headers/git2_features.h")
+# configure_file(git2_features.h.in "${PROJECT_BINARY_DIR}/gen_headers/git2_features.h")
+configure_file(git2_features.h.in "${PROJECT_SOURCE_DIR}/include/git2/git2_features.h")
 
 set(UTIL_INCLUDES
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include"
-	"${PROJECT_BINARY_DIR}/gen_headers")
+	# "${PROJECT_BINARY_DIR}/gen_headers"
+)
 
 file(GLOB UTIL_SRC *.c *.h allocators/*.c allocators/*.h hash.h)
 list(SORT UTIL_SRC)
