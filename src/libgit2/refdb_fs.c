@@ -15,7 +15,7 @@
 #include "reflog.h"
 #include "refdb.h"
 #include "git2/iterator.h"
-#include "sortedcache.h"
+#include "git2/sortedcache.h"
 #include "signature.h"
 #include "wildmatch.h"
 #include "path.h"
