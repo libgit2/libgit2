@@ -12,7 +12,7 @@
 #include "git2/index.h"
 #include "git2/checkout.h"
 #include "git2/repository.h"
-#include "array.h"
+#include "git2/array.h"
 #include "patch.h"
 #include "futils.h"
 #include "delta.h"

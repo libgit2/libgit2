@@ -32,7 +32,7 @@
 #include "commit.h"
 #include "oidarray.h"
 #include "merge_driver.h"
-#include "array.h"
+#include "git2/array.h"
 
 #include "git2/types.h"
 #include "git2/repository.h"

@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "array.h"
+#include "git2/array.h"
 #include "futils.h"
 #include "oid.h"
 #include "parse.h"

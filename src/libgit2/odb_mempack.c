@@ -11,7 +11,7 @@
 #include "futils.h"
 #include "hash.h"
 #include "odb.h"
-#include "array.h"
+#include "git2/array.h"
 #include "pack-objects.h"
 
 #include "git2/odb_backend.h"

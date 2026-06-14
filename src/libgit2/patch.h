@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "git2/patch.h"
-#include "array.h"
+#include "git2/array.h"
 
 /* cached information about a hunk in a patch */
 typedef struct git_patch_hunk {

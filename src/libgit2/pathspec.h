@@ -13,7 +13,7 @@
 #include "git2/str.h"
 #include "git2/vector.h"
 #include "pool.h"
-#include "array.h"
+#include "git2/array.h"
 
 /* public compiled pathspec */
 struct git_pathspec {

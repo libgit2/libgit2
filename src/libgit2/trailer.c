@@ -4,7 +4,7 @@
  * This file is part of libgit2, distributed under the GNU GPL v2 with
  * a Linking Exception. For full terms see the included COPYING file.
  */
-#include "array.h"
+#include "git2/array.h"
 #include "common.h"
 #include "git2/message.h"
 

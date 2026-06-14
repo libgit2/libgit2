@@ -17,7 +17,7 @@
 #include "git2/config.h"
 #include "blob.h"
 #include "attr_file.h"
-#include "array.h"
+#include "git2/array.h"
 #include "path.h"
 
 struct git_filter_source {

@@ -7,7 +7,7 @@
 
 #include "commit_graph.h"
 
-#include "array.h"
+#include "git2/array.h"
 #include "buf.h"
 #include "filebuf.h"
 #include "futils.h"

@@ -13,7 +13,7 @@
 #include "filebuf.h"
 #include "commit.h"
 #include "merge.h"
-#include "array.h"
+#include "git2/array.h"
 #include "config.h"
 #include "annotated_commit.h"
 #include "index.h"

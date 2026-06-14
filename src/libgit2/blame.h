@@ -6,7 +6,7 @@
 #include "git2/blame.h"
 #include "git2/vector.h"
 #include "diff.h"
-#include "array.h"
+#include "git2/array.h"
 #include "git2/oid.h"
 
 /*

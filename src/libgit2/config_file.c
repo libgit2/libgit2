@@ -10,7 +10,7 @@
 #include "git2/config.h"
 #include "git2/sys/config.h"
 
-#include "array.h"
+#include "git2/array.h"
 #include "git2/str.h"
 #include "config_backend.h"
 #include "config_list.h"

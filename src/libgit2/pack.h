@@ -12,7 +12,7 @@
 
 #include "git2/oid.h"
 
-#include "array.h"
+#include "git2/array.h"
 #include "map.h"
 #include "mwindow.h"
 #include "odb.h"

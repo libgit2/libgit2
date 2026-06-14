@@ -20,7 +20,7 @@
 #include "signature.h"
 #include "refs.h"
 #include "object.h"
-#include "array.h"
+#include "git2/array.h"
 #include "oidarray.h"
 #include "grafts.h"
 
