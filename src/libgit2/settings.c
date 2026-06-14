@@ -36,7 +36,7 @@
 #include "transports/ssh_libssh2.h"
 
 #ifdef GIT_WIN32
-# include "win32/w32_leakcheck.h"
+# include "git2/win32/w32_leakcheck.h"
 #endif
 
 /* Declarations for tuneable settings */

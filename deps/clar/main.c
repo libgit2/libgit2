@@ -2,7 +2,7 @@
 #include "clar_libgit2_trace.h"
 
 #ifdef GIT_DEBUG_LEAKCHECK_WIN32
-# include "win32/w32_leakcheck.h"
+# include "git2/win32/w32_leakcheck.h"
 #endif
 
 #ifdef _WIN32

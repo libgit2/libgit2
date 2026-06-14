@@ -9,7 +9,7 @@
 
 #if defined(GIT_DEBUG_LEAKCHECK_WIN32)
 
-#include "win32/w32_leakcheck.h"
+#include "git2/win32/w32_leakcheck.h"
 
 static void *leakcheck_malloc(size_t len, const char *file, int line)
 {
