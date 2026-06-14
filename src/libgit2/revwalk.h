@@ -12,7 +12,7 @@
 #include "git2/revwalk.h"
 #include "commit_list.h"
 #include "pqueue.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "git2/vector.h"
 #include "hashmap_oid.h"
 

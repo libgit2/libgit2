@@ -12,7 +12,7 @@
 #include "git2/oid.h"
 #include "git2/attr.h"
 #include "git2/vector.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "git2/str.h"
 #include "git2/futils.h"
 

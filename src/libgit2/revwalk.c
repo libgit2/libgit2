@@ -10,7 +10,7 @@
 #include "commit.h"
 #include "odb.h"
 #include "pathspec.h"
-#include "pool.h"
+#include "git2/pool.h"
 
 #include "git2/revparse.h"
 #include "merge.h"

@@ -12,7 +12,7 @@
 #include "filter.h"
 #include "git2/hash.h"
 #include "merge_driver.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "mwindow.h"
 #include "oid.h"
 #include "rand.h"

@@ -17,7 +17,7 @@
 #include "git2/hash.h"
 #include "index.h"
 #include "merge_driver.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "mwindow.h"
 #include "object.h"
 #include "odb.h"

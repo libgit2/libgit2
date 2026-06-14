@@ -29,7 +29,7 @@
 #include "diff_xdiff.h"
 #include "git2/fs_path.h"
 #include "attr.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "path.h"
 #include "git2/hashmap_str.h"
 

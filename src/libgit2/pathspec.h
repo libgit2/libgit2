@@ -12,7 +12,7 @@
 #include "git2/pathspec.h"
 #include "git2/str.h"
 #include "git2/vector.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "git2/array.h"
 
 /* public compiled pathspec */

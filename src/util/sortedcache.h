@@ -13,7 +13,7 @@
 #include "git2/futils.h"
 #include "git2/vector.h"
 #include "git2/thread.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "git2/hashmap_str.h"
 
 #include <stddef.h>

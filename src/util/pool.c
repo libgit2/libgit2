@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "pool.h"
+#include "git2/pool.h"
 
 #include "posix.h"
 #ifndef GIT_WIN32

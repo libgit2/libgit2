@@ -11,7 +11,7 @@
 
 #include "git2/vector.h"
 #include "commit_list.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "git2/iterator.h"
 
 #include "git2/types.h"
