@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "win32_leakcheck.h"
+#include "git2/allocators/win32_leakcheck.h"
 
 #if defined(GIT_DEBUG_LEAKCHECK_WIN32)
 
