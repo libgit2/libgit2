@@ -8,7 +8,7 @@
 #ifndef INCLUDE_win32_error_h__
 #define INCLUDE_win32_error_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 extern char *git_win32_get_error_message(DWORD error_code);
 

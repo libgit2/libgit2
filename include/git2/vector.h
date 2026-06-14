@@ -7,7 +7,7 @@
 #ifndef INCLUDE_vector_h__
 #define INCLUDE_vector_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 typedef int (*git_vector_cmp)(const void *, const void *);
 

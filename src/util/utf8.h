@@ -7,7 +7,7 @@
 #ifndef INCLUDE_utf8_h__
 #define INCLUDE_utf8_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 /*
  * Iterate through an UTF-8 string, yielding one codepoint at a time.

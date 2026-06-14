@@ -7,7 +7,7 @@
 #ifndef INCLUDE_filebuf_h__
 #define INCLUDE_filebuf_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #include "futils.h"
 #include "hash.h"

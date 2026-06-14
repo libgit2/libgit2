@@ -8,7 +8,7 @@
 #ifndef INCLUDE_win32_leakcheck_h__
 #define INCLUDE_win32_leakcheck_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 /* Initialize the win32 leak checking system. */
 int git_win32_leakcheck_global_init(void);

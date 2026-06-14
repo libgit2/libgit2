@@ -7,7 +7,7 @@
 #ifndef INCLUDE_win32_w32_buffer_h__
 #define INCLUDE_win32_w32_buffer_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 #include "git2/str.h"
 
 /**

@@ -10,7 +10,7 @@
 
 #include "git2/sys/alloc.h"
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 extern git_allocator git__allocator;
 

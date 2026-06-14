@@ -7,7 +7,7 @@
 #ifndef INCLUDE_stackstr_h__
 #define INCLUDE_stackstr_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 typedef struct {
 	/* Length of / number of bytes used by `data`. */

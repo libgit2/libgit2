@@ -7,7 +7,7 @@
 #ifndef INCLUDE_win32_posix_h__
 #define INCLUDE_win32_posix_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 #include "../posix.h"
 #include "win32-compat.h"
 #include "path_w32.h"

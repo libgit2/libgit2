@@ -7,7 +7,7 @@
 #ifndef INCLUDE_win32_dir_h__
 #define INCLUDE_win32_dir_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #include "w32_util.h"
 

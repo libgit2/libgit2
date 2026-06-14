@@ -7,7 +7,7 @@
 #ifndef INCLUDE_win32_path_w32_h__
 #define INCLUDE_win32_path_w32_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 /**
  * Create a Win32 path (in UCS-2 format) from a UTF-8 string.  If the given

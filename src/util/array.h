@@ -7,7 +7,7 @@
 #ifndef INCLUDE_array_h__
 #define INCLUDE_array_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 /*
  * Use this to declare a typesafe resizable array of items, a la:

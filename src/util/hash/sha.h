@@ -8,7 +8,7 @@
 #ifndef INCLUDE_hash_sha_h__
 #define INCLUDE_hash_sha_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
 typedef struct git_hash_sha256_ctx git_hash_sha256_ctx;

@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #if !defined(GIT_WIN32) && !defined(NO_MMAP)
 

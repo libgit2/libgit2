@@ -7,7 +7,7 @@
 #ifndef INCLUDE_str_h__
 #define INCLUDE_str_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 struct git_str {
 	char *ptr;

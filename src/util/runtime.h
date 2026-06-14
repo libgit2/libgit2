@@ -7,7 +7,7 @@
 #ifndef INCLUDE_runtime_h__
 #define INCLUDE_runtime_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 typedef int (*git_runtime_init_fn)(void);
 typedef void (*git_runtime_shutdown_fn)(void);

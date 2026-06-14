@@ -7,7 +7,7 @@
 #ifndef INCLUDE_net_h__
 #define INCLUDE_net_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 /*
  * Hostname handling

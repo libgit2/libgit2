@@ -8,7 +8,7 @@
 #ifndef INCLUDE_regexp_h__
 #define INCLUDE_regexp_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #if defined(GIT_REGEX_BUILTIN)
 # define PCRE2_CODE_UNIT_WIDTH 8

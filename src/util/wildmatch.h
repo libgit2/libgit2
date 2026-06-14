@@ -8,7 +8,7 @@
 #ifndef INCLUDE_wildmatch_h__
 #define INCLUDE_wildmatch_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #define WM_CASEFOLD 1
 #define WM_PATHNAME 2

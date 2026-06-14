@@ -7,7 +7,7 @@
 #ifndef INCLUDE_posix_h__
 #define INCLUDE_posix_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #include <stdlib.h>
 #include <fcntl.h>

@@ -8,7 +8,7 @@
 #ifndef INCLUDE_runtime_h__
 #define INCLUDE_runtime_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 extern int git_strlist_copy(char ***out, const char **in, size_t len);
 

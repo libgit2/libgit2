@@ -7,7 +7,7 @@
 #ifndef INCLUDE_sorted_cache_h__
 #define INCLUDE_sorted_cache_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #include "util.h"
 #include "futils.h"

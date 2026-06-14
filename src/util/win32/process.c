@@ -8,7 +8,7 @@
 #include <stdio.h>
 #include <git2.h>
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 #include "process.h"
 #include "strlist.h"
 #include "fs_path.h"

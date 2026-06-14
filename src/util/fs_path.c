@@ -7,7 +7,7 @@
 
 #include "fs_path.h"
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 #include "futils.h"
 #include "posix.h"
 #ifdef GIT_WIN32

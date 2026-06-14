@@ -7,7 +7,7 @@
 #ifndef INCLUDE_rand_h__
 #define INCLUDE_rand_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 /**
  * Initialize the random number generation subsystem.  This will

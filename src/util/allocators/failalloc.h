@@ -8,7 +8,7 @@
 #ifndef INCLUDE_allocators_failalloc_h__
 #define INCLUDE_allocators_failalloc_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 extern void *git_failalloc_malloc(size_t len, const char *file, int line);
 extern void *git_failalloc_realloc(void *ptr, size_t size, const char *file, int line);

@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 #include "runtime.h"
 
 static git_runtime_shutdown_fn shutdown_callback[32];

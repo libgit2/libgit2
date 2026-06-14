@@ -8,7 +8,7 @@
 #define INCLUDE_util_h__
 
 #include "git2/str.h"
-#include "git2_util.h"
+#include "git2/git2_util.h"
 #include "strnlen.h"
 #include "thread.h"
 

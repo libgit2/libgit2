@@ -7,7 +7,7 @@
 #ifndef INCLUDE_fs_path_h__
 #define INCLUDE_fs_path_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #include "posix.h"
 #include "git2/str.h"

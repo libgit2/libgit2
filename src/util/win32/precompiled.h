@@ -1,4 +1,4 @@
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #include <errno.h>
 #include <limits.h>

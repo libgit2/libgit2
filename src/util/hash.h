@@ -8,7 +8,7 @@
 #ifndef INCLUDE_hash_h__
 #define INCLUDE_hash_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #include "hash/sha.h"
 

@@ -8,7 +8,7 @@
 #ifndef INCLUDE_errors_h__
 #define INCLUDE_errors_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 #include "git2/sys/errors.h"
 
 /* Initialize the error thread-state. */

@@ -8,7 +8,7 @@
 #ifndef INCLUDE_allocators_debugalloc_h__
 #define INCLUDE_allocators_debugalloc_h__
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #include "alloc.h"
 
