@@ -39,8 +39,8 @@
  * It returns an error code < 0 if there is an allocation error, otherwise
  * the length of the dirname (which will be > 0).
  */
-extern char *git_fs_path_dirname(const char *path);
-extern int git_fs_path_dirname_r(git_str *buffer, const char *path);
+GIT_EXTERN(char *) git_fs_path_dirname(const char *path);
+GIT_EXTERN(int) git_fs_path_dirname_r(git_str *buffer, const char *path);
 
 /*
  * This function returns the basename of the file, which is the last
@@ -58,13 +58,13 @@ extern int git_fs_path_dirname_r(git_str *buffer, const char *path);
  * It returns an error code < 0 if there is an allocation error, otherwise
  * the length of the basename (which will be >= 0).
  */
-extern char *git_fs_path_basename(const char *path);
-extern int git_fs_path_basename_r(git_str *buffer, const char *path);
+GIT_EXTERN(char *) git_fs_path_basename(const char *path);
+GIT_EXTERN(int) git_fs_path_basename_r(git_str *buffer, const char *path);
 
 /* Return the offset of the start of the basename.  Unlike the other
  * basename functions, this returns 0 if the path is empty.
  */
-extern size_t git_fs_path_basename_offset(git_str *buffer);
+GIT_EXTERN(size_t) git_fs_path_basename_offset(git_str *buffer);
 
 /**
  * Find offset to root of path if path has one.
@@ -74,17 +74,17 @@ extern size_t git_fs_path_basename_offset(git_str *buffer);
  * "c:/windows/rooted/path" returns 2).  If the path is not rooted, this
  * returns -1.
  */
-extern int git_fs_path_root(const char *path);
+GIT_EXTERN(int) git_fs_path_root(const char *path);
 
 /**
  * Ensure path has a trailing '/'.
  */
-extern int git_fs_path_to_dir(git_str *path);
+GIT_EXTERN(int) git_fs_path_to_dir(git_str *path);
 
 /**
  * Ensure string has a trailing '/' if there is space for it.
  */
-extern void git_fs_path_string_to_dir(char *path, size_t size);
+GIT_EXTERN(void) git_fs_path_string_to_dir(char *path, size_t size);
 
 /**
  * Provides the length of the given path string with no trailing
@@ -172,12 +172,12 @@ GIT_INLINE(int) git_fs_path_at_end_of_segment(const char *p)
 	return !*p || *p == '/';
 }
 
-extern int git__percent_decode(git_str *decoded_out, const char *input);
+GIT_EXTERN(int) git__percent_decode(git_str *decoded_out, const char *input);
 
 /**
  * Extract path from file:// URL.
  */
-extern int git_fs_path_fromurl(git_str *local_path_out, const char *file_url);
+GIT_EXTERN(int) git_fs_path_fromurl(git_str *local_path_out, const char *file_url);
 
 
 /**
@@ -190,41 +190,41 @@ extern int git_fs_path_fromurl(git_str *local_path_out, const char *file_url);
  * Check if a file exists and can be accessed.
  * @return true or false
  */
-extern bool git_fs_path_exists(const char *path);
+GIT_EXTERN(bool) git_fs_path_exists(const char *path);
 
 /**
  * Check if the given path points to a directory.
  * @return true or false
  */
-extern bool git_fs_path_isdir(const char *path);
+GIT_EXTERN(bool) git_fs_path_isdir(const char *path);
 
 /**
  * Check if the given path points to a regular file.
  * @return true or false
  */
-extern bool git_fs_path_isfile(const char *path);
+GIT_EXTERN(bool) git_fs_path_isfile(const char *path);
 
 /**
  * Check if the given path points to an executable.
  * @return true or false
  */
-extern bool git_fs_path_isexecutable(const char *path);
+GIT_EXTERN(bool) git_fs_path_isexecutable(const char *path);
 
 /**
  * Check if the given path points to a symbolic link.
  * @return true or false
  */
-extern bool git_fs_path_islink(const char *path);
+GIT_EXTERN(bool) git_fs_path_islink(const char *path);
 
 /**
  * Check if the given path is a directory, and is empty.
  */
-extern bool git_fs_path_is_empty_dir(const char *path);
+GIT_EXTERN(bool) git_fs_path_is_empty_dir(const char *path);
 
 /**
  * Stat a file and/or link and set error if needed.
  */
-extern int git_fs_path_lstat(const char *path, struct stat *st);
+GIT_EXTERN(int) git_fs_path_lstat(const char *path, struct stat *st);
 
 /**
  * Check if the parent directory contains the item.
@@ -233,7 +233,7 @@ extern int git_fs_path_lstat(const char *path, struct stat *st);
  * @param item Item that might be in the directory.
  * @return 0 if item exists in directory, <0 otherwise.
  */
-extern bool git_fs_path_contains(git_str *dir, const char *item);
+GIT_EXTERN(bool) git_fs_path_contains(git_str *dir, const char *item);
 
 /**
  * Check if the given path contains the given subdirectory.
@@ -242,7 +242,7 @@ extern bool git_fs_path_contains(git_str *dir, const char *item);
  * @param subdir Subdirectory name to look for in parent
  * @return true if subdirectory exists, false otherwise.
  */
-extern bool git_fs_path_contains_dir(git_str *parent, const char *subdir);
+GIT_EXTERN(bool) git_fs_path_contains_dir(git_str *parent, const char *subdir);
 
 /**
  * Determine the common directory length between two paths, including
@@ -254,7 +254,7 @@ extern bool git_fs_path_contains_dir(git_str *parent, const char *subdir);
  * @param two The second path
  * @return The length of the common directory
  */
-extern size_t git_fs_path_common_dirlen(const char *one, const char *two);
+GIT_EXTERN(size_t) git_fs_path_common_dirlen(const char *one, const char *two);
 
 /**
  * Make the path relative to the given parent path.
@@ -265,7 +265,7 @@ extern size_t git_fs_path_common_dirlen(const char *one, const char *two);
  *         if there was not common root between the paths,
  *         or <0.
  */
-extern int git_fs_path_make_relative(git_str *path, const char *parent);
+GIT_EXTERN(int) git_fs_path_make_relative(git_str *path, const char *parent);
 
 /**
  * Check if the given path contains the given file.
@@ -274,7 +274,7 @@ extern int git_fs_path_make_relative(git_str *path, const char *parent);
  * @param file File name to look for in parent
  * @return true if file exists, false otherwise.
  */
-extern bool git_fs_path_contains_file(git_str *dir, const char *file);
+GIT_EXTERN(bool) git_fs_path_contains_file(git_str *dir, const char *file);
 
 /**
  * Prepend base to unrooted path or just copy path over.
@@ -282,25 +282,25 @@ extern bool git_fs_path_contains_file(git_str *dir, const char *file);
  * This will optionally return the index into the path where the "root"
  * is, either the end of the base directory prefix or the path root.
  */
-extern int git_fs_path_join_unrooted(
+GIT_EXTERN(int) git_fs_path_join_unrooted(
 	git_str *path_out, const char *path, const char *base, ssize_t *root_at);
 
 /**
  * Removes multiple occurrences of '/' in a row, squashing them into a
  * single '/'.
  */
-extern void git_fs_path_squash_slashes(git_str *path);
+GIT_EXTERN(void) git_fs_path_squash_slashes(git_str *path);
 
 /**
  * Clean up path, prepending base if it is not already rooted.
  */
-extern int git_fs_path_prettify(git_str *path_out, const char *path, const char *base);
+GIT_EXTERN(int) git_fs_path_prettify(git_str *path_out, const char *path, const char *base);
 
 /**
  * Clean up path, prepending base if it is not already rooted and
  * appending a slash.
  */
-extern int git_fs_path_prettify_dir(git_str *path_out, const char *path, const char *base);
+GIT_EXTERN(int) git_fs_path_prettify_dir(git_str *path_out, const char *path, const char *base);
 
 /**
  * Get a directory from a path.
@@ -311,7 +311,7 @@ extern int git_fs_path_prettify_dir(git_str *path_out, const char *path, const c
  * appends the trailing '/'.  If the path does not exist, it is
  * treated like a regular filename.
  */
-extern int git_fs_path_find_dir(git_str *dir);
+GIT_EXTERN(int) git_fs_path_find_dir(git_str *dir);
 
 /**
  * Resolve relative references within a path.
@@ -323,7 +323,7 @@ extern int git_fs_path_find_dir(git_str *dir);
  * Additionally, this will recognize an "c:/" drive prefix or a "xyz://" URL
  * prefix and not touch that part of the path.
  */
-extern int git_fs_path_resolve_relative(git_str *path, size_t ceiling);
+GIT_EXTERN(int) git_fs_path_resolve_relative(git_str *path, size_t ceiling);
 
 /**
  * Apply a relative path to base path.
@@ -334,7 +334,7 @@ extern int git_fs_path_resolve_relative(git_str *path, size_t ceiling);
  * slash, "." will be eaten with no change, and ".." will remove a
  * segment from the base path.
  */
-extern int git_fs_path_apply_relative(git_str *target, const char *relpath);
+GIT_EXTERN(int) git_fs_path_apply_relative(git_str *target, const char *relpath);
 
 enum {
 	GIT_FS_PATH_DIR_IGNORE_CASE = (1u << 0),
@@ -355,7 +355,7 @@ enum {
  * @param payload Passed to callback as first argument.
  * @return 0 on success or error code from OS error or from callback
  */
-extern int git_fs_path_direach(
+GIT_EXTERN(int) git_fs_path_direach(
 	git_str *pathbuf,
 	uint32_t flags,
 	int (*callback)(void *payload, git_str *path),
@@ -364,7 +364,7 @@ extern int git_fs_path_direach(
 /**
  * Sort function to order two paths
  */
-extern int git_fs_path_cmp(
+GIT_EXTERN(int) git_fs_path_cmp(
 	const char *name1, size_t len1, int isdir1,
 	const char *name2, size_t len2, int isdir2,
 	int (*compare)(const char *, const char *, size_t));
@@ -387,7 +387,7 @@ extern int git_fs_path_cmp(
  *		be modified in any way. Return non-zero to stop iteration.
  * @param payload Passed to fn as the first ath.
  */
-extern int git_fs_path_walk_up(
+GIT_EXTERN(int) git_fs_path_walk_up(
 	git_str *pathbuf,
 	const char *ceiling,
 	int (*callback)(void *payload, const char *path),
@@ -441,11 +441,11 @@ GIT_INLINE(int) git_fs_path_equal_or_prefixed(
 }
 
 /* translate errno to libgit2 error code and set error message */
-extern int git_fs_path_set_error(
+GIT_EXTERN(int) git_fs_path_set_error(
 	int errno_value, const char *path, const char *action);
 
 /* check if non-ascii characters are present in filename */
-extern bool git_fs_path_has_non_ascii(const char *path, size_t pathlen);
+GIT_EXTERN(bool) git_fs_path_has_non_ascii(const char *path, size_t pathlen);
 
 #define GIT_PATH_REPO_ENCODING "UTF-8"
 
@@ -467,21 +467,21 @@ typedef struct {
 #define GIT_PATH_ICONV_INIT { (iconv_t)-1, GIT_STR_INIT }
 
 /* Init iconv data for converting decomposed UTF-8 to precomposed */
-extern int git_fs_path_iconv_init_precompose(git_fs_path_iconv_t *ic);
+GIT_EXTERN(int) git_fs_path_iconv_init_precompose(git_fs_path_iconv_t *ic);
 
 /* Clear allocated iconv data */
-extern void git_fs_path_iconv_clear(git_fs_path_iconv_t *ic);
+GIT_EXTERN(void) git_fs_path_iconv_clear(git_fs_path_iconv_t *ic);
 
 /*
  * Rewrite `in` buffer using iconv map if necessary, replacing `in`
  * pointer internal iconv buffer if rewrite happened.  The `in` pointer
  * will be left unchanged if no rewrite was needed.
  */
-extern int git_fs_path_iconv(git_fs_path_iconv_t *ic, const char **in, size_t *inlen);
+GIT_EXTERN(int) git_fs_path_iconv(git_fs_path_iconv_t *ic, const char **in, size_t *inlen);
 
 #endif /* GIT_I18N_ICONV */
 
-extern bool git_fs_path_does_decompose_unicode(const char *root);
+GIT_EXTERN(bool) git_fs_path_does_decompose_unicode(const char *root);
 
 
 typedef struct git_fs_path_diriter git_fs_path_diriter;
@@ -534,7 +534,7 @@ struct git_fs_path_diriter
  * @param flags Directory reader flags
  * @return 0 or an error code
  */
-extern int git_fs_path_diriter_init(
+GIT_EXTERN(int) git_fs_path_diriter_init(
 	git_fs_path_diriter *diriter,
 	const char *path,
 	unsigned int flags);
@@ -546,7 +546,7 @@ extern int git_fs_path_diriter_init(
  * @param diriter The directory iterator
  * @return 0, GIT_ITEROVER, or an error code
  */
-extern int git_fs_path_diriter_next(git_fs_path_diriter *diriter);
+GIT_EXTERN(int) git_fs_path_diriter_next(git_fs_path_diriter *diriter);
 
 /**
  * Returns the file name of the current item in the iterator.
@@ -556,7 +556,7 @@ extern int git_fs_path_diriter_next(git_fs_path_diriter *diriter);
  * @param diriter The directory iterator
  * @return 0 or an error code
  */
-extern int git_fs_path_diriter_filename(
+GIT_EXTERN(int) git_fs_path_diriter_filename(
 	const char **out,
 	size_t *out_len,
 	git_fs_path_diriter *diriter);
@@ -571,7 +571,7 @@ extern int git_fs_path_diriter_filename(
  * @param diriter The directory iterator
  * @return 0 or an error code
  */
-extern int git_fs_path_diriter_fullpath(
+GIT_EXTERN(int) git_fs_path_diriter_fullpath(
 	const char **out,
 	size_t *out_len,
 	git_fs_path_diriter *diriter);
@@ -583,14 +583,14 @@ extern int git_fs_path_diriter_fullpath(
  * @param diriter The directory iterator
  * @return 0 or an error code
  */
-extern int git_fs_path_diriter_stat(struct stat *out, git_fs_path_diriter *diriter);
+GIT_EXTERN(int) git_fs_path_diriter_stat(struct stat *out, git_fs_path_diriter *diriter);
 
 /**
  * Closes the directory iterator.
  *
  * @param diriter The directory iterator
  */
-extern void git_fs_path_diriter_free(git_fs_path_diriter *diriter);
+GIT_EXTERN(void) git_fs_path_diriter_free(git_fs_path_diriter *diriter);
 
 /**
  * Load all directory entries (except '.' and '..') into a vector.
@@ -607,7 +607,7 @@ extern void git_fs_path_diriter_free(git_fs_path_diriter *diriter);
  * 		prefix_len 3, the entries will look like "b/e1", "b/e2", etc.
  * @param flags Combination of GIT_FS_PATH_DIR flags.
  */
-extern int git_fs_path_dirload(
+GIT_EXTERN(int) git_fs_path_dirload(
 	git_vector *contents,
 	const char *path,
 	size_t prefix_len,
@@ -615,8 +615,8 @@ extern int git_fs_path_dirload(
 
 
 /* Used for paths to repositories on the filesystem */
-extern bool git_fs_path_is_local_file_url(const char *file_url);
-extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url_or_path);
+GIT_EXTERN(bool) git_fs_path_is_local_file_url(const char *file_url);
+GIT_EXTERN(int) git_fs_path_from_url_or_path(git_str *local_path_out, const char *url_or_path);
 
 /* Flags to determine path validity in `git_fs_path_isvalid` */
 #define GIT_FS_PATH_REJECT_EMPTY_COMPONENT    (1 << 0)
@@ -656,7 +656,7 @@ extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url
  * Validate a filesystem path; with custom callbacks per-character and
  * per-path component.
  */
-extern bool git_fs_path_str_is_valid_ext(
+GIT_EXTERN(bool) git_fs_path_str_is_valid_ext(
 	const git_str *path,
 	unsigned int flags,
 	bool (*validate_char_cb)(char ch, void *payload),
@@ -705,7 +705,7 @@ GIT_INLINE(bool) git_fs_path_str_is_valid(
 	return git_fs_path_str_is_valid_ext(path, flags, NULL, NULL, NULL, NULL);
 }
 
-extern int git_fs_path_validate_str_length_with_suffix(
+GIT_EXTERN(int) git_fs_path_validate_str_length_with_suffix(
 	git_str *path,
 	size_t suffix_len);
 

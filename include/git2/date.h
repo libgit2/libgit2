@@ -18,7 +18,7 @@
  * - "July 17, 2003"
  * - "2003-7-17 08:23i+03"
  */
-extern int git_date_offset_parse(git_time_t *out, int *out_offset, const char *date);
+GIT_EXTERN(int) git_date_offset_parse(git_time_t *out, int *out_offset, const char *date);
 
 /*
  * Parse a string into a value as a git_time_t.
@@ -30,7 +30,7 @@ extern int git_date_offset_parse(git_time_t *out, int *out_offset, const char *d
  * - "July 17, 2003"
  * - "2003-7-17 08:23"
  */
-extern int git_date_parse(git_time_t *out, const char *date);
+GIT_EXTERN(int) git_date_parse(git_time_t *out, const char *date);
 
 /*
  * Format a git_time as a RFC2822 string

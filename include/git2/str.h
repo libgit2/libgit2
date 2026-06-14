@@ -52,9 +52,9 @@ GIT_INLINE(bool) git_str_is_allocated(const git_str *str)
  * For the cases where GIT_STR_INIT cannot be used to do static
  * initialization.
  */
-extern int git_str_init(git_str *str, size_t initial_size);
+GIT_EXTERN(int) git_str_init(git_str *str, size_t initial_size);
 
-extern void git_str_dispose(git_str *str);
+GIT_EXTERN(void) git_str_dispose(git_str *str);
 
 /**
  * Resize the string buffer allocation to make more space.
@@ -87,7 +87,7 @@ int git_str_grow(git_str *str, size_t target_size);
  * Like `git_str_grow`, if this is a user-supplied string buffer,
  * this will allocate a new string uffer.
  */
-extern int git_str_grow_by(git_str *str, size_t additional_size);
+GIT_EXTERN(int) git_str_grow_by(git_str *str, size_t additional_size);
 
 /**
  * Attempt to grow the buffer to hold at least `target_size` bytes.
@@ -100,17 +100,17 @@ extern int git_str_grow_by(git_str *str, size_t additional_size);
  * `ptr` even if `asize` is zero will be copied into the newly allocated
  * string buffer.
  */
-extern int git_str_try_grow(
+GIT_EXTERN(int) git_str_try_grow(
 	git_str *str, size_t target_size, bool mark_oom);
 
-extern void git_str_swap(git_str *str_a, git_str *str_b);
-extern char *git_str_detach(git_str *str);
-extern int git_str_attach(git_str *str, char *ptr, size_t asize);
+GIT_EXTERN(void) git_str_swap(git_str *str_a, git_str *str_b);
+GIT_EXTERN(char *) git_str_detach(git_str *str);
+GIT_EXTERN(int) git_str_attach(git_str *str, char *ptr, size_t asize);
 
 /* Populates a `git_str` where the contents are not "owned" by the string
  * buffer, and calls to `git_str_dispose` will not free the given str.
  */
-extern void git_str_attach_notowned(
+GIT_EXTERN(void) git_str_attach_notowned(
 	git_str *str, const char *ptr, size_t size);
 
 /**
@@ -272,7 +272,7 @@ int git_str_splice(
  * @param esc_suffix String to insert as suffix of each found character
  * @return 0 on success, <0 on failure (probably allocation problem)
  */
-extern int git_str_puts_escaped(
+GIT_EXTERN(int) git_str_puts_escaped(
 	git_str *str,
 	const char *string,
 	const char *esc_chars,
@@ -292,28 +292,28 @@ GIT_INLINE(int) git_str_puts_escape_regex(git_str *str, const char *string)
  *
  * I.e. remove backslashes
  */
-extern void git_str_unescape(git_str *str);
+GIT_EXTERN(void) git_str_unescape(git_str *str);
 
 /**
  * Replace all \r\n with \n.
  *
  * @return 0 on success, -1 on memory error
  */
-extern int git_str_crlf_to_lf(git_str *tgt, const git_str *src);
+GIT_EXTERN(int) git_str_crlf_to_lf(git_str *tgt, const git_str *src);
 
 /**
  * Replace all \n with \r\n. Does not modify existing \r\n.
  *
  * @return 0 on success, -1 on memory error
  */
-extern int git_str_lf_to_crlf(git_str *tgt, const git_str *src);
+GIT_EXTERN(int) git_str_lf_to_crlf(git_str *tgt, const git_str *src);
 
 /**
  * Fill string buffer with the common prefix of a array of strings
  *
  * String buffer will be set to empty if there is no common prefix
  */
-extern int git_str_common_prefix(git_str *buf, char *const *const strings, size_t count);
+GIT_EXTERN(int) git_str_common_prefix(git_str *buf, char *const *const strings, size_t count);
 
 /**
  * Check if a string buffer begins with a UTF BOM
@@ -322,7 +322,7 @@ extern int git_str_common_prefix(git_str *buf, char *const *const strings, size_
  * @param str String buffer in which to check the first bytes for a BOM
  * @return Number of bytes of BOM data (or 0 if no BOM found)
  */
-extern int git_str_detect_bom(git_str_bom_t *bom, const git_str *str);
+GIT_EXTERN(int) git_str_detect_bom(git_str_bom_t *bom, const git_str *str);
 
 /**
  * Gather stats for a piece of text
@@ -337,7 +337,7 @@ extern int git_str_detect_bom(git_str_bom_t *bom, const git_str *str);
  * @param skip_bom Exclude leading BOM from stats if true
  * @return Does the string buffer heuristically look like binary data
  */
-extern bool git_str_gather_text_stats(
+GIT_EXTERN(bool) git_str_gather_text_stats(
 	git_str_text_stats *stats, const git_str *str, bool skip_bom);
 
 /**

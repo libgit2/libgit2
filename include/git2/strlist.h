@@ -10,27 +10,27 @@
 
 #include "git2/git2_util.h"
 
-extern int git_strlist_copy(char ***out, const char **in, size_t len);
+GIT_EXTERN(int) git_strlist_copy(char ***out, const char **in, size_t len);
 
-extern int git_strlist_copy_with_null(
+GIT_EXTERN(int) git_strlist_copy_with_null(
 	char ***out,
 	const char **in,
 	size_t len);
 
-extern bool git_strlist_contains_prefix(
+GIT_EXTERN(bool) git_strlist_contains_prefix(
 	const char **strings,
 	size_t len,
 	const char *str,
 	size_t n);
 
-extern bool git_strlist_contains_key(
+GIT_EXTERN(bool) git_strlist_contains_key(
 	const char **strings,
 	size_t len,
 	const char *key,
 	char delimiter);
 
-extern void git_strlist_free(char **strings, size_t len);
+GIT_EXTERN(void) git_strlist_free(char **strings, size_t len);
 
-extern void git_strlist_free_with_null(char **strings);
+GIT_EXTERN(void) git_strlist_free_with_null(char **strings);
 
 #endif

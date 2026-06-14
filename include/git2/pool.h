@@ -81,7 +81,7 @@ typedef struct {
  * Of course, you can use this in other ways, but those are the
  * two most common patterns.
  */
-extern int git_pool_init(git_pool *pool, size_t item_size);
+GIT_EXTERN(int) git_pool_init(git_pool *pool, size_t item_size);
 
 GIT_INLINE(bool) git_pool_is_initialized(git_pool *pool)
 {
@@ -91,54 +91,54 @@ GIT_INLINE(bool) git_pool_is_initialized(git_pool *pool)
 /**
  * Free all items in pool
  */
-extern void git_pool_clear(git_pool *pool);
+GIT_EXTERN(void) git_pool_clear(git_pool *pool);
 
 /**
  * Swap two pools with one another
  */
-extern void git_pool_swap(git_pool *a, git_pool *b);
+GIT_EXTERN(void) git_pool_swap(git_pool *a, git_pool *b);
 
 /**
  * Allocate space for one or more items from a pool.
  */
-extern void *git_pool_malloc(git_pool *pool, size_t items);
-extern void *git_pool_mallocz(git_pool *pool, size_t items);
+GIT_EXTERN(void *) git_pool_malloc(git_pool *pool, size_t items);
+GIT_EXTERN(void *) git_pool_mallocz(git_pool *pool, size_t items);
 
 /**
  * Allocate space and duplicate string data into it.
  *
  * This is allowed only for pools with item_size == sizeof(char)
  */
-extern char *git_pool_strndup(git_pool *pool, const char *str, size_t n);
+GIT_EXTERN(char *) git_pool_strndup(git_pool *pool, const char *str, size_t n);
 
 /**
  * Allocate space and duplicate a string into it.
  *
  * This is allowed only for pools with item_size == sizeof(char)
  */
-extern char *git_pool_strdup(git_pool *pool, const char *str);
+GIT_EXTERN(char *) git_pool_strdup(git_pool *pool, const char *str);
 
 /**
  * Allocate space and duplicate a string into it, NULL is no error.
  *
  * This is allowed only for pools with item_size == sizeof(char)
  */
-extern char *git_pool_strdup_safe(git_pool *pool, const char *str);
+GIT_EXTERN(char *) git_pool_strdup_safe(git_pool *pool, const char *str);
 
 /**
  * Allocate space for the concatenation of two strings.
  *
  * This is allowed only for pools with item_size == sizeof(char)
  */
-extern char *git_pool_strcat(git_pool *pool, const char *a, const char *b);
+GIT_EXTERN(char *) git_pool_strcat(git_pool *pool, const char *a, const char *b);
 
 /*
  * Misc utilities
  */
 #ifndef GIT_DEBUG_POOL
-extern uint32_t git_pool__open_pages(git_pool *pool);
+GIT_EXTERN(uint32_t) git_pool__open_pages(git_pool *pool);
 #endif
-extern bool git_pool__ptr_in_pool(git_pool *pool, void *ptr);
+GIT_EXTERN(bool) git_pool__ptr_in_pool(git_pool *pool, void *ptr);
 
 /**
  * This function is being called by our global setup routines to
@@ -146,6 +146,6 @@ extern bool git_pool__ptr_in_pool(git_pool *pool, void *ptr);
  *
  * @return 0 on success, <0 on failure
  */
-extern int git_pool_global_init(void);
+GIT_EXTERN(int) git_pool_global_init(void);
 
 #endif

@@ -210,16 +210,16 @@ void git_error_system_set(int code);
  * fails, the `out` structure is set to the failure error message and
  * the normal system error message is not updated.
  */
-extern int git_error_save(git_error **out);
+GIT_EXTERN(int) git_error_save(git_error **out);
 
 /**
  * Restore thread error state to the given value. The given value is
  * freed and `git_error_free` need not be called on it.
  */
-extern int git_error_restore(git_error *error);
+GIT_EXTERN(int) git_error_restore(git_error *error);
 
 /** Free an error state. */
-extern void git_error_free(git_error *error);
+GIT_EXTERN(void) git_error_free(git_error *error);
 
 /** @} */
 GIT_END_DECL

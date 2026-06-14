@@ -24,12 +24,12 @@ typedef struct {
 	char dir[GIT_FLEX_ARRAY];
 } git__DIR;
 
-extern git__DIR *git__opendir(const char *);
-extern struct git__dirent *git__readdir(git__DIR *);
-extern int git__readdir_ext(
+GIT_EXTERN(git__DIR *) git__opendir(const char *);
+GIT_EXTERN(struct git__dirent *) git__readdir(git__DIR *);
+GIT_EXTERN(int) git__readdir_ext(
 	git__DIR *, struct git__dirent *, struct git__dirent **, int *);
-extern void git__rewinddir(git__DIR *);
-extern int git__closedir(git__DIR *);
+GIT_EXTERN(void) git__rewinddir(git__DIR *);
+GIT_EXTERN(int) git__closedir(git__DIR *);
 
 # ifndef GIT__WIN32_NO_WRAP_DIR
 #	define dirent git__dirent

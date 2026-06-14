@@ -39,13 +39,13 @@ GIT_INLINE(void) git__free(void *ptr)
 	git__allocator.gfree(ptr);
 }
 
-extern void *git__calloc(size_t nelem, size_t elsize);
-extern void *git__mallocarray(size_t nelem, size_t elsize);
-extern void *git__reallocarray(void *ptr, size_t nelem, size_t elsize);
+GIT_EXTERN(void *) git__calloc(size_t nelem, size_t elsize);
+GIT_EXTERN(void *) git__mallocarray(size_t nelem, size_t elsize);
+GIT_EXTERN(void *) git__reallocarray(void *ptr, size_t nelem, size_t elsize);
 
-extern char *git__strdup(const char *str);
-extern char *git__strndup(const char *str, size_t n);
-extern char *git__substrdup(const char *str, size_t n);
+GIT_EXTERN(char *) git__strdup(const char *str);
+GIT_EXTERN(char *) git__strndup(const char *str, size_t n);
+GIT_EXTERN(char *) git__substrdup(const char *str, size_t n);
 
 /**
  * This function is being called by our global setup routines to

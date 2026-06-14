@@ -27,7 +27,7 @@ enum {
  * @param cmp The entry priority comparison function
  * @return 0 on success, <0 on error
  */
-extern int git_pqueue_init(
+GIT_EXTERN(int) git_pqueue_init(
 	git_pqueue *pq,
 	uint32_t flags,
 	size_t init_size,
@@ -46,7 +46,7 @@ extern int git_pqueue_init(
  * @param item Pointer to the item data
  * @return 0 on success, <0 on failure
  */
-extern int git_pqueue_insert(git_pqueue *pq, void *item);
+GIT_EXTERN(int) git_pqueue_insert(git_pqueue *pq, void *item);
 
 /**
  * Remove the top item in the priority queue
@@ -54,6 +54,6 @@ extern int git_pqueue_insert(git_pqueue *pq, void *item);
  * @param pq The priority queue
  * @return item from heap on success, NULL if queue is empty
  */
-extern void *git_pqueue_pop(git_pqueue *pq);
+GIT_EXTERN(void *) git_pqueue_pop(git_pqueue *pq);
 
 #endif

@@ -52,12 +52,12 @@
 #define CASESELECT(IGNORE_CASE, ICASE, CASE) \
 	((IGNORE_CASE) ? (ICASE) : (CASE))
 
-extern int git__prefixcmp(const char *str, const char *prefix);
-extern int git__prefixcmp_icase(const char *str, const char *prefix);
-extern int git__prefixncmp(const char *str, size_t str_n, const char *prefix);
-extern int git__prefixncmp_icase(const char *str, size_t str_n, const char *prefix);
-extern int git__suffixcmp(const char *str, const char *suffix);
-extern int git__suffixcmp_icase(const char *str, const char *suffix);
+GIT_EXTERN(int) git__prefixcmp(const char *str, const char *prefix);
+GIT_EXTERN(int) git__prefixcmp_icase(const char *str, const char *prefix);
+GIT_EXTERN(int) git__prefixncmp(const char *str, size_t str_n, const char *prefix);
+GIT_EXTERN(int) git__prefixncmp_icase(const char *str, size_t str_n, const char *prefix);
+GIT_EXTERN(int) git__suffixcmp(const char *str, const char *suffix);
+GIT_EXTERN(int) git__suffixcmp_icase(const char *str, const char *suffix);
 
 GIT_INLINE(int) git__signum(int val)
 {
@@ -68,8 +68,8 @@ extern int git__strntol32(int32_t *n, const char *buff, size_t buff_len, const c
 extern int git__strntol64(int64_t *n, const char *buff, size_t buff_len, const char **end_buf, int base);
 
 
-extern void git__hexdump(const char *buffer, size_t n);
-extern uint32_t git__hash(const void *key, int len, uint32_t seed);
+GIT_EXTERN(void) git__hexdump(const char *buffer, size_t n);
+GIT_EXTERN(uint32_t) git__hash(const void *key, int len, uint32_t seed);
 
 /* 32-bit cross-platform rotl */
 #ifdef _MSC_VER /* use built-in method in MSVC */
@@ -78,13 +78,13 @@ extern uint32_t git__hash(const void *key, int len, uint32_t seed);
 #	define git__rotl(v, s) (uint32_t)(((uint32_t)(v) << (s)) | ((uint32_t)(v) >> (32 - (s))))
 #endif
 
-extern char *git__strtok(char **end, const char *sep);
-extern char *git__strsep(char **end, const char *sep);
+GIT_EXTERN(char *) git__strtok(char **end, const char *sep);
+GIT_EXTERN(char *) git__strsep(char **end, const char *sep);
 
-extern void git__strntolower(char *str, size_t len);
-extern void git__strtolower(char *str);
+GIT_EXTERN(void) git__strntolower(char *str, size_t len);
+GIT_EXTERN(void) git__strtolower(char *str);
 
-extern size_t git__linenlen(const char *buffer, size_t buffer_len);
+GIT_EXTERN(size_t) git__linenlen(const char *buffer, size_t buffer_len);
 
 GIT_INLINE(const char *) git__next_line(const char *s)
 {
@@ -108,19 +108,19 @@ GIT_INLINE(const void *) git__memrchr(const void *s, int c, size_t n)
 	return NULL;
 }
 
-extern const void * git__memmem(const void *haystack, size_t haystacklen,
+GIT_EXTERN(const void *) git__memmem(const void *haystack, size_t haystacklen,
 				const void *needle, size_t needlelen);
 
 typedef int (*git__tsort_cmp)(const void *a, const void *b);
 
-extern void git__tsort(void **dst, size_t size, git__tsort_cmp cmp);
+GIT_EXTERN(void) git__tsort(void **dst, size_t size, git__tsort_cmp cmp);
 
 typedef int (*git__sort_r_cmp)(const void *a, const void *b, void *payload);
 
-extern void git__tsort_r(
+GIT_EXTERN(void) git__tsort_r(
 	void **dst, size_t size, git__sort_r_cmp cmp, void *payload);
 
-extern void git__qsort_r(
+GIT_EXTERN(void) git__qsort_r(
 	void *els, size_t nel, size_t elsize, git__sort_r_cmp cmp, void *payload);
 
 /**
@@ -128,14 +128,14 @@ extern void git__qsort_r(
  * 		element is or would be inserted if not found.
  * @return 0 if found; GIT_ENOTFOUND if not found
  */
-extern int git__bsearch(
+GIT_EXTERN(int) git__bsearch(
 	void **array,
 	size_t array_len,
 	const void *key,
 	int (*compare)(const void *key, const void *element),
 	size_t *position);
 
-extern int git__bsearch_r(
+GIT_EXTERN(int) git__bsearch_r(
 	void **array,
 	size_t array_len,
 	const void *key,
@@ -146,13 +146,13 @@ extern int git__bsearch_r(
 #define git__strcmp strcmp
 #define git__strncmp strncmp
 
-extern int git__strcmp_cb(const void *a, const void *b);
-extern int git__strcasecmp_cb(const void *a, const void *b);
+GIT_EXTERN(int) git__strcmp_cb(const void *a, const void *b);
+GIT_EXTERN(int) git__strcasecmp_cb(const void *a, const void *b);
 
-extern int git__strcasecmp(const char *a, const char *b);
-extern int git__strncasecmp(const char *a, const char *b, size_t sz);
+GIT_EXTERN(int) git__strcasecmp(const char *a, const char *b);
+GIT_EXTERN(int) git__strncasecmp(const char *a, const char *b, size_t sz);
 
-extern int git__strcasesort_cmp(const char *a, const char *b);
+GIT_EXTERN(int) git__strcasesort_cmp(const char *a, const char *b);
 
 /*
  * Compare some NUL-terminated `a` to a possibly non-NUL terminated
@@ -257,7 +257,7 @@ GIT_INLINE(bool) git__iswildcard(int c)
  * Valid values for true are: 'true', 'yes', 'on'
  * Valid values for false are: 'false', 'no', 'off'
  */
-extern int git__parse_bool(int *out, const char *value);
+GIT_EXTERN(int) git__parse_bool(int *out, const char *value);
 
 /*
  * Unescapes a string in-place.
@@ -266,7 +266,7 @@ extern int git__parse_bool(int *out, const char *value);
  * - "jackie\" -> "jacky\"
  * - "chan\\" -> "chan\"
  */
-extern size_t git__unescape(char *str);
+GIT_EXTERN(size_t) git__unescape(char *str);
 
 /*
  * Safely zero-out memory, making sure that the compiler
@@ -351,9 +351,9 @@ GIT_INLINE(uint64_t) git_time_monotonic(void)
 
 #endif
 
-extern int git__getenv(git_str *out, const char *name);
+GIT_EXTERN(int) git__getenv(git_str *out, const char *name);
 
-extern int git__online_cpus(void);
+GIT_EXTERN(int) git__online_cpus(void);
 
 GIT_INLINE(int) git__noop(void) { return 0; }
 GIT_INLINE(int) git__noop_args(void *a, ...) { GIT_UNUSED(a); return 0; }

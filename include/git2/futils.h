@@ -21,14 +21,14 @@
  *
  * Read whole files into an in-memory buffer for processing
  */
-extern int git_futils_readbuffer(git_str *obj, const char *path);
-extern int git_futils_readbuffer_updated(
+GIT_EXTERN(int) git_futils_readbuffer(git_str *obj, const char *path);
+GIT_EXTERN(int) git_futils_readbuffer_updated(
 	git_str *obj,
 	const char *path,
 	unsigned char checksum[GIT_HASH_SHA256_SIZE],
 	int *updated);
-extern int git_futils_readbuffer_fd_full(git_str *obj, git_file fd);
-extern int git_futils_readbuffer_fd(git_str *obj, git_file fd, size_t len);
+GIT_EXTERN(int) git_futils_readbuffer_fd_full(git_str *obj, git_file fd);
+GIT_EXTERN(int) git_futils_readbuffer_fd(git_str *obj, git_file fd, size_t len);
 
 /* Additional constants for `git_futils_writebuffer`'s `open_flags`.  We
  * support these internally and they will be removed before the `open` call.
@@ -45,7 +45,7 @@ extern int git_futils_readbuffer_fd(git_str *obj, git_file fd, size_t len);
 # define O_FSYNC (1 << 30)
 #endif
 
-extern int git_futils_writebuffer(
+GIT_EXTERN(int) git_futils_writebuffer(
 	const git_str *buf, const char *path, int open_flags, mode_t mode);
 
 /**
@@ -62,23 +62,23 @@ extern int git_futils_writebuffer(
  * Create and open a file, while also
  * creating all the folders in its path
  */
-extern int git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode);
+GIT_EXTERN(int) git_futils_creat_withpath(const char *path, const mode_t dirmode, const mode_t mode);
 
 /**
  * Create and open a process-locked file
  */
-extern int git_futils_creat_locked(const char *path, const mode_t mode);
+GIT_EXTERN(int) git_futils_creat_locked(const char *path, const mode_t mode);
 
 /**
  * Create and open a process-locked file, while
  * also creating all the folders in its path
  */
-extern int git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode);
+GIT_EXTERN(int) git_futils_creat_locked_withpath(const char *path, const mode_t dirmode, const mode_t mode);
 
 /**
  * Create a path recursively.
  */
-extern int git_futils_mkdir_r(const char *path, const mode_t mode);
+GIT_EXTERN(int) git_futils_mkdir_r(const char *path, const mode_t mode);
 
 /**
  * Flags to pass to `git_futils_mkdir`.
@@ -145,13 +145,13 @@ struct git_futils_mkdir_options
  * @param opts Extended options, or null.
  * @return 0 on success, else error code
  */
-extern int git_futils_mkdir_relative(const char *path, const char *base, mode_t mode, uint32_t flags, struct git_futils_mkdir_options *opts);
+GIT_EXTERN(int) git_futils_mkdir_relative(const char *path, const char *base, mode_t mode, uint32_t flags, struct git_futils_mkdir_options *opts);
 
 /**
  * Create a directory or entire path.  Similar to `git_futils_mkdir_relative`
  * without performance data.
  */
-extern int git_futils_mkdir(const char *path, mode_t mode, uint32_t flags);
+GIT_EXTERN(int) git_futils_mkdir(const char *path, mode_t mode, uint32_t flags);
 
 /**
  * Create all the folders required to contain
@@ -188,7 +188,7 @@ typedef enum {
  * @param flags Combination of git_futils_rmdir_flags values
  * @return 0 on success; -1 on error.
  */
-extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags);
+GIT_EXTERN(int) git_futils_rmdir_r(const char *path, const char *base, uint32_t flags);
 
 /**
  * Create and open a temporary file with a `_git2_` suffix in a
@@ -204,20 +204,20 @@ extern int git_futils_rmdir_r(const char *path, const char *base, uint32_t flags
  *
  * @return On success, an open file descriptor, else an error code < 0.
  */
-extern int git_futils_mktmp(git_str *path_out, const char *filename, mode_t mode);
+GIT_EXTERN(int) git_futils_mktmp(git_str *path_out, const char *filename, mode_t mode);
 
 /**
  * Move a file on the filesystem, create the
  * destination path if it doesn't exist
  */
-extern int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode);
+GIT_EXTERN(int) git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmode);
 
 /**
  * Copy a file
  *
  * The filemode will be used for the newly created file.
  */
-extern int git_futils_cp(
+GIT_EXTERN(int) git_futils_cp(
 	const char *from,
 	const char *to,
 	mode_t filemode);
@@ -226,7 +226,7 @@ extern int git_futils_cp(
  * Set the files atime and mtime to the given time, or the current time
  * if `ts` is NULL.
  */
-extern int git_futils_touch(const char *path, time_t *when);
+GIT_EXTERN(int) git_futils_touch(const char *path, time_t *when);
 
 /**
  * Flags that can be passed to `git_futils_cp_r`.
@@ -266,7 +266,7 @@ typedef enum {
  * will actually be copied from the source files and the `dirmode` arg
  * will be ignored.
  */
-extern int git_futils_cp_r(
+GIT_EXTERN(int) git_futils_cp_r(
 	const char *from,
 	const char *to,
 	uint32_t flags,
@@ -275,17 +275,17 @@ extern int git_futils_cp_r(
 /**
  * Open a file readonly and set error if needed.
  */
-extern int git_futils_open_ro(const char *path);
+GIT_EXTERN(int) git_futils_open_ro(const char *path);
 
 /**
  * Truncate a file, creating it if it doesn't exist.
  */
-extern int git_futils_truncate(const char *path, int mode);
+GIT_EXTERN(int) git_futils_truncate(const char *path, int mode);
 
 /**
  * Get the filesize in bytes of a file
  */
-extern int git_futils_filesize(uint64_t *out, git_file fd);
+GIT_EXTERN(int) git_futils_filesize(uint64_t *out, git_file fd);
 
 #define GIT_PERMS_IS_EXEC(MODE)		(((MODE) & 0100) != 0)
 #define GIT_PERMS_CANONICAL(MODE)	(GIT_PERMS_IS_EXEC(MODE) ? 0755 : 0644)
@@ -299,7 +299,7 @@ extern int git_futils_filesize(uint64_t *out, git_file fd);
 /**
  * Convert a mode_t from the OS to a legal git mode_t value.
  */
-extern mode_t git_futils_canonical_mode(mode_t raw_mode);
+GIT_EXTERN(mode_t) git_futils_canonical_mode(mode_t raw_mode);
 
 
 /**
@@ -317,7 +317,7 @@ extern mode_t git_futils_canonical_mode(mode_t raw_mode);
  * - 0 on success;
  * - -1 on error.
  */
-extern int git_futils_mmap_ro(
+GIT_EXTERN(int) git_futils_mmap_ro(
 	git_map *out,
 	git_file fd,
 	off64_t begin,
@@ -333,7 +333,7 @@ extern int git_futils_mmap_ro(
  * - GIT_ENOTFOUND if not found;
  * - -1 on an unspecified OS related error.
  */
-extern int git_futils_mmap_ro_file(
+GIT_EXTERN(int) git_futils_mmap_ro_file(
 	git_map *out,
 	const char *path);
 
@@ -341,7 +341,7 @@ extern int git_futils_mmap_ro_file(
  * Release the memory associated with a previous memory mapping.
  * @param map the mapping description previously configured.
  */
-extern void git_futils_mmap_free(git_map *map);
+GIT_EXTERN(void) git_futils_mmap_free(git_map *map);
 
 /**
  * Create a "fake" symlink (text file containing the target path).
@@ -350,7 +350,7 @@ extern void git_futils_mmap_free(git_map *map);
  * @param path symlink file to be created
  * @return 0 on success, -1 on error
  */
-extern int git_futils_fake_symlink(const char *target, const char *path);
+GIT_EXTERN(int) git_futils_fake_symlink(const char *target, const char *path);
 
 /**
  * A file stamp represents a snapshot of information about a file that can
@@ -377,7 +377,7 @@ typedef struct {
  * @param path Path to stat and check if changed
  * @return 0 if up-to-date, 1 if out-of-date, GIT_ENOTFOUND if cannot stat
  */
-extern int git_futils_filestamp_check(
+GIT_EXTERN(int) git_futils_filestamp_check(
 	git_futils_filestamp *stamp, const char *path);
 
 /**
@@ -390,13 +390,13 @@ extern int git_futils_filestamp_check(
  * @param tgt File stamp to write to
  * @param src File stamp to copy from or NULL to clear the target
  */
-extern void git_futils_filestamp_set(
+GIT_EXTERN(void) git_futils_filestamp_set(
 	git_futils_filestamp *tgt, const git_futils_filestamp *src);
 
 /**
  * Set file stamp data from stat structure
  */
-extern void git_futils_filestamp_set_from_stat(
+GIT_EXTERN(void) git_futils_filestamp_set_from_stat(
 	git_futils_filestamp *stamp, struct stat *st);
 
 /**
@@ -406,7 +406,7 @@ extern void git_futils_filestamp_set_from_stat(
  * @param path Path of the directory to sync.
  * @return 0 on success, -1 on error
  */
-extern int git_futils_fsync_dir(const char *path);
+GIT_EXTERN(int) git_futils_fsync_dir(const char *path);
 
 /**
  * `fsync` the parent directory of the given path, if `fsync` is
@@ -415,6 +415,6 @@ extern int git_futils_fsync_dir(const char *path);
  * @param path Path of the file whose parent directory should be synced.
  * @return 0 on success, -1 on error
  */
-extern int git_futils_fsync_parent(const char *path);
+GIT_EXTERN(int) git_futils_fsync_parent(const char *path);
 
 #endif

@@ -139,8 +139,8 @@ extern int p_creat(const char *path, mode_t mode);
 extern int p_getcwd(char *buffer_out, size_t size);
 extern int p_rename(const char *from, const char *to);
 
-extern int git__page_size(size_t *page_size);
-extern int git__mmap_alignment(size_t *page_size);
+GIT_EXTERN(int) git__page_size(size_t *page_size);
+GIT_EXTERN(int) git__mmap_alignment(size_t *page_size);
 
 /* The number of times `p_fsync` has been called.  Note that this is for
  * test code only; it it not necessarily thread-safe and should not be

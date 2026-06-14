@@ -61,7 +61,7 @@ typedef struct {
  * @param opts the options for creating the process
  * @return 0 or an error code
  */
-extern int git_process_new(
+GIT_EXTERN(int) git_process_new(
 	git_process **out,
 	const char **args,
 	size_t args_len,
@@ -86,7 +86,7 @@ extern int git_process_new(
  * this call.  You can avoid this by setting `exclude_env` in the
  * options and providing the entire environment yourself.
  */
-extern int git_process_new_from_cmdline(
+GIT_EXTERN(int) git_process_new_from_cmdline(
 	git_process **out,
 	const char *cmdline,
 	const char **env,
@@ -95,12 +95,12 @@ extern int git_process_new_from_cmdline(
 
 #ifdef GIT_WIN32
 
-extern int git_process__appname(
+GIT_EXTERN(int) git_process__appname(
 	git_str *out,
 	const char *cmdline);
 
 /* Windows path parsing is tricky; this helper function is for testing. */
-extern int git_process__cmdline(
+GIT_EXTERN(int) git_process__cmdline(
 	git_str *out,
 	const char **in,
 	size_t in_len);
@@ -124,7 +124,7 @@ GIT_INLINE(bool) git_process__is_cmdline_option(const char *str)
  * @param process the process to start
  * @return 0 or an error code
  */
-extern int git_process_start(git_process *process);
+GIT_EXTERN(int) git_process_start(git_process *process);
 
 /**
  * Returns the process id of the process.
@@ -133,7 +133,7 @@ extern int git_process_start(git_process *process);
  * @param process the process to query
  * @return 0 or an error code
  */
-extern int git_process_id(p_pid_t *out, git_process *process);
+GIT_EXTERN(int) git_process_id(p_pid_t *out, git_process *process);
 
 /**
  * Read from the process's stdout.  The process must have been created with
@@ -144,7 +144,7 @@ extern int git_process_id(p_pid_t *out, git_process *process);
  * @param count maximum number of bytes to read
  * @return number of bytes read or an error code
  */
-extern ssize_t git_process_read(git_process *process, void *buf, size_t count);
+GIT_EXTERN(ssize_t) git_process_read(git_process *process, void *buf, size_t count);
 
 /**
  * Read from the process's stderr.  The process must have been created with
@@ -155,7 +155,7 @@ extern ssize_t git_process_read(git_process *process, void *buf, size_t count);
  * @param count maximum number of bytes to read
  * @return number of bytes read or an error code
  */
-extern ssize_t git_process_read_err(git_process *process, void *buf, size_t count);
+GIT_EXTERN(ssize_t) git_process_read_err(git_process *process, void *buf, size_t count);
 
 /**
  * Write to the process's stdin.  The process must have been created with
@@ -166,7 +166,7 @@ extern ssize_t git_process_read_err(git_process *process, void *buf, size_t coun
  * @param count maximum number of bytes to write
  * @return number of bytes written or an error code
  */
-extern ssize_t git_process_write(git_process *process, const void *buf, size_t count);
+GIT_EXTERN(ssize_t) git_process_write(git_process *process, const void *buf, size_t count);
 
 /**
  * Wait for the process to finish.
@@ -174,28 +174,28 @@ extern ssize_t git_process_write(git_process *process, const void *buf, size_t c
  * @param result the result of the process or NULL
  * @param process the process to wait on
  */
-extern int git_process_wait(git_process_result *result, git_process *process);
+GIT_EXTERN(int) git_process_wait(git_process_result *result, git_process *process);
 
 /**
  * Close the input pipe from the child.
  *
  * @param process the process to close the pipe on
  */
-extern int git_process_close_in(git_process *process);
+GIT_EXTERN(int) git_process_close_in(git_process *process);
 
 /**
  * Close the output pipe from the child.
  *
  * @param process the process to close the pipe on
  */
-extern int git_process_close_out(git_process *process);
+GIT_EXTERN(int) git_process_close_out(git_process *process);
 
 /**
  * Close the error pipe from the child.
  *
  * @param process the process to close the pipe on
  */
-extern int git_process_close_err(git_process *process);
+GIT_EXTERN(int) git_process_close_err(git_process *process);
 
 /**
  * Close all resources that are used by the process.  This does not
@@ -203,7 +203,7 @@ extern int git_process_close_err(git_process *process);
  *
  * @parma process the process to close
  */
-extern int git_process_close(git_process *process);
+GIT_EXTERN(int) git_process_close(git_process *process);
 
 /**
  * Place a human-readable error message in the given git buffer.
@@ -211,13 +211,13 @@ extern int git_process_close(git_process *process);
  * @param msg the buffer to store the message
  * @param result the process result that produced an error
  */
-extern int git_process_result_msg(git_str *msg, git_process_result *result);
+GIT_EXTERN(int) git_process_result_msg(git_str *msg, git_process_result *result);
 
 /**
  * Free a process structure
  *
  * @param process the process to free
  */
-extern void git_process_free(git_process *process);
+GIT_EXTERN(void) git_process_free(git_process *process);
 
 #endif
