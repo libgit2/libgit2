@@ -7,7 +7,7 @@
 
 #include "git2/vector.h"
 
-#include "integer.h"
+#include "git2/integer.h"
 
 /* In elements, not bytes */
 #define MIN_ALLOCSIZE	8

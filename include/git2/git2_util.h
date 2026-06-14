@@ -106,7 +106,7 @@ typedef struct git_str git_str;
 #include "git2/types.h"
 #include "git2/errors.h"
 #include "git2/thread.h"
-#include "integer.h"
+#include "git2/integer.h"
 #include "git2/assert_safe.h"
 
 #include "posix.h"
