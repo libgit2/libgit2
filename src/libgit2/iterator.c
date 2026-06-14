@@ -7,6 +7,10 @@
 
 #include "git2/iterator.h"
 
+#include "common.h"
+
+#include "ignore.h"
+
 #include "tree.h"
 #include "index.h"
 #include "path.h"

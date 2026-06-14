@@ -10,9 +10,9 @@
 #include "common.h"
 
 #include "git2/index.h"
-#include "vector.h"
-#include "str.h"
-#include "ignore.h"
+#include "git2/vector.h"
+#include "git2/str.h"
+#include "git2/ignore.h"
 
 /**
  * @file git2/iterator.h
