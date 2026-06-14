@@ -3,17 +3,17 @@
 add_library(util OBJECT)
 
 # configure_file(git2_features.h.in "${PROJECT_BINARY_DIR}/gen_headers/git2_features.h")
-# configure_file(git2_features.h.in "${PROJECT_SOURCE_DIR}/include/git2/git2_features.h")
-configure_file(git2_features.h.in "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}/git2_features.h")
+configure_file(git2_features.h.in "${PROJECT_SOURCE_DIR}/include/git2/git2_features.h")
+# configure_file(git2_features.h.in "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}/git2_features.h")
 
-install(FILES "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}/git2_features.h"
+install(FILES "${PROJECT_SOURCE_DIR}/include/git2/git2_features.h"
         DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${LIBGIT2_FILENAME}")
 
 set(UTIL_INCLUDES
 	"${PROJECT_SOURCE_DIR}/src/util"
 	"${PROJECT_SOURCE_DIR}/include"
 	# "${PROJECT_BINARY_DIR}/gen_headers"
-	"${PROJECT_BINARY_DIR}/include"
+	# "${PROJECT_BINARY_DIR}/include"
 )
 
 file(GLOB UTIL_SRC *.c *.h allocators/*.c allocators/*.h hash.h)
