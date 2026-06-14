@@ -49,4 +49,7 @@ struct p_stat {
 
 #define stat p_stat
 
+/** @} */
+GIT_END_DECL
+
 #endif

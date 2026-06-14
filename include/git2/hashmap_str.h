@@ -40,4 +40,7 @@ GIT_INLINE(bool) git_hashmap_str_equal(const char *one, const char *two)
 GIT_HASHSET_SETUP(git_hashset_str, const char *, git_hashmap_str_hash, git_hashmap_str_equal);
 GIT_HASHMAP_SETUP(git_hashmap_str, const char *, void *, git_hashmap_str_hash, git_hashmap_str_equal);
 
+/** @} */
+GIT_END_DECL
+
 #endif

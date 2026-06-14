@@ -172,4 +172,7 @@ typedef struct git_str git_str;
 #include "git2/util.h"
 #include "git2/ctype_compat.h"
 
+/** @} */
+GIT_END_DECL
+
 #endif

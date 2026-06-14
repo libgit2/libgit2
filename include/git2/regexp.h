@@ -99,4 +99,7 @@ int git_regexp_match(const git_regexp *r, const char *string);
  */
 int git_regexp_search(const git_regexp *r, const char *string, size_t nmatches, git_regmatch *matches);
 
+/** @} */
+GIT_END_DECL
+
 #endif

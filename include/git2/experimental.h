@@ -17,4 +17,7 @@
  * instead.
  */
 
+/** @} */
+GIT_END_DECL
+
 #endif

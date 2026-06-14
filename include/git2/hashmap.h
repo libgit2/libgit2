@@ -422,4 +422,7 @@ typedef uint32_t git_hashmap_iter_t;
 	GIT_HASHMAP_STRUCT(name, key_t, val_t) \
 	GIT_HASHMAP_FUNCTIONS(name, GIT_HASHMAP_INLINE, key_t, val_t, __hash_fn, __equal_fn)
 
+/** @} */
+GIT_END_DECL
+
 #endif

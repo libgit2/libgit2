@@ -148,4 +148,7 @@ GIT_EXTERN(bool) git_pool__ptr_in_pool(git_pool *pool, void *ptr);
  */
 GIT_EXTERN(int) git_pool_global_init(void);
 
+/** @} */
+GIT_END_DECL
+
 #endif

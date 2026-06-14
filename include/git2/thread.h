@@ -477,4 +477,7 @@ void *git_tlsdata_get(git_tlsdata_key key);
  */
 int git_tlsdata_dispose(git_tlsdata_key key);
 
+/** @} */
+GIT_END_DECL
+
 #endif

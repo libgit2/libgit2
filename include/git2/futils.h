@@ -417,4 +417,7 @@ GIT_EXTERN(int) git_futils_fsync_dir(const char *path);
  */
 GIT_EXTERN(int) git_futils_fsync_parent(const char *path);
 
+/** @} */
+GIT_END_DECL
+
 #endif

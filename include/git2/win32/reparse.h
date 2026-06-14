@@ -54,4 +54,7 @@ typedef struct _GIT_REPARSE_DATA_BUFFER {
 # define FSCTL_SET_REPARSE_POINT			0x000900a4
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

@@ -61,4 +61,7 @@ int git_rwlock_wrlock(git_rwlock *);
 int git_rwlock_wrunlock(git_rwlock *);
 int git_rwlock_free(git_rwlock *);
 
+/** @} */
+GIT_END_DECL
+
 #endif

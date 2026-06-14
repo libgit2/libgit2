@@ -41,4 +41,7 @@ GIT_EXTERN(int) git__closedir(git__DIR *);
 #	define closedir git__closedir
 # endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

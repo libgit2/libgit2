@@ -16,4 +16,7 @@ struct git_hash_sha1_ctx {
 	SHA1_CTX c;
 };
 
+/** @} */
+GIT_END_DECL
+
 #endif

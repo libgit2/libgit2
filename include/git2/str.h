@@ -356,4 +356,7 @@ int git_str_is_binary(const git_str *str);
 */
 int git_str_contains_nul(const git_str *str);
 
+/** @} */
+GIT_END_DECL
+
 #endif

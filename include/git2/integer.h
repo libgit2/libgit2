@@ -217,4 +217,7 @@ GIT_INLINE(bool) git__multiply_int64_overflow(int64_t *out, int64_t one, int64_t
 }
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

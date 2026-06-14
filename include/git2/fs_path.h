@@ -816,4 +816,7 @@ int git_fs_path_owner_is_current_user(bool *out, const char *path);
  */
 int git_fs_path_find_executable(git_str *fullpath, const char *executable);
 
+/** @} */
+GIT_END_DECL
+
 #endif

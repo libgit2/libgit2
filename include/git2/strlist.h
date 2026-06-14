@@ -33,4 +33,7 @@ GIT_EXTERN(void) git_strlist_free(char **strings, size_t len);
 
 GIT_EXTERN(void) git_strlist_free_with_null(char **strings);
 
+/** @} */
+GIT_END_DECL
+
 #endif

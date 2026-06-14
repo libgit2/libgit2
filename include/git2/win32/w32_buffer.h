@@ -16,4 +16,7 @@
  */
 int git_str_put_w(git_str *buf, const wchar_t *string_w, size_t len_w);
 
+/** @} */
+GIT_END_DECL
+
 #endif

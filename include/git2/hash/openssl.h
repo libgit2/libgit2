@@ -60,4 +60,7 @@ struct git_hash_sha256_ctx {
 };
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

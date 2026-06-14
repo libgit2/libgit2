@@ -43,4 +43,7 @@ typedef struct { /* memory mapped buffer	*/
 extern int p_mmap(git_map *out, size_t len, int prot, int flags, int fd, off64_t offset);
 extern int p_munmap(git_map *map);
 
+/** @} */
+GIT_END_DECL
+
 #endif

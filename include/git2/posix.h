@@ -217,4 +217,7 @@ struct pollfd {
 extern int p_poll(struct pollfd *fds, unsigned int nfds, int timeout);
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

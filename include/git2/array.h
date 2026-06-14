@@ -127,4 +127,7 @@ GIT_INLINE(int) git_array__search(
 	git_array__search(out, (a).ptr, sizeof(*(a).ptr), (a).size, \
 		(cmp), (key))
 
+/** @} */
+GIT_END_DECL
+
 #endif

@@ -72,4 +72,7 @@ GIT_INLINE(void) git_bitvec_free(git_bitvec *bv)
 		git__free(bv->u.words);
 }
 
+/** @} */
+GIT_END_DECL
+
 #endif

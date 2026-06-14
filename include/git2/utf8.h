@@ -49,4 +49,7 @@ extern size_t git_utf8_char_length(const char *str, size_t str_len);
  */
 extern size_t git_utf8_valid_buf_length(const char *str, size_t str_len);
 
+/** @} */
+GIT_END_DECL
+
 #endif

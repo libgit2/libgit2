@@ -88,4 +88,7 @@ size_t git_win32_path_remove_namespace(wchar_t *str, size_t len);
 
 int git_win32_path_find_executable(git_win32_path fullpath, wchar_t* exe);
 
+/** @} */
+GIT_END_DECL
+
 #endif

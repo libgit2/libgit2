@@ -220,4 +220,7 @@ GIT_EXTERN(int) git_process_result_msg(git_str *msg, git_process_result *result)
  */
 GIT_EXTERN(void) git_process_free(git_process *process);
 
+/** @} */
+GIT_END_DECL
+
 #endif

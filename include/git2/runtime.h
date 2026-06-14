@@ -59,4 +59,7 @@ int git_runtime_shutdown(void);
  */
 int git_runtime_shutdown_register(git_runtime_shutdown_fn callback);
 
+/** @} */
+GIT_END_DECL
+
 #endif

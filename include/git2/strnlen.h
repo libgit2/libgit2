@@ -21,4 +21,7 @@ GIT_INLINE(size_t) p_strnlen(const char *s, size_t maxlen) {
 #   define p_strnlen strnlen
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

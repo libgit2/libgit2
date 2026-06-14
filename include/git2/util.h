@@ -360,4 +360,7 @@ GIT_INLINE(int) git__noop_args(void *a, ...) { GIT_UNUSED(a); return 0; }
 
 #include "git2/alloc.h"
 
+/** @} */
+GIT_END_DECL
+
 #endif

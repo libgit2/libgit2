@@ -56,4 +56,7 @@ GIT_EXTERN(int) git_pqueue_insert(git_pqueue *pq, void *item);
  */
 GIT_EXTERN(void *) git_pqueue_pop(git_pqueue *pq);
 
+/** @} */
+GIT_END_DECL
+
 #endif

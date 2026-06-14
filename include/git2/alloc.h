@@ -62,4 +62,7 @@ int git_allocator_global_init(void);
  */
 int git_allocator_setup(git_allocator *allocator);
 
+/** @} */
+GIT_END_DECL
+
 #endif

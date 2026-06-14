@@ -219,4 +219,7 @@ int git_win32_leakcheck_stacktrace_dump(
 const char *git_win32_leakcheck_stacktrace(int skip, const char *file);
 
 #endif
+/** @} */
+GIT_END_DECL
+
 #endif

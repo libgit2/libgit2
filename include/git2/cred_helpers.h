@@ -12,4 +12,7 @@
 # include "git2/credential_helpers.h"
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

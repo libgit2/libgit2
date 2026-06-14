@@ -33,4 +33,7 @@ typedef SSIZE_T ssize_t;
 #define GIT_LIBGIT2_CALL __cdecl
 #define GIT_SYSTEM_CALL NTAPI
 
+/** @} */
+GIT_END_DECL
+
 #endif

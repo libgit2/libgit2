@@ -58,4 +58,7 @@ GIT_INLINE(size_t) git_hash_size(git_hash_algorithm_t algorithm) {
 	}
 }
 
+/** @} */
+GIT_END_DECL
+
 #endif

@@ -34,4 +34,7 @@ void git_rand_seed(uint64_t seed);
  */
 uint64_t git_rand_next(void);
 
+/** @} */
+GIT_END_DECL
+
 #endif

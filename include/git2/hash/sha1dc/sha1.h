@@ -107,4 +107,7 @@ int  SHA1DCFinal(unsigned char[20], SHA1_CTX*);
 #include SHA1DC_CUSTOM_TRAILING_INCLUDE_SHA1_H
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

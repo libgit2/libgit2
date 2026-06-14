@@ -34,4 +34,7 @@ GIT_INLINE(int) git_has_win32_version(int major, int minor, int service_pack)
 	return 1;
 }
 
+/** @} */
+GIT_END_DECL
+
 #endif

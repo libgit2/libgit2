@@ -14,4 +14,7 @@
 
 int git_debugalloc_init_allocator(git_allocator *allocator);
 
+/** @} */
+GIT_END_DECL
+
 #endif

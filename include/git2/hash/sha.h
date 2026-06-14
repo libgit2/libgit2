@@ -72,4 +72,7 @@ int git_hash_sha256_init(git_hash_sha256_ctx *c);
 int git_hash_sha256_update(git_hash_sha256_ctx *c, const void *data, size_t len);
 int git_hash_sha256_final(unsigned char *out, git_hash_sha256_ctx *c);
 
+/** @} */
+GIT_END_DECL
+
 #endif

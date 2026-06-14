@@ -42,4 +42,7 @@ GIT_EXTERN(int) git_date_parse(git_time_t *out, const char *date);
  */
 extern int git_date_rfc2822_fmt(git_str *out, git_time_t time, int offset);
 
+/** @} */
+GIT_END_DECL
+
 #endif

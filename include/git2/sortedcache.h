@@ -179,4 +179,7 @@ void *git_sortedcache_entry(git_sortedcache *sc, size_t pos);
 int git_sortedcache_lookup_index(
 	size_t *out, git_sortedcache *sc, const char *key);
 
+/** @} */
+GIT_END_DECL
+
 #endif

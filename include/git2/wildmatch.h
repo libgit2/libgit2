@@ -20,4 +20,7 @@
 
 int wildmatch(const char *pattern, const char *text, unsigned int flags);
 
+/** @} */
+GIT_END_DECL
+
 #endif

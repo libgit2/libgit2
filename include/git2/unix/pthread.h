@@ -54,4 +54,7 @@ GIT_INLINE(int) git_threads_global_init(void) { return 0; }
 #define git_rwlock_free(a)	pthread_rwlock_destroy(a)
 #define GIT_RWLOCK_STATIC_INIT	PTHREAD_RWLOCK_INITIALIZER
 
+/** @} */
+GIT_END_DECL
+
 #endif

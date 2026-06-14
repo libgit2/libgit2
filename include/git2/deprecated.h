@@ -1137,4 +1137,7 @@ GIT_END_DECL
 
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

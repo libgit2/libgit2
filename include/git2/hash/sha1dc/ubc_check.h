@@ -49,4 +49,7 @@ void ubc_check(const uint32_t W[80], uint32_t dvmask[DVMASKSIZE]);
 #include SHA1DC_CUSTOM_TRAILING_INCLUDE_UBC_CHECK_H
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

@@ -99,4 +99,7 @@ GIT_INLINE(int) p_futimes(int f, const struct p_timeval t[2])
 #define p_pread(f, d, s, o) pread(f, d, s, o)
 #define p_pwrite(f, d, s, o) pwrite(f, d, s, o)
 
+/** @} */
+GIT_END_DECL
+
 #endif

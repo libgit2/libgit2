@@ -107,4 +107,7 @@
 #	endif
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

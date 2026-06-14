@@ -124,4 +124,7 @@ int git_utf8_from_16_alloc_with_len(
 	const wchar_t *src,
 	int src_len);
 
+/** @} */
+GIT_END_DECL
+
 #endif

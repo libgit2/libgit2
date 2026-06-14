@@ -20,4 +20,7 @@ void __mingworg_MemoryBarrier(void);
 
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

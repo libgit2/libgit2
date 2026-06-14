@@ -67,4 +67,7 @@ GIT_INLINE(bool) git__isprint(int c)
 # define git__isprint(a)  (!!isprint((unsigned char)(a)))
 #endif
 
+/** @} */
+GIT_END_DECL
+
 #endif

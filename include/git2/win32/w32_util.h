@@ -143,4 +143,7 @@ GIT_INLINE(void) git_win32__file_information_to_stat(
 		fileinfo->ftLastWriteTime);
 }
 
+/** @} */
+GIT_END_DECL
+
 #endif

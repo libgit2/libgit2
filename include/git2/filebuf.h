@@ -104,4 +104,7 @@ GIT_INLINE(int) git_filebuf_hash_flags(git_hash_algorithm_t algorithm)
 	}
 }
 
+/** @} */
+GIT_END_DECL
+
 #endif

@@ -45,4 +45,7 @@
 typedef wchar_t git_win32_path[GIT_WIN_PATH_UTF16];
 typedef char git_win32_utf8_path[GIT_WIN_PATH_UTF8];
 
+/** @} */
+GIT_END_DECL
+
 #endif

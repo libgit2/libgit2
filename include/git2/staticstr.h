@@ -63,4 +63,7 @@ typedef struct {
 		(__str)->data[0] = 0; \
 	} while(0)
 
+/** @} */
+GIT_END_DECL
+
 #endif

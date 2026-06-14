@@ -12,4 +12,7 @@
 
 extern char *git_win32_get_error_message(DWORD error_code);
 
+/** @} */
+GIT_END_DECL
+
 #endif

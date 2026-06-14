@@ -125,4 +125,7 @@ int git_vector_verify_sorted(const git_vector *v);
  */
 void git_vector_reverse(git_vector *v);
 
+/** @} */
+GIT_END_DECL
+
 #endif
