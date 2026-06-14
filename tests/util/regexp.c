@@ -2,7 +2,7 @@
 
 #include <locale.h>
 
-#include "regexp.h"
+#include "git2/regexp.h"
 
 #if LC_ALL > 0
 static const char *old_locales[LC_ALL];

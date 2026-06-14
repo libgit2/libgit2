@@ -14,7 +14,7 @@
 #ifndef INCLUDE_git_xdiff_h__
 #define INCLUDE_git_xdiff_h__
 
-#include "regexp.h"
+#include "git2/regexp.h"
 
 /* Work around C90-conformance issues */
 #if !defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L)

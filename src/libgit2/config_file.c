@@ -17,7 +17,7 @@
 #include "config_parse.h"
 #include "git2/filebuf.h"
 #include "refdb.h"
-#include "regexp.h"
+#include "git2/regexp.h"
 #include "sysdir.h"
 #include "wildmatch.h"
 #include "git2/hash.h"
