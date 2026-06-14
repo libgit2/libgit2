@@ -9,7 +9,7 @@
 #include "git2/runtime.h"
 
 #include "git2/allocators/stdalloc.h"
-#include "allocators/debugalloc.h"
+#include "git2/allocators/debugalloc.h"
 #include "git2/allocators/failalloc.h"
 #include "git2/allocators/win32_leakcheck.h"
 
