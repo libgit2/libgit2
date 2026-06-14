@@ -9,7 +9,7 @@
 
 #include "repository.h"
 #include "commit.h"
-#include "thread.h"
+#include "git2/thread.h"
 #include "util.h"
 #include "odb.h"
 #include "object.h"

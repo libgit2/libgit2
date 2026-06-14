@@ -20,7 +20,7 @@
 #include "runtime.h"
 #include "settings.h"
 #include "sysdir.h"
-#include "thread.h"
+#include "git2/thread.h"
 #include "git2/global.h"
 #include "streams/registry.h"
 #include "streams/mbedtls.h"

@@ -12,7 +12,7 @@
 #include "delta.h"
 #include "git2/iterator.h"
 #include "pack.h"
-#include "thread.h"
+#include "git2/thread.h"
 #include "tree.h"
 #include "util.h"
 #include "revwalk.h"

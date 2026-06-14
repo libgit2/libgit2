@@ -12,7 +12,7 @@
 #include "util.h"
 #include "futils.h"
 #include "git2/vector.h"
-#include "thread.h"
+#include "git2/thread.h"
 #include "pool.h"
 #include "hashmap_str.h"
 

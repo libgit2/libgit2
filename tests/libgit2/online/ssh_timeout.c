@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/sys/transport.h"
-#include "thread.h"
+#include "git2/thread.h"
 
 #ifndef _WIN32
 # include <sys/socket.h>

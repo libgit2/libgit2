@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "thread.h"
+#include "git2/thread.h"
 #include "runtime.h"
 
 #define CLEAN_THREAD_EXIT 0x6F012842
