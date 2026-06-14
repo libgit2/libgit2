@@ -7,7 +7,7 @@
 
 #include "git2/git2_util.h"
 
-#include "errors.h"
+#include "git2/errors.h"
 #include "posix.h"
 #include "git2/str.h"
 #include "runtime.h"

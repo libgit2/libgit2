@@ -13,7 +13,7 @@
 
 #include "util.h"
 #include "posix.h"
-#include "date.h"
+#include "git2/date.h"
 
 #include <ctype.h>
 #include <time.h>

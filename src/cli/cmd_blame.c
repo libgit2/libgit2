@@ -15,7 +15,7 @@
 
 #include "fs_path.h"
 #include "futils.h"
-#include "date.h"
+#include "git2/date.h"
 #include "hashmap.h"
 
 #define COMMAND_NAME "blame"
