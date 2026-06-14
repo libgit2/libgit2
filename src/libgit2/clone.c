@@ -20,7 +20,7 @@
 #include "remote.h"
 #include "futils.h"
 #include "refs.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "repository.h"
 #include "odb.h"
 #include "net.h"

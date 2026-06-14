@@ -10,7 +10,7 @@
 #include "git2/ignore.h"
 #include "common.h"
 #include "attrcache.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "config.h"
 #include "wildmatch.h"
 #include "path.h"

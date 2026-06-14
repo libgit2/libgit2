@@ -11,7 +11,7 @@
 #include "git2/git2_util.h"
 #include "process.h"
 #include "strlist.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 
 #ifndef DWORD_MAX
 # define DWORD_MAX INT32_MAX

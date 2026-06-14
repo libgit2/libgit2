@@ -9,7 +9,7 @@
 
 #include "common.h"
 #include "config.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "repository.h"
 #include "signature.h"
 #include "git2/config.h"

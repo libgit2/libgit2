@@ -14,7 +14,7 @@
 #include "hash.h"
 #include "odb.h"
 #include "pack.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "repository.h"
 #include "git2/str.h"
 

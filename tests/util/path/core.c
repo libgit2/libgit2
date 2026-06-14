@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "futils.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 
 #ifndef GIT_WIN32
 # include <unistd.h>

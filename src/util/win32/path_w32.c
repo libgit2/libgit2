@@ -7,7 +7,7 @@
 
 #include "path_w32.h"
 
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "utf-conv.h"
 #include "posix.h"
 #include "reparse.h"

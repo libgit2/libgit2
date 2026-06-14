@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "futils.h"
 #include "git2/sys/repository.h"
 

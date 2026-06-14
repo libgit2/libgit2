@@ -13,7 +13,7 @@
 
 #include "diff.h"
 #include "diff_generate.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "futils.h"
 #include "config.h"
 

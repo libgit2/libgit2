@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 
 static git_buf buf = GIT_BUF_INIT;
 

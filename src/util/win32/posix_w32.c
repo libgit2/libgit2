@@ -9,7 +9,7 @@
 
 #include "../posix.h"
 #include "../futils.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "path_w32.h"
 #include "utf-conv.h"
 #include "reparse.h"

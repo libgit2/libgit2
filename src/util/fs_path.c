@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "fs_path.h"
+#include "git2/fs_path.h"
 
 #include "git2/git2_util.h"
 #include "futils.h"

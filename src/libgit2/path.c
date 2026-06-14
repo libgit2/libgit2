@@ -8,7 +8,7 @@
 #include "path.h"
 
 #include "repository.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "utf8.h"
 
 typedef struct {

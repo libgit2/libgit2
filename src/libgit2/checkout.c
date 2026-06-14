@@ -27,7 +27,7 @@
 #include "diff_generate.h"
 #include "pathspec.h"
 #include "diff_xdiff.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "attr.h"
 #include "pool.h"
 #include "path.h"

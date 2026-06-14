@@ -12,7 +12,7 @@
 #include "git2/net.h"
 #include "git2/transport.h"
 #include "git2/sys/transport.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 
 typedef struct transport_definition {
 	char *prefix;

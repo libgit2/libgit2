@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 
 #ifdef GIT_I18N_ICONV
 static git_fs_path_iconv_t ic;

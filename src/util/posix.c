@@ -7,7 +7,7 @@
 
 #include "posix.h"
 
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include <stdio.h>
 #include <ctype.h>
 

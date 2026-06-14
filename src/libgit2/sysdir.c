@@ -9,10 +9,10 @@
 
 #include "runtime.h"
 #include "git2/str.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include <ctype.h>
 #if GIT_WIN32
-# include "fs_path.h"
+# include "git2/fs_path.h"
 # include "win32/path_w32.h"
 # include "win32/utf-conv.h"
 #else

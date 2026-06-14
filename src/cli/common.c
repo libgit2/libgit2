@@ -10,7 +10,7 @@
 
 #include "git2/git2_util.h"
 #include "git2/vector.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 
 #include "common.h"
 #include "error.h"

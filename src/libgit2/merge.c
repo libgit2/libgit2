@@ -12,7 +12,7 @@
 #include "repository.h"
 #include "revwalk.h"
 #include "commit_list.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "refs.h"
 #include "object.h"
 #include "git2/iterator.h"
