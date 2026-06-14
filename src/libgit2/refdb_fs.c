@@ -9,7 +9,7 @@
 #include "hash.h"
 #include "repository.h"
 #include "futils.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "pack.h"
 #include "parse.h"
 #include "reflog.h"

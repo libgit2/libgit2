@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "futils.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "git2/vector.h"
 #include "tree-cache.h"
 #include "index_map.h"

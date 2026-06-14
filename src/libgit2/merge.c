@@ -25,7 +25,7 @@
 #include "blob.h"
 #include "oid.h"
 #include "index.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "config.h"
 #include "oidarray.h"
 #include "annotated_commit.h"

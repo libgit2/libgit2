@@ -15,7 +15,7 @@
 #include "config_backend.h"
 #include "config_list.h"
 #include "config_parse.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "refdb.h"
 #include "regexp.h"
 #include "sysdir.h"

@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "odb.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 
 #define TEST_REPO_PATH "redundant.git"
 

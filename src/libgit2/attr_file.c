@@ -8,7 +8,7 @@
 #include "attr_file.h"
 
 #include "repository.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "attrcache.h"
 #include "git2/blob.h"
 #include "git2/tree.h"

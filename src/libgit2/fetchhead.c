@@ -12,7 +12,7 @@
 
 #include "git2/str.h"
 #include "futils.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "refs.h"
 #include "net.h"
 #include "repository.h"

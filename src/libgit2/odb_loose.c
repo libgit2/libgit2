@@ -14,7 +14,7 @@
 #include "hash.h"
 #include "odb.h"
 #include "delta.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "object.h"
 #include "zstream.h"
 

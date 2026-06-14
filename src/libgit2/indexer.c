@@ -17,7 +17,7 @@
 #include "mwindow.h"
 #include "posix.h"
 #include "pack.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "oid.h"
 #include "oidarray.h"
 #include "zstream.h"

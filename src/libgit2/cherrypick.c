@@ -8,7 +8,7 @@
 #include "common.h"
 
 #include "repository.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "merge.h"
 #include "git2/vector.h"
 #include "index.h"

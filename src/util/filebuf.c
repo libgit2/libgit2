@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "filebuf.h"
+#include "git2/filebuf.h"
 
 #include "futils.h"
 

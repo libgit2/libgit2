@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "futils.h"
 #include "posix.h"
 

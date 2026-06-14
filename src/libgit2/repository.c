@@ -21,7 +21,7 @@
 #include "blob.h"
 #include "futils.h"
 #include "sysdir.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "index.h"
 #include "config.h"
 #include "refs.h"

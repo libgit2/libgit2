@@ -9,7 +9,7 @@
 
 #include "git2/array.h"
 #include "buf.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "futils.h"
 #include "hash.h"
 #include "odb.h"
