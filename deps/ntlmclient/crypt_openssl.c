@@ -21,7 +21,7 @@
 
 #include "ntlm.h"
 #include "compat.h"
-#include "git2/util.h"
+#include "util.h"
 #include "crypt.h"
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(CRYPT_OPENSSL_DYNAMIC)
