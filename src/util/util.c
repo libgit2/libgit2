@@ -10,7 +10,7 @@
 #include "git2/git2_util.h"
 
 #ifdef GIT_WIN32
-# include "win32/utf-conv.h"
+# include "git2/win32/utf-conv.h"
 # include "git2/win32/w32_buffer.h"
 
 # ifndef WIN32_LEAN_AND_MEAN

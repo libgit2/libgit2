@@ -97,7 +97,7 @@ bool cl_is_env_set(const char *name)
 
 #ifdef GIT_WIN32
 
-#include "win32/utf-conv.h"
+#include "git2/win32/utf-conv.h"
 
 int cl_setenv(const char *name, const char *value)
 {
