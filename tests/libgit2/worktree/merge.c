@@ -6,6 +6,9 @@
 /* define GIT_MERGE_HEAD_FILE */
 #include "refs.h"
 
+/* define git_repository */
+#include "repository.h"
+
 #define COMMON_REPO "testrepo"
 #define WORKTREE_REPO "testrepo-worktree"
 
