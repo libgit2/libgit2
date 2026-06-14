@@ -14,7 +14,7 @@
 #include "git2/win32/posix.h"
 #include "git2/win32/w32_buffer.h"
 #include "win32/w32_util.h"
-#include "win32/version.h"
+#include "git2/win32/version.h"
 #include <aclapi.h>
 #else
 #include <dirent.h>
