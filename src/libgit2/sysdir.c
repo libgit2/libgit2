@@ -13,7 +13,7 @@
 #include <ctype.h>
 #if GIT_WIN32
 # include "git2/fs_path.h"
-# include "win32/path_w32.h"
+# include "git2/win32/path_w32.h"
 # include "win32/utf-conv.h"
 #else
 # include <unistd.h>
