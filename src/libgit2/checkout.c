@@ -31,7 +31,7 @@
 #include "attr.h"
 #include "pool.h"
 #include "path.h"
-#include "hashmap_str.h"
+#include "git2/hashmap_str.h"
 
 /* See docs/checkout-internals.md for more information */
 

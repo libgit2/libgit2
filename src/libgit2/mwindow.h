@@ -12,7 +12,7 @@
 
 #include "map.h"
 #include "git2/vector.h"
-#include "hashmap_str.h"
+#include "git2/hashmap_str.h"
 
 GIT_HASHMAP_STR_STRUCT(git_mwindow_packmap, struct git_pack_file *);
 GIT_HASHMAP_STR_PROTOTYPES(git_mwindow_packmap, struct git_pack_file *);

@@ -14,7 +14,7 @@
 #include "git2/fs_path.h"
 #include "pool.h"
 #include "git2/hash.h"
-#include "hashmap_str.h"
+#include "git2/hashmap_str.h"
 
 /**
  * Filebuffer methods

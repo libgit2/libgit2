@@ -20,7 +20,7 @@
 #include "reader.h"
 #include "index.h"
 #include "repository.h"
-#include "hashmap_str.h"
+#include "git2/hashmap_str.h"
 #include "apply.h"
 
 typedef struct {

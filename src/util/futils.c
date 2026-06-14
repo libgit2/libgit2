@@ -10,7 +10,7 @@
 #include "runtime.h"
 #include "git2/hash.h"
 #include "rand.h"
-#include "hashmap_str.h"
+#include "git2/hashmap_str.h"
 
 #include <ctype.h>
 
