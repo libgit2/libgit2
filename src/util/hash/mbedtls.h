@@ -8,7 +8,7 @@
 #ifndef INCLUDE_hash_mbedtls_h__
 #define INCLUDE_hash_mbedtls_h__
 
-#include "hash/sha.h"
+#include "git2/hash/sha.h"
 
 #ifdef GIT_SHA1_MBEDTLS
 # include <mbedtls/sha1.h>

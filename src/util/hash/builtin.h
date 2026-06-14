@@ -8,7 +8,7 @@
 #ifndef INCLUDE_hash_builtin_h__
 #define INCLUDE_hash_builtin_h__
 
-#include "hash/sha.h"
+#include "git2/hash/sha.h"
 
 #include "rfc6234/sha.h"
 

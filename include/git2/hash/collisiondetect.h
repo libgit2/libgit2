@@ -8,7 +8,7 @@
 #ifndef INCLUDE_hash_collisiondetect_h__
 #define INCLUDE_hash_collisiondetect_h__
 
-#include "hash/sha.h"
+#include "git2/hash/sha.h"
 
 #include "sha1dc/sha1.h"
 

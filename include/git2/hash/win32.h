@@ -8,7 +8,7 @@
 #ifndef INCLUDE_hash_win32_h__
 #define INCLUDE_hash_win32_h__
 
-#include "hash/sha.h"
+#include "git2/hash/sha.h"
 
 #include <wincrypt.h>
 

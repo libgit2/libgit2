@@ -8,7 +8,7 @@
 #ifndef INCLUDE_hash_openssl_h__
 #define INCLUDE_hash_openssl_h__
 
-#include "hash/sha.h"
+#include "git2/hash/sha.h"
 
 #if defined(GIT_SHA1_OPENSSL_FIPS) || defined(GIT_SHA256_OPENSSL_FIPS)
 # include <openssl/evp.h>
