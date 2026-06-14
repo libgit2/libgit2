@@ -9,6 +9,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 /**
  * Create a Win32 path (in UCS-2 format) from a UTF-8 string.  If the given
  * path is relative, then it will be turned into an absolute path by having

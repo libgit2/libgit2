@@ -9,6 +9,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 /*
  * Use this to declare a typesafe resizable array of items, a la:
  *

@@ -7,6 +7,8 @@
 #ifndef INCLUDE_ctype_compat_h__
 #define INCLUDE_ctype_compat_h__
 
+GIT_BEGIN_DECL
+
 /*
  * The Microsoft C runtime (MSVCRT) may take a heavy lock on the
  * locale in order to figure out how the `ctype` functions work.

@@ -9,6 +9,8 @@
 
 #include "common.h"
 
+GIT_BEGIN_DECL
+
 /*
  * This is a silly little fixed length bit vector type that will store
  * vectors of 64 bits or less directly in the structure and allocate

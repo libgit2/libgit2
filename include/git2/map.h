@@ -10,6 +10,8 @@
 #include "git2/git2_util.h"
 
 
+GIT_BEGIN_DECL
+
 /* p_mmap() prot values */
 #define GIT_PROT_NONE 0x0
 #define GIT_PROT_READ 0x1

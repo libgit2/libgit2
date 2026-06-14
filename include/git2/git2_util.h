@@ -15,6 +15,8 @@
 #include "git2/sys/errors.h"
 #include "git2/cc-compat.h"
 
+GIT_BEGIN_DECL
+
 typedef struct git_str git_str;
 
 /** Declare a function as always inlined. */

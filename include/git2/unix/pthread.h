@@ -8,6 +8,8 @@
 #ifndef INCLUDE_unix_pthread_h__
 #define INCLUDE_unix_pthread_h__
 
+GIT_BEGIN_DECL
+
 typedef struct {
 	pthread_t thread;
 } git_thread;

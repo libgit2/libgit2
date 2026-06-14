@@ -15,6 +15,8 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 
+GIT_BEGIN_DECL
+
 typedef int GIT_SOCKET;
 #define INVALID_SOCKET -1
 

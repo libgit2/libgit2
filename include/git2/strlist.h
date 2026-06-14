@@ -10,6 +10,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 GIT_EXTERN(int) git_strlist_copy(char ***out, const char **in, size_t len);
 
 GIT_EXTERN(int) git_strlist_copy_with_null(

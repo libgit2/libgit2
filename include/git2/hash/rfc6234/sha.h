@@ -83,6 +83,8 @@
  * See stdint-example.h
  */
 
+GIT_BEGIN_DECL
+
 #ifndef _SHA_enum_
 #define _SHA_enum_
 /*

@@ -9,6 +9,8 @@
 
 #include <stdarg.h>
 
+GIT_BEGIN_DECL
+
 /*
  * See if our compiler is known to support flexible array members.
  */

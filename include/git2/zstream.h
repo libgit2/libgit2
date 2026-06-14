@@ -13,6 +13,8 @@
 
 #include "git2/str.h"
 
+GIT_BEGIN_DECL
+
 typedef enum {
 	GIT_ZSTREAM_INFLATE,
 	GIT_ZSTREAM_DEFLATE

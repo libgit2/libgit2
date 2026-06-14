@@ -9,6 +9,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 struct git_str {
 	char *ptr;
 	size_t asize;

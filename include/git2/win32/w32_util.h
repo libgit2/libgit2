@@ -14,6 +14,8 @@
 #include "git2/posix.h"
 #include "path_w32.h"
 
+GIT_BEGIN_DECL
+
 /*
 
 #include "common.h"

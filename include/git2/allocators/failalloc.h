@@ -10,6 +10,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 GIT_EXTERN(void *) git_failalloc_malloc(size_t len, const char *file, int line);
 GIT_EXTERN(void *) git_failalloc_realloc(void *ptr, size_t size, const char *file, int line);
 GIT_EXTERN(void) git_failalloc_free(void *ptr);

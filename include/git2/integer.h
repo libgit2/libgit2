@@ -7,6 +7,8 @@
 #ifndef INCLUDE_integer_h__
 #define INCLUDE_integer_h__
 
+GIT_BEGIN_DECL
+
 /** @return true if p fits into the range of a size_t */
 GIT_INLINE(int) git__is_sizet(int64_t p)
 {

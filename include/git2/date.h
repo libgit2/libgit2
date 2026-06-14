@@ -10,6 +10,8 @@
 #include "git2/util.h"
 #include "git2/str.h"
 
+GIT_BEGIN_DECL
+
 /*
  * Parse a string into a value as a git_time_t with a timezone offset.
  *

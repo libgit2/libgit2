@@ -12,6 +12,8 @@
 
 #include "git2/alloc.h"
 
+GIT_BEGIN_DECL
+
 int git_stdalloc_init_allocator(git_allocator *allocator);
 
 /** @} */

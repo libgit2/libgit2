@@ -9,6 +9,8 @@
 
 #include "git2/hashmap.h"
 
+GIT_BEGIN_DECL
+
 GIT_INLINE(uint32_t) git_hashmap_str_hash(const char *s)
 {
 	uint32_t h = (uint32_t)*s;

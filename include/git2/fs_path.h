@@ -14,6 +14,8 @@
 #include "git2/vector.h"
 #include "git2/utf8.h"
 
+GIT_BEGIN_DECL
+
 /**
  * Path manipulation utils
  *

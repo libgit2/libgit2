@@ -9,6 +9,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 /**
  * Initialize the random number generation subsystem.  This will
  * seed the random number generator with the system's entropy pool,

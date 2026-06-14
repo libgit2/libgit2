@@ -13,6 +13,8 @@
 #include "git2/hash.h"
 #include <zlib.h>
 
+GIT_BEGIN_DECL
+
 #ifdef GIT_THREADS
 #	define GIT_FILEBUF_THREADS
 #endif

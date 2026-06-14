@@ -11,6 +11,8 @@
 
 #include "git2/vector.h"
 
+GIT_BEGIN_DECL
+
 typedef struct git_pool_page git_pool_page;
 
 #ifndef GIT_DEBUG_POOL

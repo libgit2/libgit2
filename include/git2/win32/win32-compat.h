@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+GIT_BEGIN_DECL
+
 typedef long suseconds_t;
 
 struct p_timeval {

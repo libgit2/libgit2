@@ -9,6 +9,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 typedef struct {
 	/* Length of / number of bytes used by `data`. */
 	size_t len;

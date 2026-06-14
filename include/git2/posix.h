@@ -13,6 +13,8 @@
 #include <fcntl.h>
 #include <time.h>
 
+GIT_BEGIN_DECL
+
 /* stat: file mode type testing macros */
 #ifndef S_IFGITLINK
 #define S_IFGITLINK 0160000

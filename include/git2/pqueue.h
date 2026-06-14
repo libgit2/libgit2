@@ -11,6 +11,8 @@
 
 #include "git2/vector.h"
 
+GIT_BEGIN_DECL
+
 typedef git_vector git_pqueue;
 
 enum {

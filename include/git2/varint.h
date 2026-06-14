@@ -11,6 +11,8 @@
 
 #include <stdint.h>
 
+GIT_BEGIN_DECL
+
 GIT_EXTERN(int) git_encode_varint(unsigned char *, size_t, uintmax_t);
 GIT_EXTERN(uintmax_t) git_decode_varint(const unsigned char *, size_t *);
 

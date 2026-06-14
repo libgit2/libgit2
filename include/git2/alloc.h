@@ -12,6 +12,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 extern git_allocator git__allocator;
 
 GIT_INLINE(void *) git__malloc(size_t len)

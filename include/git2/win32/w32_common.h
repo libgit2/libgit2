@@ -10,6 +10,8 @@
 
 #include <git2/common.h>
 
+GIT_BEGIN_DECL
+
 /*
  * 4096 is the max allowed Git path. `MAX_PATH` (260) is the typical max allowed
  * Windows path length, however win32 Unicode APIs generally allow up to 32,767

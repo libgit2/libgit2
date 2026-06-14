@@ -12,6 +12,8 @@
 
 #include "git2/hash/sha.h"
 
+GIT_BEGIN_DECL
+
 typedef struct {
 	void *data;
 	size_t len;

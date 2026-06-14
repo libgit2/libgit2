@@ -16,6 +16,8 @@
 #include "git2/hash.h"
 #include "git2/hashmap_str.h"
 
+GIT_BEGIN_DECL
+
 /**
  * Filebuffer methods
  *

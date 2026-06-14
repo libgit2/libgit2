@@ -10,6 +10,8 @@
 #include "git2/git2_util.h"
 #include "git2/str.h"
 
+GIT_BEGIN_DECL
+
 /**
  * Convert a wide character string to UTF-8 and append the results to the
  * buffer.

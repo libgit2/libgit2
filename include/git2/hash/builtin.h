@@ -12,6 +12,8 @@
 
 #include "rfc6234/sha.h"
 
+GIT_BEGIN_DECL
+
 struct git_hash_sha256_ctx {
 	SHA256Context c;
 };

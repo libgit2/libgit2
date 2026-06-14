@@ -10,6 +10,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
 typedef struct git_hash_sha256_ctx git_hash_sha256_ctx;
 

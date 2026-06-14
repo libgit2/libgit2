@@ -8,6 +8,8 @@
 #ifndef INCLUDE_process_h__
 #define INCLUDE_process_h__
 
+GIT_BEGIN_DECL
+
 typedef struct git_process git_process;
 
 typedef struct {

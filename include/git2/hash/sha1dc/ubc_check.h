@@ -23,6 +23,8 @@
 #ifndef SHA1DC_UBC_CHECK_H
 #define SHA1DC_UBC_CHECK_H
 
+GIT_BEGIN_DECL
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

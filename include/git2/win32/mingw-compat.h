@@ -7,6 +7,8 @@
 #ifndef INCLUDE_win32_mingw_compat_h__
 #define INCLUDE_win32_mingw_compat_h__
 
+GIT_BEGIN_DECL
+
 #if defined(__MINGW32__)
 
 #undef stat

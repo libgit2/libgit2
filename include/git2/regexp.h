@@ -10,6 +10,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 #if defined(GIT_REGEX_BUILTIN)
 # define PCRE2_CODE_UNIT_WIDTH 8
 # include "pcre2.h"

@@ -10,6 +10,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 extern char *git_win32_get_error_message(DWORD error_code);
 
 /** @} */

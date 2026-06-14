@@ -12,6 +12,8 @@
 
 #include <CommonCrypto/CommonDigest.h>
 
+GIT_BEGIN_DECL
+
 #ifdef GIT_SHA1_COMMON_CRYPTO
 struct git_hash_sha1_ctx {
 	CC_SHA1_CTX c;

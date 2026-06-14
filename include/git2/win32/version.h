@@ -9,6 +9,8 @@
 
 #include <windows.h>
 
+GIT_BEGIN_DECL
+
 GIT_INLINE(int) git_has_win32_version(int major, int minor, int service_pack)
 {
 	OSVERSIONINFOEX version_test = {0};

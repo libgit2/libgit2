@@ -11,6 +11,8 @@
 
 #include "w32_util.h"
 
+GIT_BEGIN_DECL
+
 struct git__dirent {
 	int d_ino;
 	git_win32_utf8_path d_name;

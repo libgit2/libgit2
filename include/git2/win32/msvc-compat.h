@@ -7,6 +7,8 @@
 #ifndef INCLUDE_win32_msvc_compat_h__
 #define INCLUDE_win32_msvc_compat_h__
 
+GIT_BEGIN_DECL
+
 #if defined(_MSC_VER)
 
 typedef unsigned short mode_t;

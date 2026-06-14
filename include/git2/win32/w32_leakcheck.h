@@ -21,6 +21,8 @@ int git_win32_leakcheck_global_init(void);
 #include "git2/errors.h"
 #include "git2/strnlen.h"
 
+GIT_BEGIN_DECL
+
 bool git_win32_leakcheck_has_leaks(void);
 
 /* Stack frames (for stack tracing, below) */

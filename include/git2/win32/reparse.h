@@ -8,6 +8,8 @@
 #ifndef INCLUDE_win32_reparse_h__
 #define INCLUDE_win32_reparse_h__
 
+GIT_BEGIN_DECL
+
 /* This structure is defined on MSDN at
 * http://msdn.microsoft.com/en-us/library/windows/hardware/ff552012(v=vs.85).aspx
 *

@@ -14,6 +14,8 @@
 #include "utf-conv.h"
 #include "dir.h"
 
+GIT_BEGIN_DECL
+
 extern unsigned long git_win32__createfile_sharemode;
 extern int git_win32__retries;
 

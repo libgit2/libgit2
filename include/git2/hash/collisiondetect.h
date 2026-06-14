@@ -12,6 +12,8 @@
 
 #include "sha1dc/sha1.h"
 
+GIT_BEGIN_DECL
+
 struct git_hash_sha1_ctx {
 	SHA1_CTX c;
 };

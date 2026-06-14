@@ -9,6 +9,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 typedef int (*git_runtime_init_fn)(void);
 typedef void (*git_runtime_shutdown_fn)(void);
 

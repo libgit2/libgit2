@@ -11,6 +11,8 @@
 
 #include <wchar.h>
 
+GIT_BEGIN_DECL
+
 #ifndef WC_ERR_INVALID_CHARS
 # define WC_ERR_INVALID_CHARS	0x80
 #endif

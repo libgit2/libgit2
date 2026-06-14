@@ -10,6 +10,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 #if defined (_MSC_VER)
 #	define GIT_RESTRICT __restrict
 #else

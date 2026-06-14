@@ -8,6 +8,8 @@
 #ifndef SHA1DC_SHA1_H
 #define SHA1DC_SHA1_H
 
+GIT_BEGIN_DECL
+
 #if defined(__cplusplus)
 extern "C" {
 #endif

@@ -10,6 +10,8 @@
 
 #include "git2/hash/sha.h"
 
+GIT_BEGIN_DECL
+
 #if defined(GIT_SHA1_OPENSSL_FIPS) || defined(GIT_SHA256_OPENSSL_FIPS)
 # include <openssl/evp.h>
 #endif

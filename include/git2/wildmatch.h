@@ -10,6 +10,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 #define WM_CASEFOLD 1
 #define WM_PATHNAME 2
 

@@ -39,6 +39,8 @@
 #include <string.h>
 #include <limits.h>
 
+GIT_BEGIN_DECL
+
 #define GIT_HASHMAP_INIT {0}
 #define GIT_HASHSET_INIT {0}
 

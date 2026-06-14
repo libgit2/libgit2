@@ -12,6 +12,8 @@
 
 #include <wincrypt.h>
 
+GIT_BEGIN_DECL
+
 typedef enum {
 	GIT_HASH_WIN32_INVALID = 0,
 	GIT_HASH_WIN32_CRYPTOAPI,

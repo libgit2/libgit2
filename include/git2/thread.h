@@ -7,6 +7,8 @@
 #ifndef INCLUDE_thread_h__
 #define INCLUDE_thread_h__
 
+GIT_BEGIN_DECL
+
 #if defined(GIT_THREADS)
 
 #if defined(__clang__)

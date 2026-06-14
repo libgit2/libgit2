@@ -10,6 +10,8 @@
 
 #include "git2/hash/sha.h"
 
+GIT_BEGIN_DECL
+
 #ifdef GIT_SHA1_MBEDTLS
 # include <mbedtls/sha1.h>
 

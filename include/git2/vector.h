@@ -9,6 +9,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 typedef int (*git_vector_cmp)(const void *, const void *);
 
 enum {

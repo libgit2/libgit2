@@ -8,6 +8,8 @@
 #ifndef INCLUDE_experimental_h__
 #define INCLUDE_experimental_h__
 
+GIT_BEGIN_DECL
+
 /*
  * This file exists to support users who build libgit2 with a bespoke
  * build system and do not use our cmake configuration. Normally, cmake

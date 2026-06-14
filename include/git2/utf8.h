@@ -9,6 +9,8 @@
 
 #include "git2/git2_util.h"
 
+GIT_BEGIN_DECL
+
 /*
  * Iterate through an UTF-8 string, yielding one codepoint at a time.
  *
