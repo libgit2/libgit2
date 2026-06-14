@@ -21,7 +21,7 @@
 #include "utf8.h"
 #include "crypt.h"
 #include "compat.h"
-#include "git2/util.h"
+#include "util.h"
 
 #define NTLM_ASSERT_ARG(expr) do { \
 		if (!(expr)) \
