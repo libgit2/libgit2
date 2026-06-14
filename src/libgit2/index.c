@@ -18,7 +18,7 @@
 #include "ignore.h"
 #include "blob.h"
 #include "diff.h"
-#include "varint.h"
+#include "git2/varint.h"
 #include "path.h"
 #include "index_map.h"
 
