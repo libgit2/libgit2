@@ -2,7 +2,7 @@
 #include "git2/posix.h"
 
 #ifdef GIT_WIN32
-# include "win32/reparse.h"
+# include "git2/win32/reparse.h"
 #endif
 
 void test_link__cleanup(void)
