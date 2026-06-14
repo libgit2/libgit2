@@ -1,6 +1,8 @@
 #include "clar_libgit2.h"
 #include "git2/repository.h"
 #include "git2/merge.h"
+/* define GIT_REFS_HEADS_DIR */
+#include "refs.h"
 #include "merge.h"
 #include "../merge_helpers.h"
 #include "../conflict_data.h"
