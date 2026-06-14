@@ -71,7 +71,4 @@
 
 #endif /* GIT_ASSERT_HARD */
 
-/** @} */
-GIT_END_DECL
-
 #endif
