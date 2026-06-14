@@ -14,7 +14,7 @@
 #include "common.h"
 #include "filter.h"
 #include "grafts.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "index.h"
 #include "merge_driver.h"
 #include "pool.h"

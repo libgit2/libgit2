@@ -12,7 +12,7 @@
 #include "Windows.h"
 #include "Dbghelp.h"
 #include "win32/posix.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "runtime.h"
 
 /* Stack frames (for stack tracing, below) */

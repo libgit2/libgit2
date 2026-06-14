@@ -11,7 +11,7 @@
 #include "buf.h"
 #include "git2/filebuf.h"
 #include "git2/futils.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "oidarray.h"
 #include "pack.h"
 #include "repository.h"

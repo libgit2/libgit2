@@ -10,7 +10,7 @@
 #include "buf.h"
 #include "common.h"
 #include "filter.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "merge_driver.h"
 #include "pool.h"
 #include "mwindow.h"

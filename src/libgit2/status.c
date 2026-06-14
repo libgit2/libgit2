@@ -9,7 +9,7 @@
 
 #include "git2.h"
 #include "git2/futils.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "git2/vector.h"
 #include "tree.h"
 #include "git2/status.h"

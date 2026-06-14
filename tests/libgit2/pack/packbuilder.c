@@ -1,11 +1,11 @@
 #include "clar_libgit2.h"
 #include "git2/futils.h"
 #include "pack.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "git2/iterator.h"
 #include "git2/vector.h"
 #include "posix.h"
-#include "hash.h"
+#include "git2/hash.h"
 
 static git_repository *_repo;
 static git_revwalk *_revwalker;

@@ -14,7 +14,7 @@
 
 #include "buf.h"
 #include "git2/futils.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "filter.h"
 #include "repository.h"
 

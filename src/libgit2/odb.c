@@ -11,7 +11,7 @@
 #include "git2/object.h"
 #include "git2/sys/odb_backend.h"
 #include "git2/futils.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "delta.h"
 #include "filter.h"
 #include "repository.h"

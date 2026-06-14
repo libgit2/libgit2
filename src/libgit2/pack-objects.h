@@ -11,7 +11,7 @@
 #include "common.h"
 
 #include "git2/str.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "zstream.h"
 #include "pool.h"
 #include "indexer.h"

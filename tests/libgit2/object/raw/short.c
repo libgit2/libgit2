@@ -2,7 +2,7 @@
 #include "clar_libgit2.h"
 
 #include "odb.h"
-#include "hash.h"
+#include "git2/hash.h"
 
 void test_object_raw_short__oid_shortener_no_duplicates(void)
 {

@@ -7,7 +7,7 @@
 
 #include "refs.h"
 
-#include "hash.h"
+#include "git2/hash.h"
 #include "repository.h"
 #include "git2/futils.h"
 #include "git2/filebuf.h"

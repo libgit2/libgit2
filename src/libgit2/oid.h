@@ -11,7 +11,7 @@
 
 #include "git2/experimental.h"
 #include "git2/oid.h"
-#include "hash.h"
+#include "git2/hash.h"
 
 #ifdef GIT_EXPERIMENTAL_SHA256
 # define GIT_OID_NONE { 0, { 0 } }

@@ -12,7 +12,7 @@
 #include "repository.h"
 #include "tree.h"
 #include "tree-cache.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "git2/iterator.h"
 #include "pathspec.h"
 #include "ignore.h"

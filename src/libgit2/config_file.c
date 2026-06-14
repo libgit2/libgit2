@@ -20,7 +20,7 @@
 #include "regexp.h"
 #include "sysdir.h"
 #include "wildmatch.h"
-#include "hash.h"
+#include "git2/hash.h"
 
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10

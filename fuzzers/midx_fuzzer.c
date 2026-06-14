@@ -13,7 +13,7 @@
 
 #include "common.h"
 #include "git2/futils.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "midx.h"
 
 #include "standalone_driver.h"

@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/odb_backend.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "odb.h"
 
 #define LARGEFILE_SIZE 5368709122

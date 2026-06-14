@@ -16,7 +16,7 @@
 #include "map.h"
 #include "git2/vector.h"
 #include "oid.h"
-#include "hash.h"
+#include "git2/hash.h"
 
 /**
  * A commit-graph file.

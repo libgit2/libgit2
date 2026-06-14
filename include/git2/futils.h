@@ -13,7 +13,7 @@
 #include "posix.h"
 #include "git2/fs_path.h"
 #include "pool.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "hashmap_str.h"
 
 /**

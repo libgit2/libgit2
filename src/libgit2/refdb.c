@@ -12,7 +12,7 @@
 #include "git2/refdb.h"
 #include "git2/sys/refdb_backend.h"
 
-#include "hash.h"
+#include "git2/hash.h"
 #include "refs.h"
 #include "reflog.h"
 #include "posix.h"

@@ -10,7 +10,7 @@
 #include "git2/git2_util.h"
 
 #include "git2/futils.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include <zlib.h>
 
 #ifdef GIT_THREADS
