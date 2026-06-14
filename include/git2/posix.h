@@ -154,7 +154,7 @@ extern size_t p_fsync__cnt;
 #ifdef GIT_WIN32
 #	include "win32/posix.h"
 #else
-#	include "unix/posix.h"
+#	include "git2/unix/posix.h"
 #endif
 
 #include "git2/strnlen.h"
