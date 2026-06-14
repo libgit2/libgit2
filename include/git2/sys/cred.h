@@ -12,7 +12,4 @@
 # include "git2/sys/credential.h"
 #endif
 
-/** @} */
-GIT_END_DECL
-
 #endif
