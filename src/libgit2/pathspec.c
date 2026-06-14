@@ -13,7 +13,7 @@
 #include "git2/iterator.h"
 #include "repository.h"
 #include "index.h"
-#include "bitvec.h"
+#include "git2/bitvec.h"
 #include "diff.h"
 #include "wildmatch.h"
 

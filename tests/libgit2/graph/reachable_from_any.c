@@ -3,7 +3,7 @@
 #include <git2.h>
 
 #include "commit_graph.h"
-#include "bitvec.h"
+#include "git2/bitvec.h"
 #include "git2/vector.h"
 
 static git_repository *repo;
