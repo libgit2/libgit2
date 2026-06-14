@@ -6,7 +6,7 @@
  */
 
 #include "git2/alloc.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 
 #include "allocators/stdalloc.h"
 #include "allocators/debugalloc.h"

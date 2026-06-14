@@ -17,7 +17,7 @@
 #include "oid.h"
 #include "git2/rand.h"
 #include "refdb_reftable.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "settings.h"
 #include "sysdir.h"
 #include "git2/thread.h"

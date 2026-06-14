@@ -10,7 +10,7 @@
 #include "git2/vector.h"
 #include "git2/futils.h"
 #include "git2/map.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "pack.h"
 
 #define DEFAULT_WINDOW_SIZE \

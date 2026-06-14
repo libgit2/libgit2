@@ -10,7 +10,7 @@
 #include "git2/errors.h"
 #include "git2/posix.h"
 #include "git2/str.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 
 /*
  * Some static error data that is used when we're out of memory, TLS

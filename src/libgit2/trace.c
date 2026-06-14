@@ -8,7 +8,7 @@
 #include "trace.h"
 
 #include "git2/str.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "git2/trace.h"
 
 struct git_trace_data git_trace__data = {0};

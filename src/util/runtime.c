@@ -6,7 +6,7 @@
  */
 
 #include "git2/git2_util.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 
 static git_runtime_shutdown_fn shutdown_callback[32];
 static git_atomic32 shutdown_callback_count;

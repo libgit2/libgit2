@@ -7,7 +7,7 @@
 
 #include "sysdir.h"
 
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "git2/str.h"
 #include "git2/fs_path.h"
 #include <ctype.h>

@@ -9,7 +9,7 @@
 
 #include "git2/posix.h"
 #include "registry.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "stream.h"
 
 #ifndef _WIN32

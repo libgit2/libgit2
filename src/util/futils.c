@@ -7,7 +7,7 @@
 
 #include "git2/futils.h"
 
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "git2/hash.h"
 #include "git2/rand.h"
 #include "git2/hashmap_str.h"

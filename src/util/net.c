@@ -11,7 +11,7 @@
 
 #include "git2/posix.h"
 #include "git2/str.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 
 #define DEFAULT_PORT_HTTP  "80"
 #define DEFAULT_PORT_HTTPS "443"

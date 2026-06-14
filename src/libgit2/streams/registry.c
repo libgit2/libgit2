@@ -9,7 +9,7 @@
 
 #include "streams/registry.h"
 
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "streams/tls.h"
 #include "streams/mbedtls.h"
 #include "streams/openssl.h"

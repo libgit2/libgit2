@@ -14,7 +14,7 @@
 #include <ctype.h>
 
 #include "common.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "settings.h"
 #include "git2/posix.h"
 #include "stream.h"

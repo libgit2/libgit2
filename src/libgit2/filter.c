@@ -12,7 +12,7 @@
 #include "git2/futils.h"
 #include "git2/hash.h"
 #include "repository.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "git2/sys/filter.h"
 #include "git2/config.h"
 #include "blob.h"

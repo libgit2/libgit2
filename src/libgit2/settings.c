@@ -23,7 +23,7 @@
 #include "odb.h"
 #include "git2/rand.h"
 #include "refs.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "sysdir.h"
 #include "git2/thread.h"
 #include "git2/global.h"

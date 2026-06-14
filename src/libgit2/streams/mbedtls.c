@@ -11,7 +11,7 @@
 
 #include <ctype.h>
 
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "stream.h"
 #include "streams/socket.h"
 #include "git2/transport.h"

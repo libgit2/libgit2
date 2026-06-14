@@ -6,7 +6,7 @@
  */
 
 #include "git2/thread.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 
 #define CLEAN_THREAD_EXIT 0x6F012842
 

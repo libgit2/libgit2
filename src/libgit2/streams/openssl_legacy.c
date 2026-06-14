@@ -8,7 +8,7 @@
 #include "streams/openssl.h"
 #include "streams/openssl_legacy.h"
 
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "git2/sys/openssl.h"
 
 #if defined(GIT_HTTPS_OPENSSL) && !defined(GIT_HTTPS_OPENSSL_DYNAMIC)
