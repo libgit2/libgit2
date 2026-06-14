@@ -11,7 +11,7 @@
 #include "allocators/stdalloc.h"
 #include "allocators/debugalloc.h"
 #include "git2/allocators/failalloc.h"
-#include "allocators/win32_leakcheck.h"
+#include "git2/allocators/win32_leakcheck.h"
 
 /* Fail any allocation until git_libgit2_init is called. */
 git_allocator git__allocator = {
