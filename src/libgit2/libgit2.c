@@ -6,7 +6,7 @@
  */
 
 #include <git2.h>
-#include "alloc.h"
+#include "git2/alloc.h"
 #include "buf.h"
 #include "common.h"
 #include "filter.h"

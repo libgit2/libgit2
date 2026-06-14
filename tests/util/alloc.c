@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "clar_libgit2_alloc.h"
-#include "alloc.h"
+#include "git2/alloc.h"
 
 void test_alloc__cleanup(void)
 {

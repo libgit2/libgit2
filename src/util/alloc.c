@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "alloc.h"
+#include "git2/alloc.h"
 #include "runtime.h"
 
 #include "allocators/stdalloc.h"

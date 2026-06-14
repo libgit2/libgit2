@@ -10,7 +10,7 @@
 
 #include "git2/git2_util.h"
 
-#include "alloc.h"
+#include "git2/alloc.h"
 
 int git_debugalloc_init_allocator(git_allocator *allocator);
 

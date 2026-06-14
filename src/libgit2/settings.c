@@ -8,7 +8,7 @@
 #include "settings.h"
 
 #include <git2.h>
-#include "alloc.h"
+#include "git2/alloc.h"
 #include "buf.h"
 #include "cache.h"
 #include "common.h"
