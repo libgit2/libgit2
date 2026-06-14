@@ -18,7 +18,7 @@
 
 #include "ntlm.h"
 #include "unicode.h"
-#include "utf8.h"
+#include "git2/utf8.h"
 #include "crypt.h"
 #include "compat.h"
 #include "util.h"

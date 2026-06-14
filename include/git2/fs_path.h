@@ -12,7 +12,7 @@
 #include "git2/posix.h"
 #include "git2/str.h"
 #include "git2/vector.h"
-#include "utf8.h"
+#include "git2/utf8.h"
 
 /**
  * Path manipulation utils
