@@ -9,7 +9,7 @@
 
 #include "git2/git2_util.h"
 #include "git2/futils.h"
-#include "posix.h"
+#include "git2/posix.h"
 #ifdef GIT_WIN32
 #include "win32/posix.h"
 #include "win32/w32_buffer.h"

@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "refs.h"
 #include "repo_helpers.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/annotated_commit.h"
 
 static const char *g_email = "foo@example.com";

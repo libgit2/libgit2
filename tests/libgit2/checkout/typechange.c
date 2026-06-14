@@ -2,7 +2,7 @@
 #include "diff_generate.h"
 #include "git2/checkout.h"
 #include "path.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/futils.h"
 
 static git_repository *g_repo = NULL;

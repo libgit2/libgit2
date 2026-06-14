@@ -8,7 +8,7 @@
 #include "common.h"
 
 #include "repository.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/futils.h"
 #include "index.h"
 #include "diff_xdiff.h"

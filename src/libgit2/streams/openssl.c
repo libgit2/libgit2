@@ -16,7 +16,7 @@
 #include "common.h"
 #include "runtime.h"
 #include "settings.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "stream.h"
 #include "git2/net.h"
 #include "streams/socket.h"

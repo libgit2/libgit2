@@ -109,7 +109,7 @@ typedef struct git_str git_str;
 #include "git2/integer.h"
 #include "git2/assert_safe.h"
 
-#include "posix.h"
+#include "git2/posix.h"
 
 #define GIT_BUFSIZE_DEFAULT 65536
 #define GIT_BUFSIZE_FILEIO GIT_BUFSIZE_DEFAULT

@@ -16,7 +16,7 @@
 */
 #include "git2/deprecated.h"
 
-#include "posix.h"
+#include "git2/posix.h"
 
 /**
  * Initialize a structure with a version.

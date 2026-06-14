@@ -3,7 +3,7 @@
 
 #include "index.h"
 #include "odb.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "util.h"
 #include "path.h"
 #include "git2/futils.h"

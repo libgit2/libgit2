@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "filter.h"
 #include "git2/sys/filter.h"
 #include "custom_helpers.h"

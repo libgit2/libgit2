@@ -11,7 +11,7 @@
 #include "git2/git2_util.h"
 
 #include "utf-conv.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "path_w32.h"
 
 /*
@@ -20,7 +20,7 @@
 #include "path.h"
 #include "path_w32.h"
 #include "utf-conv.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "reparse.h"
 #include "dir.h"
 */

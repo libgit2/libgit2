@@ -4,7 +4,7 @@
 #include "git2/hash.h"
 #include "git2/iterator.h"
 #include "git2/vector.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/hash.h"
 
 static git_repository *_repo;

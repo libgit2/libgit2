@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/str.h"
 
 /**

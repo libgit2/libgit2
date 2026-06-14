@@ -7,7 +7,7 @@
 
 #include "git2/pool.h"
 
-#include "posix.h"
+#include "git2/posix.h"
 #ifndef GIT_WIN32
 #include <unistd.h>
 #endif

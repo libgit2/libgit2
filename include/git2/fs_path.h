@@ -9,7 +9,7 @@
 
 #include "git2/git2_util.h"
 
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/str.h"
 #include "git2/vector.h"
 #include "utf8.h"

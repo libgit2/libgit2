@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "odb.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 static git_repository *repo;
 static git_odb *odb;

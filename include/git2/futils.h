@@ -10,7 +10,7 @@
 #include "git2/git2_util.h"
 
 #include "git2/map.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/fs_path.h"
 #include "git2/pool.h"
 #include "git2/hash.h"

@@ -2,7 +2,7 @@
 #include "git2/futils.h"
 #include "ignore.h"
 #include "status_data.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "util.h"
 #include "path.h"
 #include "../diff/diff_helpers.h"

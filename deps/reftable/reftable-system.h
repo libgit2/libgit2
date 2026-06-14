@@ -9,7 +9,7 @@
  */
 
 #include "git2/map.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "util.h"
 #include <zlib.h>
 

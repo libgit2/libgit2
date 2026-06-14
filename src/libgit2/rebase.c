@@ -9,7 +9,7 @@
 
 #include "git2/str.h"
 #include "repository.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/filebuf.h"
 #include "commit.h"
 #include "merge.h"

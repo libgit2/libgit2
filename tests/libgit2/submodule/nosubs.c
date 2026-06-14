@@ -1,7 +1,7 @@
 /* test the submodule APIs on repositories where there are no submodules */
 
 #include "clar_libgit2.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/futils.h"
 
 void test_submodule_nosubs__cleanup(void)

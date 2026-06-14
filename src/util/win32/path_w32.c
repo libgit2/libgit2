@@ -9,7 +9,7 @@
 
 #include "git2/fs_path.h"
 #include "utf-conv.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "reparse.h"
 #include "dir.h"
 

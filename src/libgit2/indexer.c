@@ -15,7 +15,7 @@
 #include "tag.h"
 #include "pack.h"
 #include "mwindow.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "pack.h"
 #include "git2/filebuf.h"
 #include "oid.h"

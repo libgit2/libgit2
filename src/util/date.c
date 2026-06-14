@@ -12,7 +12,7 @@
 #endif
 
 #include "util.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/date.h"
 
 #include <ctype.h>

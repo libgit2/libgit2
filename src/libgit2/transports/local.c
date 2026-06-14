@@ -9,7 +9,7 @@
 
 #include "pack-objects.h"
 #include "refs.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/fs_path.h"
 #include "repository.h"
 #include "odb.h"

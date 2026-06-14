@@ -4,7 +4,7 @@
 #include "clar.h"
 #include <git2.h>
 #include "common.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "oid.h"
 
 /**

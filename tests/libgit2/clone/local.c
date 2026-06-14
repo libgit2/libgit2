@@ -3,7 +3,7 @@
 #include "git2/clone.h"
 #include "clone.h"
 #include "path.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/futils.h"
 
 static int file_url(git_str *buf, const char *host, const char *path)

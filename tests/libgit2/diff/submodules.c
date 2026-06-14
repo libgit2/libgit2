@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "repository.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "diff_helpers.h"
 #include "../submodule/submodule_helpers.h"
 

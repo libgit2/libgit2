@@ -2,7 +2,7 @@
 
 #include "git2/filebuf.h"
 #include "git2/futils.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 #define TEST_CONFIG "git-new-config"
 

@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/vector.h"
 #include "../submodule/submodule_helpers.h"
 #include "push_util.h"

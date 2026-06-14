@@ -18,7 +18,7 @@
 #include "cache.h"
 #include "commit_graph.h"
 #include "filter.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/vector.h"
 
 #define GIT_OBJECTS_DIR "objects/"

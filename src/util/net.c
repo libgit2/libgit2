@@ -9,7 +9,7 @@
 
 #include <ctype.h>
 
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/str.h"
 #include "runtime.h"
 

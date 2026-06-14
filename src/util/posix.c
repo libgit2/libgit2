@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "posix.h"
+#include "git2/posix.h"
 
 #include "git2/fs_path.h"
 #include <stdio.h>

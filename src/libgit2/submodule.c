@@ -10,7 +10,7 @@
 #include "buf.h"
 #include "branch.h"
 #include "git2/vector.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "config_backend.h"
 #include "config.h"
 #include "repository.h"

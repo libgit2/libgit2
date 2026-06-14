@@ -9,7 +9,7 @@
 
 #include "smart.h"
 #include "util.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "git2/str.h"
 #include "oid.h"
 

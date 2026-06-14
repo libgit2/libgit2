@@ -6,7 +6,7 @@
 #include "git2/checkout.h"
 #include "repository.h"
 #include "index.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 static git_repository *g_repo;
 

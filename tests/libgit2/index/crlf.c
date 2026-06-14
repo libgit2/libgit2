@@ -3,7 +3,7 @@
 
 #include "git2/checkout.h"
 #include "repository.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 #define FILE_CONTENTS_LF "one\ntwo\nthree\nfour\n"
 #define FILE_CONTENTS_CRLF "one\r\ntwo\r\nthree\r\nfour\r\n"
