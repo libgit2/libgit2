@@ -13,7 +13,7 @@
 #ifdef GIT_WIN32
 #include "git2/win32/posix.h"
 #include "git2/win32/w32_buffer.h"
-#include "win32/w32_util.h"
+#include "git2/win32/w32_util.h"
 #include "git2/win32/version.h"
 #include <aclapi.h>
 #else

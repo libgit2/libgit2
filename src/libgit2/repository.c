@@ -37,7 +37,7 @@
 #include "path.h"
 
 #ifdef GIT_WIN32
-# include "win32/w32_util.h"
+# include "git2/win32/w32_util.h"
 #endif
 
 bool git_repository__validate_ownership = true;
