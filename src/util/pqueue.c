@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "pqueue.h"
+#include "git2/pqueue.h"
 
 #include "util.h"
 
