@@ -9,7 +9,7 @@
 
 #include "git2/str.h"
 #include "git2/git2_util.h"
-#include "strnlen.h"
+#include "git2/strnlen.h"
 #include "git2/thread.h"
 
 #ifndef GIT_WIN32

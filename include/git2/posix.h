@@ -157,7 +157,7 @@ extern size_t p_fsync__cnt;
 #	include "unix/posix.h"
 #endif
 
-#include "strnlen.h"
+#include "git2/strnlen.h"
 
 #ifdef NO_READDIR_R
 GIT_INLINE(int) p_readdir_r(DIR *dirp, struct dirent *entry, struct dirent **result)

@@ -19,7 +19,7 @@ int git_win32_leakcheck_global_init(void);
 #include <crtdbg.h>
 
 #include "git2/errors.h"
-#include "strnlen.h"
+#include "git2/strnlen.h"
 
 bool git_win32_leakcheck_has_leaks(void);
 
