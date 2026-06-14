@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "net.h"
+#include "git2/net.h"
 
 static git_net_url conndata;
 

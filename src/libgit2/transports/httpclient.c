@@ -19,7 +19,7 @@
 #include "auth_negotiate.h"
 #include "auth_ntlm.h"
 #include "git2/sys/credential.h"
-#include "net.h"
+#include "git2/net.h"
 #include "stream.h"
 #include "streams/socket.h"
 #include "streams/tls.h"

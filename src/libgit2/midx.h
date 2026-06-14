@@ -14,7 +14,7 @@
 
 #include "git2/sys/midx.h"
 
-#include "map.h"
+#include "git2/map.h"
 #include "mwindow.h"
 #include "odb.h"
 #include "oid.h"

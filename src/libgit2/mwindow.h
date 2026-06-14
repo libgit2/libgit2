@@ -10,7 +10,7 @@
 
 #include "common.h"
 
-#include "map.h"
+#include "git2/map.h"
 #include "git2/vector.h"
 #include "git2/hashmap_str.h"
 

@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#include "net.h"
+#include "git2/net.h"
 #include "stream.h"
 #include "streams/socket.h"
 #include "git2/sys/transport.h"

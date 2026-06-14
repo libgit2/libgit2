@@ -8,7 +8,7 @@
 #define INCLUDE_git_transport_h__
 
 #include "indexer.h"
-#include "net.h"
+#include "git2/net.h"
 #include "types.h"
 #include "cert.h"
 #include "credential.h"

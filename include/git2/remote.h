@@ -10,7 +10,7 @@
 #include "common.h"
 #include "repository.h"
 #include "refspec.h"
-#include "net.h"
+#include "git2/net.h"
 #include "indexer.h"
 #include "strarray.h"
 #include "transport.h"

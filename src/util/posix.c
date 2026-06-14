@@ -226,7 +226,7 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 
 #ifdef NO_MMAP
 
-#include "map.h"
+#include "git2/map.h"
 
 int git__page_size(size_t *page_size)
 {

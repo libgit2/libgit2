@@ -9,7 +9,7 @@
 #define INCLUDE_transports_httpclient_h__
 
 #include "common.h"
-#include "net.h"
+#include "git2/net.h"
 
 #define GIT_HTTP_STATUS_CONTINUE                      100
 #define GIT_HTTP_STATUS_OK                            200

@@ -9,7 +9,7 @@
 
 #include "git2/git2_util.h"
 
-#include "map.h"
+#include "git2/map.h"
 #include "posix.h"
 #include "git2/fs_path.h"
 #include "pool.h"

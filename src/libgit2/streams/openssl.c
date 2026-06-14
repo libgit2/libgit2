@@ -18,7 +18,7 @@
 #include "settings.h"
 #include "posix.h"
 #include "stream.h"
-#include "net.h"
+#include "git2/net.h"
 #include "streams/socket.h"
 #include "git2/transport.h"
 #include "git2/sys/openssl.h"

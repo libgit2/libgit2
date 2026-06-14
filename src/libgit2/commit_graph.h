@@ -13,7 +13,7 @@
 #include "git2/types.h"
 #include "git2/sys/commit_graph.h"
 
-#include "map.h"
+#include "git2/map.h"
 #include "git2/vector.h"
 #include "oid.h"
 #include "git2/hash.h"

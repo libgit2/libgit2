@@ -9,7 +9,7 @@
 
 #if !defined(GIT_WIN32) && !defined(NO_MMAP)
 
-#include "map.h"
+#include "git2/map.h"
 #include <sys/mman.h>
 #include <unistd.h>
 #include <errno.h>

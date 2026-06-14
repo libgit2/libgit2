@@ -12,7 +12,7 @@
 #include <libssh2.h>
 
 #include "runtime.h"
-#include "net.h"
+#include "git2/net.h"
 #include "smart.h"
 #include "process.h"
 #include "streams/socket.h"

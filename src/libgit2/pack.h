@@ -13,7 +13,7 @@
 #include "git2/oid.h"
 
 #include "git2/array.h"
-#include "map.h"
+#include "git2/map.h"
 #include "mwindow.h"
 #include "odb.h"
 #include "zstream.h"

@@ -12,7 +12,7 @@
 #include "common.h"
 
 #include "config.h"
-#include "net.h"
+#include "git2/net.h"
 #include "path.h"
 #include "git2/futils.h"
 #include "process.h"
