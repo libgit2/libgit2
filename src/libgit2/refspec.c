@@ -9,7 +9,7 @@
 
 #include "buf.h"
 #include "refs.h"
-#include "util.h"
+#include "git2/util.h"
 #include "git2/vector.h"
 #include "wildmatch.h"
 

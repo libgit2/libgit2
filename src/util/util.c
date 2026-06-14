@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "util.h"
+#include "git2/util.h"
 
 #include "git2/git2_util.h"
 

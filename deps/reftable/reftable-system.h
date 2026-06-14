@@ -10,7 +10,7 @@
 
 #include "git2/map.h"
 #include "git2/posix.h"
-#include "util.h"
+#include "git2/util.h"
 #include <zlib.h>
 
 /*

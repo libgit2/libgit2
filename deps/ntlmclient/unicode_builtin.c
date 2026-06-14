@@ -12,7 +12,7 @@
 #include "ntlm.h"
 #include "unicode.h"
 #include "compat.h"
-#include "util.h"
+#include "git2/util.h"
 
 typedef unsigned int    UTF32;   /* at least 32 bits */
 typedef unsigned short  UTF16;   /* at least 16 bits */

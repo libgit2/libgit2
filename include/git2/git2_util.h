@@ -169,7 +169,7 @@ typedef struct git_str git_str;
 #define GIT_ERROR_CHECK_ALLOC_MULTIPLY(out, nelem, elsize) \
 	if (GIT_MULTIPLY_SIZET_OVERFLOW(out, nelem, elsize)) { return -1; }
 
-#include "util.h"
+#include "git2/util.h"
 #include "git2/ctype_compat.h"
 
 #endif

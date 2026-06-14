@@ -8,7 +8,7 @@
 #include "common.h"
 
 #include "smart.h"
-#include "util.h"
+#include "git2/util.h"
 #include "git2/posix.h"
 #include "git2/str.h"
 #include "oid.h"

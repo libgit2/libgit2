@@ -2,7 +2,7 @@
 #include "path.h"
 #include "git2/posix.h"
 #include "status_helpers.h"
-#include "util.h"
+#include "git2/util.h"
 #include "status.h"
 
 static git_repository *g_repo = NULL;

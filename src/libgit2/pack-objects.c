@@ -14,7 +14,7 @@
 #include "pack.h"
 #include "git2/thread.h"
 #include "tree.h"
-#include "util.h"
+#include "git2/util.h"
 #include "revwalk.h"
 #include "commit_list.h"
 

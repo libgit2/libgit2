@@ -11,7 +11,7 @@
 #include <sys/time.h>
 #endif
 
-#include "util.h"
+#include "git2/util.h"
 #include "git2/posix.h"
 #include "git2/date.h"
 

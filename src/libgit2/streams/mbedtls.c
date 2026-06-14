@@ -15,7 +15,7 @@
 #include "stream.h"
 #include "streams/socket.h"
 #include "git2/transport.h"
-#include "util.h"
+#include "git2/util.h"
 
 #ifndef GIT_DEFAULT_CERT_LOCATION
 #define GIT_DEFAULT_CERT_LOCATION NULL

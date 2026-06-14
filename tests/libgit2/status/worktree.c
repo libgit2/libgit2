@@ -3,7 +3,7 @@
 #include "ignore.h"
 #include "status_data.h"
 #include "git2/posix.h"
-#include "util.h"
+#include "git2/util.h"
 #include "path.h"
 #include "../diff/diff_helpers.h"
 #include "../checkout/checkout_helpers.h"

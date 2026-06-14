@@ -1,4 +1,4 @@
-file(GLOB SRC_NTLMCLIENT "ntlm.c" "ntlm.h" "util.c" "util.h")
+file(GLOB SRC_NTLMCLIENT "ntlm.c" "ntlm.h" "util.c" "git2/util.h")
 list(SORT SRC_NTLMCLIENT)
 
 add_definitions(-DNTLM_STATIC=1)

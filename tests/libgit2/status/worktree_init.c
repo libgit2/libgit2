@@ -5,7 +5,7 @@
 #include "ignore.h"
 #include "status_helpers.h"
 #include "git2/posix.h"
-#include "util.h"
+#include "git2/util.h"
 #include "path.h"
 #include "index.h"
 

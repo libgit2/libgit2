@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "path.h"
-#include "util.h"
+#include "git2/util.h"
 #include "git2/posix.h"
 #include "submodule_helpers.h"
 #include "git2/sys/repository.h"

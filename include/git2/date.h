@@ -7,7 +7,7 @@
 #ifndef INCLUDE_date_h__
 #define INCLUDE_date_h__
 
-#include "util.h"
+#include "git2/util.h"
 #include "git2/str.h"
 
 /*

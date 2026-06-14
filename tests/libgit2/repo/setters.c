@@ -4,7 +4,7 @@
 #include "index.h"
 #include "odb.h"
 #include "git2/posix.h"
-#include "util.h"
+#include "git2/util.h"
 #include "path.h"
 #include "git2/futils.h"
 
