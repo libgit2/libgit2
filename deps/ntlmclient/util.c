@@ -11,7 +11,7 @@
 #include <arpa/inet.h>
 
 #include "compat.h"
-#include "git2/util.h"
+#include "util.h"
 
 void ntlm_memzero(void *data, size_t size)
 {
