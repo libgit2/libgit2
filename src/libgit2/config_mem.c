@@ -10,7 +10,7 @@
 #include "config_backend.h"
 #include "config_parse.h"
 #include "config_list.h"
-#include "strlist.h"
+#include "git2/strlist.h"
 
 typedef struct {
 	git_config_backend parent;

@@ -10,7 +10,7 @@
 
 #include "git2/git2_util.h"
 #include "git2/process.h"
-#include "strlist.h"
+#include "git2/strlist.h"
 #include "git2/fs_path.h"
 
 #ifndef DWORD_MAX

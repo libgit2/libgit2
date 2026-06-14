@@ -9,7 +9,7 @@
 
 #include "git2/git2_util.h"
 #include "git2/vector.h"
-#include "strlist.h"
+#include "git2/strlist.h"
 
 int git_strlist_copy(char ***out, const char **in, size_t len)
 {

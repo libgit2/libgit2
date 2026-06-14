@@ -14,7 +14,7 @@
 #include "git2/vector.h"
 #include "git2/futils.h"
 #include "git2/process.h"
-#include "strlist.h"
+#include "git2/strlist.h"
 
 #ifdef __APPLE__
 	#include <crt_externs.h>
