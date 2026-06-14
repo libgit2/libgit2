@@ -19,7 +19,7 @@
 #include "refdb.h"
 #include "git2/regexp.h"
 #include "sysdir.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 #include "git2/hash.h"
 
 /* Max depth for [include] directives */

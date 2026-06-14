@@ -14,7 +14,7 @@
 #include "git2/tree.h"
 #include "blob.h"
 #include "index.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 #include <ctype.h>
 
 static void attr_file_free(git_attr_file *file)

@@ -20,7 +20,7 @@
 #include "strarray.h"
 #include "tag.h"
 #include "git2/vector.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 #include "hashmap_oid.h"
 
 /* Ported from https://github.com/git/git/blob/89dde7882f71f846ccd0359756d27bebc31108de/builtin/describe.c */

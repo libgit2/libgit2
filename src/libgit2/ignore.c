@@ -12,7 +12,7 @@
 #include "attrcache.h"
 #include "git2/fs_path.h"
 #include "config.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 #include "path.h"
 
 #define GIT_IGNORE_INTERNAL		"[internal]exclude"

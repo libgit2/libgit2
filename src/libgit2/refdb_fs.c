@@ -17,7 +17,7 @@
 #include "git2/iterator.h"
 #include "git2/sortedcache.h"
 #include "signature.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 #include "path.h"
 
 #include <git2/tag.h>

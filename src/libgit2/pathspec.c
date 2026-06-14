@@ -15,7 +15,7 @@
 #include "index.h"
 #include "git2/bitvec.h"
 #include "diff.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 
 /* what is the common non-wildcard prefix for all items in the pathspec */
 char *git_pathspec_prefix(const git_strarray *pathspec)
