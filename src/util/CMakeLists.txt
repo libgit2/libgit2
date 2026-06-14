@@ -2,10 +2,12 @@
 
 add_library(util OBJECT)
 
-# this file will be installed by src/libgit2/CMakeLists.txt
 # configure_file(git2_features.h.in "${PROJECT_BINARY_DIR}/gen_headers/git2_features.h")
 # configure_file(git2_features.h.in "${PROJECT_SOURCE_DIR}/include/git2/git2_features.h")
 configure_file(git2_features.h.in "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}/git2_features.h")
+
+install(FILES "${PROJECT_BINARY_DIR}/include/${LIBGIT2_FILENAME}/git2_features.h"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/${LIBGIT2_FILENAME}")
 
 set(UTIL_INCLUDES
 	"${PROJECT_SOURCE_DIR}/src/util"
