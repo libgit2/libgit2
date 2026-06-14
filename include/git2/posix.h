@@ -152,7 +152,7 @@ extern size_t p_fsync__cnt;
  * Platform-dependent methods
  */
 #ifdef GIT_WIN32
-#	include "win32/posix.h"
+#	include "git2/win32/posix.h"
 #else
 #	include "git2/unix/posix.h"
 #endif

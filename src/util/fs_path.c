@@ -11,7 +11,7 @@
 #include "git2/futils.h"
 #include "git2/posix.h"
 #ifdef GIT_WIN32
-#include "win32/posix.h"
+#include "git2/win32/posix.h"
 #include "git2/win32/w32_buffer.h"
 #include "win32/w32_util.h"
 #include "win32/version.h"
