@@ -21,7 +21,7 @@
 #include "mwindow.h"
 #include "object.h"
 #include "odb.h"
-#include "rand.h"
+#include "git2/rand.h"
 #include "refs.h"
 #include "runtime.h"
 #include "sysdir.h"

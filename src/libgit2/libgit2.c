@@ -15,7 +15,7 @@
 #include "git2/pool.h"
 #include "mwindow.h"
 #include "oid.h"
-#include "rand.h"
+#include "git2/rand.h"
 #include "refdb_reftable.h"
 #include "runtime.h"
 #include "settings.h"
