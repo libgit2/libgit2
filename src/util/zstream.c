@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "zstream.h"
+#include "git2/zstream.h"
 
 #include <zlib.h>
 

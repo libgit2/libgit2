@@ -16,7 +16,7 @@
 #include "delta.h"
 #include "git2/filebuf.h"
 #include "object.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 
 #include "git2/odb_backend.h"
 #include "git2/types.h"

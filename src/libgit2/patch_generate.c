@@ -14,7 +14,7 @@
 #include "diff_driver.h"
 #include "diff_xdiff.h"
 #include "delta.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 #include "git2/futils.h"
 
 static void diff_output_init(

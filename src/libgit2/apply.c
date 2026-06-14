@@ -16,7 +16,7 @@
 #include "patch.h"
 #include "git2/futils.h"
 #include "delta.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 #include "reader.h"
 #include "index.h"
 #include "repository.h"

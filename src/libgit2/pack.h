@@ -16,7 +16,7 @@
 #include "git2/map.h"
 #include "mwindow.h"
 #include "odb.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 #include "oid.h"
 #include "hashmap_oid.h"
 

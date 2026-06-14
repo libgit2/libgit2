@@ -20,7 +20,7 @@
 #include "git2/filebuf.h"
 #include "oid.h"
 #include "oidarray.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 #include "object.h"
 #include "hashmap_oid.h"
 

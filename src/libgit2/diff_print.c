@@ -12,7 +12,7 @@
 #include "diff_file.h"
 #include "patch_generate.h"
 #include "git2/futils.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 #include "blob.h"
 #include "delta.h"
 #include "repository.h"

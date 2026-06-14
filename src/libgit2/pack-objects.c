@@ -8,7 +8,7 @@
 #include "pack-objects.h"
 
 #include "buf.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 #include "delta.h"
 #include "git2/iterator.h"
 #include "pack.h"
