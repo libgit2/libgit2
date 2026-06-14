@@ -267,7 +267,7 @@ GIT_INLINE(git_index *) git_iterator_index(git_iterator *iter)
 
 GIT_INLINE(git_iterator_flag_t) git_iterator_flags(git_iterator *iter)
 {
-	return iter->flags;
+	return (git_iterator_flag_t)iter->flags;
 }
 
 GIT_INLINE(bool) git_iterator_ignore_case(git_iterator *iter)
