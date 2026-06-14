@@ -31,8 +31,8 @@ endif()
 if(USE_SHA1 STREQUAL "builtin")
 	file(GLOB UTIL_SRC_SHA1 hash/collisiondetect.* hash/sha1dc/*)
 	target_compile_definitions(util PRIVATE SHA1DC_NO_STANDARD_INCLUDES=1)
-        target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_SHA1_C=\"git2_util.h\")
-        target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C=\"git2_util.h\")
+        target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_SHA1_C=\"git2/git2_util.h\")
+        target_compile_definitions(util PRIVATE SHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C=\"git2/git2_util.h\")
 elseif(USE_SHA1 STREQUAL "openssl" OR
        USE_SHA1 STREQUAL "openssl-dynamic" OR
        USE_SHA1 STREQUAL "openssl-fips")
