@@ -7,7 +7,7 @@
 #ifndef INCLUDE_hashmap_str_h__
 #define INCLUDE_hashmap_str_h__
 
-#include "hashmap.h"
+#include "git2/hashmap.h"
 
 GIT_INLINE(uint32_t) git_hashmap_str_hash(const char *s)
 {

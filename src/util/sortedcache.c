@@ -6,7 +6,7 @@
  */
 
 #include "sortedcache.h"
-#include "hashmap.h"
+#include "git2/hashmap.h"
 
 int git_sortedcache_new(
 	git_sortedcache **out,

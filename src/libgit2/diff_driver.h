@@ -11,7 +11,7 @@
 
 #include "attr_file.h"
 #include "git2/str.h"
-#include "hashmap.h"
+#include "git2/hashmap.h"
 
 typedef struct git_diff_driver git_diff_driver;
 typedef struct git_diff_driver_registry git_diff_driver_registry;
