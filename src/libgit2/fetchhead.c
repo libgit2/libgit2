@@ -10,7 +10,7 @@
 #include "git2/types.h"
 #include "git2/oid.h"
 
-#include "str.h"
+#include "git2/str.h"
 #include "futils.h"
 #include "filebuf.h"
 #include "refs.h"

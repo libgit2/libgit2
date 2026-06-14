@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#include "str.h"
+#include "git2/str.h"
 #include "repository.h"
 #include "posix.h"
 #include "filebuf.h"

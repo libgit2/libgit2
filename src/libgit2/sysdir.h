@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "posix.h"
-#include "str.h"
+#include "git2/str.h"
 
 /**
  * Find a "global" file (i.e. one in a user's home directory).

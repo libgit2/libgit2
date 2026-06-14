@@ -10,7 +10,7 @@
 #include <ctype.h>
 
 #include "posix.h"
-#include "str.h"
+#include "git2/str.h"
 #include "runtime.h"
 
 #define DEFAULT_PORT_HTTP  "80"

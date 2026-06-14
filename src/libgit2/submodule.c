@@ -17,7 +17,7 @@
 #include "tree.h"
 #include "git2/iterator.h"
 #include "fs_path.h"
-#include "str.h"
+#include "git2/str.h"
 #include "index.h"
 #include "worktree.h"
 #include "clone.h"

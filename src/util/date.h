@@ -8,7 +8,7 @@
 #define INCLUDE_date_h__
 
 #include "util.h"
-#include "str.h"
+#include "git2/str.h"
 
 /*
  * Parse a string into a value as a git_time_t with a timezone offset.

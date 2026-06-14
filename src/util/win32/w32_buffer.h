@@ -8,7 +8,7 @@
 #define INCLUDE_win32_w32_buffer_h__
 
 #include "git2_util.h"
-#include "str.h"
+#include "git2/str.h"
 
 /**
  * Convert a wide character string to UTF-8 and append the results to the

@@ -12,7 +12,7 @@
 #include "git2.h"
 #include "vector.h"
 #include "push.h"
-#include "str.h"
+#include "git2/str.h"
 #include "oidarray.h"
 #include "staticstr.h"
 #include "git2/sys/transport.h"

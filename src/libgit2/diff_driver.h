@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "attr_file.h"
-#include "str.h"
+#include "git2/str.h"
 #include "hashmap.h"
 
 typedef struct git_diff_driver git_diff_driver;

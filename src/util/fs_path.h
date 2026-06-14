@@ -10,7 +10,7 @@
 #include "git2_util.h"
 
 #include "posix.h"
-#include "str.h"
+#include "git2/str.h"
 #include "vector.h"
 #include "utf8.h"
 

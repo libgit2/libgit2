@@ -13,7 +13,7 @@
 #include "git2/attr.h"
 #include "vector.h"
 #include "pool.h"
-#include "str.h"
+#include "git2/str.h"
 #include "futils.h"
 
 #define GIT_ATTR_FILE			".gitattributes"

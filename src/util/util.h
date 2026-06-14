@@ -7,7 +7,7 @@
 #ifndef INCLUDE_util_h__
 #define INCLUDE_util_h__
 
-#include "str.h"
+#include "git2/str.h"
 #include "git2_util.h"
 #include "strnlen.h"
 #include "thread.h"

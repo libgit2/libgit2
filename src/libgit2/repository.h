@@ -20,7 +20,7 @@
 #include "array.h"
 #include "cache.h"
 #include "refs.h"
-#include "str.h"
+#include "git2/str.h"
 #include "object.h"
 #include "attrcache.h"
 #include "submodule.h"

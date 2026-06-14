@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "str.h"
+#include "git2/str.h"
 #include "posix.h"
 #include <ctype.h>
 

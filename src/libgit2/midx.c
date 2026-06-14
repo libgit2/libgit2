@@ -16,7 +16,7 @@
 #include "pack.h"
 #include "fs_path.h"
 #include "repository.h"
-#include "str.h"
+#include "git2/str.h"
 
 #define MIDX_SIGNATURE 0x4d494458 /* "MIDX" */
 #define MIDX_VERSION 1

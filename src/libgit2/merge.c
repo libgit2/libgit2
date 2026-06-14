@@ -8,7 +8,7 @@
 #include "merge.h"
 
 #include "posix.h"
-#include "str.h"
+#include "git2/str.h"
 #include "repository.h"
 #include "revwalk.h"
 #include "commit_list.h"

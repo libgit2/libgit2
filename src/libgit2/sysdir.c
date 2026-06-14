@@ -8,7 +8,7 @@
 #include "sysdir.h"
 
 #include "runtime.h"
-#include "str.h"
+#include "git2/str.h"
 #include "fs_path.h"
 #include <ctype.h>
 #if GIT_WIN32

@@ -11,7 +11,7 @@
 
 #include <zlib.h>
 
-#include "str.h"
+#include "git2/str.h"
 
 typedef enum {
 	GIT_ZSTREAM_INFLATE,

@@ -6,7 +6,7 @@
  */
 
 #include "common.h"
-#include "str.h"
+#include "git2/str.h"
 
 #define is_switch_or_value(spec) \
 	((spec)->type == CLI_OPT_TYPE_SWITCH || \

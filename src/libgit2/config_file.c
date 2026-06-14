@@ -11,7 +11,7 @@
 #include "git2/sys/config.h"
 
 #include "array.h"
-#include "str.h"
+#include "git2/str.h"
 #include "config_backend.h"
 #include "config_list.h"
 #include "config_parse.h"

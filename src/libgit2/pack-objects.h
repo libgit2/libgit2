@@ -10,7 +10,7 @@
 
 #include "common.h"
 
-#include "str.h"
+#include "git2/str.h"
 #include "hash.h"
 #include "zstream.h"
 #include "pool.h"
