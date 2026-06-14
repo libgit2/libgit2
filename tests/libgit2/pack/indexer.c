@@ -2,7 +2,7 @@
 #include <git2.h>
 #include "futils.h"
 #include "hash.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "vector.h"
 #include "posix.h"
 

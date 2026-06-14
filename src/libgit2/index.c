@@ -13,7 +13,7 @@
 #include "tree.h"
 #include "tree-cache.h"
 #include "hash.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "pathspec.h"
 #include "ignore.h"
 #include "blob.h"

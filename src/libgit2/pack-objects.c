@@ -10,7 +10,7 @@
 #include "buf.h"
 #include "zstream.h"
 #include "delta.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "pack.h"
 #include "thread.h"
 #include "tree.h"

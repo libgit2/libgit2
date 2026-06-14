@@ -3,7 +3,7 @@
 #include "path.h"
 #include "submodule_helpers.h"
 #include "futils.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 
 static git_repository *g_repo = NULL;
 

@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "git2/checkout.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 
 /**
  * Update the working directory to match the target iterator.  The

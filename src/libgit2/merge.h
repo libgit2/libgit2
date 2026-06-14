@@ -12,7 +12,7 @@
 #include "vector.h"
 #include "commit_list.h"
 #include "pool.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 
 #include "git2/types.h"
 #include "git2/merge.h"

@@ -10,7 +10,7 @@
 #include "git2/pathspec.h"
 #include "git2/diff.h"
 #include "attr_file.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "repository.h"
 #include "index.h"
 #include "bitvec.h"

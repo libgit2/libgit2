@@ -15,7 +15,7 @@
 #include "config.h"
 #include "repository.h"
 #include "tree.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "fs_path.h"
 #include "str.h"
 #include "index.h"

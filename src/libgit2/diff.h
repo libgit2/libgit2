@@ -15,7 +15,7 @@
 #include "git2/oid.h"
 
 #include "vector.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "repository.h"
 #include "pool.h"
 #include "odb.h"

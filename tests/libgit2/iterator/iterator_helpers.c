@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "repository.h"
 #include "futils.h"
 #include "iterator_helpers.h"

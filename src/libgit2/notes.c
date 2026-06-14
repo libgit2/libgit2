@@ -10,7 +10,7 @@
 #include "buf.h"
 #include "refs.h"
 #include "config.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "signature.h"
 #include "blob.h"
 

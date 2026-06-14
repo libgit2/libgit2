@@ -15,7 +15,7 @@
 #include "fs_path.h"
 #include "refs.h"
 #include "object.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "refs.h"
 #include "diff.h"
 #include "diff_generate.h"
