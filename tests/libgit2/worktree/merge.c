@@ -3,6 +3,9 @@
 #include "worktree_helpers.h"
 #include "merge/merge_helpers.h"
 
+/* define GIT_MERGE_HEAD_FILE */
+#include "refs.h"
+
 #define COMMON_REPO "testrepo"
 #define WORKTREE_REPO "testrepo-worktree"
 
