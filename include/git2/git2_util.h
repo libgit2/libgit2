@@ -78,7 +78,7 @@ typedef struct git_str git_str;
 # include "git2/win32/version.h"
 # include "git2/win32/error.h"
 # ifdef GIT_THREADS
-#  include "win32/thread.h"
+#  include "git2/win32/thread.h"
 # endif
 
 #else
