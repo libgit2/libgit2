@@ -7,7 +7,7 @@
 
 #include "merge_driver.h"
 
-#include "vector.h"
+#include "git2/vector.h"
 #include "runtime.h"
 #include "merge.h"
 #include "git2/merge.h"

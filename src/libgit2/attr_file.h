@@ -11,7 +11,7 @@
 
 #include "git2/oid.h"
 #include "git2/attr.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "pool.h"
 #include "git2/str.h"
 #include "futils.h"

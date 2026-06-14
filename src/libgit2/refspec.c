@@ -10,7 +10,7 @@
 #include "buf.h"
 #include "refs.h"
 #include "util.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "wildmatch.h"
 
 int git_refspec__parse(git_refspec *refspec, const char *input, bool is_fetch)

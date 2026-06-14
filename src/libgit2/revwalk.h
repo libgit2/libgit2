@@ -13,7 +13,7 @@
 #include "commit_list.h"
 #include "pqueue.h"
 #include "pool.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "hashmap_oid.h"
 
 GIT_HASHMAP_OID_STRUCT(git_revwalk_oidmap, git_commit_list_node *);

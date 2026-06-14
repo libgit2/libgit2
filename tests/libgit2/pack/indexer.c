@@ -3,7 +3,7 @@
 #include "futils.h"
 #include "hash.h"
 #include "git2/iterator.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "posix.h"
 
 

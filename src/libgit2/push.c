@@ -12,7 +12,7 @@
 #include "pack.h"
 #include "pack-objects.h"
 #include "remote.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "tree.h"
 
 static int push_spec_rref_cmp(const void *a, const void *b)

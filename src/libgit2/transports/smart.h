@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "git2.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "push.h"
 #include "git2/str.h"
 #include "oidarray.h"

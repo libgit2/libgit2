@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "oid.h"
-#include "vector.h"
+#include "git2/vector.h"
 
 typedef struct git_fetchhead_ref {
 	git_oid oid;

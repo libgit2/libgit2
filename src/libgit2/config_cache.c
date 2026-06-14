@@ -11,7 +11,7 @@
 #include "repository.h"
 #include "config.h"
 #include "git2/config.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "filter.h"
 
 struct map_data {

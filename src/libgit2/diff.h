@@ -14,7 +14,7 @@
 #include "git2/sys/diff.h"
 #include "git2/oid.h"
 
-#include "vector.h"
+#include "git2/vector.h"
 #include "git2/iterator.h"
 #include "repository.h"
 #include "pool.h"

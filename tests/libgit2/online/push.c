@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "../submodule/submodule_helpers.h"
 #include "push_util.h"
 #include "refspec.h"

@@ -11,7 +11,7 @@
 
 #include "util.h"
 #include "futils.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "thread.h"
 #include "pool.h"
 #include "hashmap_str.h"

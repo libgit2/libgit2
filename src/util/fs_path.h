@@ -11,7 +11,7 @@
 
 #include "posix.h"
 #include "git2/str.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "utf8.h"
 
 /**

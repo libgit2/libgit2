@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "vector.h"
+#include "git2/vector.h"
 #include "commit_list.h"
 #include "pool.h"
 #include "git2/iterator.h"

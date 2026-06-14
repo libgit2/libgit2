@@ -15,7 +15,7 @@
 #include "git2/sys/transport.h"
 
 #include "refspec.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "net.h"
 #include "proxy.h"
 

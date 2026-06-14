@@ -4,7 +4,7 @@
 #include "common.h"
 
 #include "git2/blame.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "diff.h"
 #include "array.h"
 #include "git2/oid.h"

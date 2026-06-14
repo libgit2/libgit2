@@ -9,7 +9,7 @@
 
 #include "git2_util.h"
 
-#include "vector.h"
+#include "git2/vector.h"
 
 typedef struct git_pool_page git_pool_page;
 

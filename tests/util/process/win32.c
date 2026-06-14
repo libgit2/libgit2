@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "process.h"
-#include "vector.h"
+#include "git2/vector.h"
 
 #ifdef GIT_WIN32
 static git_str result;

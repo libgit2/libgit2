@@ -10,7 +10,7 @@
 #include "repository.h"
 #include "filebuf.h"
 #include "merge.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "index.h"
 
 #include "git2/types.h"

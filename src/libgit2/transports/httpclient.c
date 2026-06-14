@@ -11,7 +11,7 @@
 
 #include "git2.h"
 
-#include "vector.h"
+#include "git2/vector.h"
 #include "trace.h"
 #include "httpclient.h"
 #include "http.h"

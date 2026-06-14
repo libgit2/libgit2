@@ -11,7 +11,7 @@
 #include <git2.h>
 
 #include "git2_util.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "futils.h"
 #include "process.h"
 #include "strlist.h"

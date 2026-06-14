@@ -10,7 +10,7 @@
 #include "git2.h"
 #include "futils.h"
 #include "hash.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "tree.h"
 #include "git2/status.h"
 #include "repository.h"

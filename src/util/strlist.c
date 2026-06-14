@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "git2_util.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "strlist.h"
 
 int git_strlist_copy(char ***out, const char **in, size_t len)

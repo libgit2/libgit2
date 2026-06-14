@@ -9,7 +9,7 @@
 #include <git2/sys/config.h>
 
 #include "git2_util.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "fs_path.h"
 
 #include "common.h"

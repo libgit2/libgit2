@@ -19,7 +19,7 @@
 #include "revwalk.h"
 #include "strarray.h"
 #include "tag.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "wildmatch.h"
 #include "hashmap_oid.h"
 

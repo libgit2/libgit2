@@ -7,7 +7,7 @@
 
 #include "mwindow.h"
 
-#include "vector.h"
+#include "git2/vector.h"
 #include "futils.h"
 #include "map.h"
 #include "runtime.h"

@@ -4,7 +4,7 @@
 
 #include "commit_graph.h"
 #include "bitvec.h"
-#include "vector.h"
+#include "git2/vector.h"
 
 static git_repository *repo;
 

@@ -11,7 +11,7 @@
 
 #include "git2/pathspec.h"
 #include "git2/str.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "pool.h"
 #include "array.h"
 

@@ -1,7 +1,7 @@
 #include <stdint.h>
 
 #include "clar_libgit2.h"
-#include "vector.h"
+#include "git2/vector.h"
 
 /* initial size of 1 would cause writing past array bounds */
 void test_vector__0(void)
