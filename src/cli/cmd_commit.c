@@ -9,7 +9,7 @@
 #include "common.h"
 #include "cmd.h"
 #include "git2/futils.h"
-#include "process.h"
+#include "git2/process.h"
 
 #define COMMAND_NAME "commit"
 

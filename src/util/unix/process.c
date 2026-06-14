@@ -13,7 +13,7 @@
 #include "git2/git2_util.h"
 #include "git2/vector.h"
 #include "git2/futils.h"
-#include "process.h"
+#include "git2/process.h"
 #include "strlist.h"
 
 #ifdef __APPLE__

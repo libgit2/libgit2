@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "process.h"
+#include "git2/process.h"
 #include "git2/vector.h"
 
 #ifdef GIT_WIN32

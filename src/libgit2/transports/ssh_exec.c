@@ -15,7 +15,7 @@
 #include "git2/net.h"
 #include "path.h"
 #include "git2/futils.h"
-#include "process.h"
+#include "git2/process.h"
 #include "transports/smart.h"
 
 typedef struct {
