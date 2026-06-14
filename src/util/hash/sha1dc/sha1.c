@@ -22,7 +22,7 @@
 #endif
 
 #include "git2/hash/sha1dc/sha1.h"
-#include "ubc_check.h"
+#include "git2/hash/sha1dc/ubc_check.h"
 
 #if (defined(__amd64__) || defined(__amd64) || defined(__x86_64__) || defined(__x86_64) || \
      defined(i386) || defined(__i386) || defined(__i386__) || defined(__i486__)  || \
