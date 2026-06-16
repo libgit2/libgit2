@@ -150,10 +150,17 @@ int git_runtime_shutdown(void)
 	if (init_lock() < 0)
 		return -1;
 
+	/* Ignore extra shutdown calls once the runtime is fully shut down. */
+	if (git_atomic32_get(&init_count) <= 0) {
+		ret = 0;
+		goto out;
+	}
+
 	/* Only do work on a 1 -> 0 transition of the refcount */
 	if ((ret = git_atomic32_dec(&init_count)) == 0)
 		shutdown_common();
 
+out:
 	/* Exit the lock */
 	if (init_unlock() < 0)
 		return -1;
