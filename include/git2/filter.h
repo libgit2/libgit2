@@ -43,6 +43,8 @@ typedef enum {
 
 /**
  * Filter option flags.
+ *
+ * @flags
  */
 typedef enum {
 	GIT_FILTER_DEFAULT = 0u,
