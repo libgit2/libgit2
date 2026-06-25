@@ -42,7 +42,13 @@ typedef enum {
  */
 typedef int GIT_CALLBACK(git_odb_foreach_cb)(const git_oid *id, void *payload);
 
-/** Options for configuring a loose object backend. */
+/**
+ * Options for configuring a loose object backend.
+ *
+ * @options[version] GIT_ODB_OPTIONS_VERSION
+ * @options[init_macro] GIT_ODB_OPTIONS_INIT
+ * @options[init_function] git_odb_options_init
+ */
 typedef struct {
 	unsigned int version; /**< version for the struct */
 
@@ -61,6 +67,20 @@ typedef struct {
  * `git_odb_options_init` programmatic initialization.
  */
 #define GIT_ODB_OPTIONS_INIT { GIT_ODB_OPTIONS_VERSION }
+
+/**
+ * Initialize git_odb_options_options structure
+ *
+ * Initialize a `git_odb_options` with default values. Equivalent to
+ * creating an instance with GIT_ODB_OPTIONS_INIT.
+ *
+ * @param opts The `git_odb_options` struct to initialize.
+ * @param version The struct version; pass `GIT_ODB_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_odb_options_init(
+	git_odb_options *opts,
+	unsigned int version);
 
 /**
  * Create a new object database with no backends.
@@ -372,13 +392,17 @@ GIT_EXTERN(int) git_odb_write(git_oid *out, git_odb *odb, const void *data, size
  *
  * @see git_odb_stream
  *
- * @param out pointer where to store the stream
+ * @param[out] out pointer where to store the stream
  * @param db object database where the stream will write
  * @param size final size of the object that will be written
  * @param type type of the object that will be written
  * @return 0 if the stream was created; error code otherwise
  */
-GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **out, git_odb *db, git_object_size_t size, git_object_t type);
+GIT_EXTERN(int) git_odb_open_wstream(
+	git_odb_stream **out,
+	git_odb *db,
+	git_object_size_t size,
+	git_object_t type);
 
 /**
  * Write to an odb stream
@@ -446,8 +470,8 @@ GIT_EXTERN(void) git_odb_stream_free(git_odb_stream *stream);
  *
  * @see git_odb_stream
  *
- * @param out pointer where to store the stream
- * @param len pointer where to store the length of the object
+ * @param[out] out pointer where to store the stream
+ * @param[out] len pointer where to store the length of the object
  * @param type pointer where to store the type of the object
  * @param db object database where the stream will read from
  * @param oid oid of the object the stream will read from
@@ -471,7 +495,7 @@ GIT_EXTERN(int) git_odb_open_rstream(
  *
  * @see git_odb_writepack
  *
- * @param out pointer to the writepack functions
+ * @param[out] out pointer to the writepack functions
  * @param db object database where the stream will read from
  * @param progress_cb function to call with progress information.
  * Be aware that this is called inline with network and indexing operations,
@@ -613,7 +637,7 @@ GIT_EXTERN(size_t) git_odb_num_backends(git_odb *odb);
 /**
  * Lookup an ODB backend object by index
  *
- * @param out output pointer to ODB backend at pos
+ * @param[out] out output pointer to ODB backend at pos
  * @param odb object database
  * @param pos index into object database backend list
  * @return 0 on success, GIT_ENOTFOUND if pos is invalid, other errors < 0

@@ -182,7 +182,7 @@ typedef enum {
 /**
  * Query compile time options for libgit2.
  *
- * @return A combination of GIT_FEATURE_* values.
+ * @return @type[flags] git_feature_t A combination of GIT_FEATURE_* values.
  */
 GIT_EXTERN(int) git_libgit2_features(void);
 

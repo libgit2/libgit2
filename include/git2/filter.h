@@ -43,6 +43,8 @@ typedef enum {
 
 /**
  * Filter option flags.
+ *
+ * @flags
  */
 typedef enum {
 	GIT_FILTER_DEFAULT = 0u,
@@ -65,6 +67,10 @@ typedef enum {
 
 /**
  * Filtering options
+ *
+ * @options[version] GIT_FILTER_OPTIONS_VERSION
+ * @options[init_macro] GIT_FILTER_OPTIONS_INIT
+ * @options[init_function] git_filter_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -90,6 +96,20 @@ typedef struct {
 
 /** Static constructor for `git_filter_options` */
 #define GIT_FILTER_OPTIONS_INIT {GIT_FILTER_OPTIONS_VERSION}
+
+/**
+ * Initialize git_filter_options structure
+ *
+ * Initialize a `git_filter_options` with default values. Equivalent to
+ * creating an instance with GIT_FILTER_OPTIONS_VERSION.
+ *
+ * @param opts The `git_filter_options` struct to initialize.
+ * @param version The struct version; pass `GIT_FILTER_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_filter_options_init(
+	git_filter_options *opts,
+	unsigned int version);
 
 /**
  * A filter that can transform file data
@@ -126,7 +146,7 @@ typedef struct git_filter_list git_filter_list;
  * This will return 0 (success) but set the output git_filter_list to NULL
  * if no filters are requested for the given file.
  *
- * @param filters Output newly created git_filter_list (or NULL)
+ * @param[out] filters Output newly created git_filter_list (or NULL)
  * @param repo Repository object that contains `path`
  * @param blob The blob to which the filter will be applied (if known)
  * @param path Relative path of the file to be filtered

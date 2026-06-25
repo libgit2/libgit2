@@ -42,6 +42,30 @@ void git_commit__free(void *_commit)
 	git__free(commit);
 }
 
+int git_commit_create_ext_options_init(
+	git_commit_create_ext_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_commit_create_ext_options,
+		GIT_COMMIT_CREATE_EXT_OPTIONS_INIT);
+	return 0;
+}
+
+int git_commit_create_options_init(
+	git_commit_create_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_commit_create_options,
+		GIT_COMMIT_CREATE_OPTIONS_INIT);
+	return 0;
+}
+
 /**
  * Append to 'out' properly marking continuations when there's a newline in 'content'
  */

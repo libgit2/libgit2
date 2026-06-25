@@ -29,13 +29,15 @@ GIT_BEGIN_DECL
  * The returned object should be released with `git_object_free` when no
  * longer needed.
  *
- * @param out pointer to output object
+ * @param[out] out pointer to output object
  * @param repo the repository to search in
  * @param spec the textual specification for an object
  * @return 0 on success, GIT_ENOTFOUND, GIT_EAMBIGUOUS, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_revparse_single(
-	git_object **out, git_repository *repo, const char *spec);
+	git_object **out,
+	git_repository *repo,
+	const char *spec);
 
 /**
  * Find a single object and intermediate reference by a revision string.

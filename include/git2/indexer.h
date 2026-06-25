@@ -69,6 +69,10 @@ typedef int GIT_CALLBACK(git_indexer_progress_cb)(const git_indexer_progress *st
 
 /**
  * Options for indexer configuration
+ *
+ * @options[version] GIT_INDEXER_OPTIONS_VERSION
+ * @options[init_macro] GIT_INDEXER_OPTIONS_INIT
+ * @options[init_function] git_indexer_options_init
  */
 typedef struct git_indexer_options {
 	unsigned int version;
@@ -134,7 +138,7 @@ GIT_EXTERN(int) git_indexer_new(
 /**
  * Create a new indexer instance
  *
- * @param out where to store the indexer instance
+ * @param[out] out where to store the indexer instance
  * @param path to the directory where the packfile should be stored
  * @param mode permissions to use creating packfile or 0 for defaults
  * @param odb object database from which to read base objects when

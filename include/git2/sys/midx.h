@@ -24,6 +24,10 @@ GIT_BEGIN_DECL
  *
  * Initialize with `GIT_MIDX_WRITER_OPTIONS_INIT`. Alternatively,
  * you can use `git_midx_writer_options_init`.
+ *
+ * @options[version] GIT_MIDX_WRITER_OPTIONS_VERSION
+ * @options[init_macro] GIT_MIDX_WRITER_OPTIONS_INIT
+ * @options[init_function] git_midx_writer_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -60,7 +64,7 @@ GIT_EXTERN(int) git_midx_writer_options_init(
 /**
  * Create a new writer for `multi-pack-index` files.
  *
- * @param out location to store the writer pointer.
+ * @param[out] out location to store the writer pointer.
  * @param pack_dir the directory where the `.pack` and `.idx` files are. The
  * `multi-pack-index` file will be written in this directory, too.
  * @return 0 or an error code

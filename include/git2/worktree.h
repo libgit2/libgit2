@@ -37,12 +37,15 @@ GIT_EXTERN(int) git_worktree_list(git_strarray *out, git_repository *repo);
 /**
  * Lookup a working tree by its name for a given repository
  *
- * @param out Output pointer to looked up worktree or `NULL`
+ * @param[out] out Output pointer to looked up worktree or `NULL`
  * @param repo The repository containing worktrees
  * @param name Name of the working tree to look up
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_worktree_lookup(git_worktree **out, git_repository *repo, const char *name);
+GIT_EXTERN(int) git_worktree_lookup(
+	git_worktree **out,
+	git_repository *repo,
+	const char *name);
 
 /**
  * Open a worktree of a given repository
@@ -51,11 +54,13 @@ GIT_EXTERN(int) git_worktree_lookup(git_worktree **out, git_repository *repo, co
  * function will look up the worktree inside the parent
  * repository and create a new `git_worktree` structure.
  *
- * @param out Out-pointer for the newly allocated worktree
+ * @param[out] out Out-pointer for the newly allocated worktree
  * @param repo Repository to look up worktree for
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_worktree_open_from_repository(git_worktree **out, git_repository *repo);
+GIT_EXTERN(int) git_worktree_open_from_repository(
+	git_worktree **out,
+	git_repository *repo);
 
 /**
  * Free a previously allocated worktree
@@ -82,6 +87,9 @@ GIT_EXTERN(int) git_worktree_validate(const git_worktree *wt);
  * Initialize with `GIT_WORKTREE_ADD_OPTIONS_INIT`. Alternatively, you can
  * use `git_worktree_add_options_init`.
  *
+ * @options[version] GIT_WORKTREE_ADD_OPTIONS_VERSION
+ * @options[init_macro] GIT_WORKTREE_ADD_OPTIONS_INIT
+ * @options[init_function] git_worktree_add_options_init
  */
 typedef struct git_worktree_add_options {
 	unsigned int version;
@@ -123,15 +131,18 @@ GIT_EXTERN(int) git_worktree_add_options_init(git_worktree_add_options *opts,
  * required data structures inside the repository and check out
  * the current HEAD at `path`
  *
- * @param out Output pointer containing new working tree
+ * @param[out] out Output pointer containing new working tree
  * @param repo Repository to create working tree for
  * @param name Name of the working tree
  * @param path Path to create working tree at
  * @param opts Options to modify default behavior. May be NULL
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_worktree_add(git_worktree **out, git_repository *repo,
-	const char *name, const char *path,
+GIT_EXTERN(int) git_worktree_add(
+	git_worktree **out,
+	git_repository *repo,
+	const char *name,
+	const char *path,
 	const git_worktree_add_options *opts);
 
 /**
@@ -206,6 +217,9 @@ typedef enum {
  * Initialize with `GIT_WORKTREE_PRUNE_OPTIONS_INIT`. Alternatively, you can
  * use `git_worktree_prune_options_init`.
  *
+ * @options[version] GIT_WORKTREE_PRUNE_OPTIONS_VERSION
+ * @options[init_macro] GIT_WORKTREE_PRUNE_OPTIONS_INIT
+ * @options[init_function] git_worktree_prune_options_init
  */
 typedef struct git_worktree_prune_options {
 	unsigned int version;

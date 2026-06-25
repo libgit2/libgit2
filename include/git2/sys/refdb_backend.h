@@ -375,7 +375,7 @@ GIT_EXTERN(int) git_refdb_init_backend(
  * opened / created, but you can use this to explicitly construct a
  * filesystem refdb backend for a repository.
  *
- * @param backend_out Output pointer to the git_refdb_backend object
+ * @param[out] backend_out Output pointer to the git_refdb_backend object
  * @param repo Git repository to access
  * @return 0 on success, <0 error code on failure
  */
@@ -390,7 +390,7 @@ GIT_EXTERN(int) git_refdb_backend_fs(
  * opened / created that uses the reftable format, but you can use this to
  * explicitly construct a reftable refdb backend for a repository.
  *
- * @param backend_out Output pointer to the git_refdb_backend object
+ * @param[out] backend_out Output pointer to the git_refdb_backend object
  * @param repo Git repository to access
  * @return 0 on success, <0 error code on failure
  */

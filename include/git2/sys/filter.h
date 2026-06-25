@@ -57,7 +57,7 @@ GIT_EXTERN(git_filter *) git_filter_lookup(const char *name);
  * `git_filter_lookup` and `git_filter_list_push` functions to assemble
  * your own chains of filters.
  *
- * @param out the filter list
+ * @param[out] out the filter list
  * @param repo the repository to use for configuration
  * @param mode the filter mode (direction)
  * @param options the options
@@ -259,7 +259,7 @@ typedef int GIT_CALLBACK(git_filter_apply_fn)(
  * with that data, the `git_writestream` will then perform the filter
  * translation and stream the filtered data out to the `next` location.
  *
- * @param out the write stream
+ * @param[out] out the write stream
  * @param self the filter
  * @param payload a data for future filter functions
  * @param src the filter source

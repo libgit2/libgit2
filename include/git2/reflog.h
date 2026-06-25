@@ -30,7 +30,7 @@ GIT_BEGIN_DECL
  * The reflog must be freed manually by using
  * git_reflog_free().
  *
- * @param out pointer to reflog
+ * @param[out] out pointer to reflog
  * @param repo the repository
  * @param name reference to look up
  * @return 0 or an error code

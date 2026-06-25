@@ -334,6 +334,10 @@ typedef enum {
  * Options for controlling the formatting of the generated e-mail.
  *
  * @deprecated use `git_email_create_options`
+ *
+ * @options[version] GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION
+ * @options[init_macro] GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT
+ * @options[init_function] git_diff_format_email_options_init
  */
 typedef struct {
 	unsigned int version;

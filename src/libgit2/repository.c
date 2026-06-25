@@ -330,6 +330,18 @@ on_error:
 	return NULL;
 }
 
+int git_repository_new_options_init(
+	git_repository_new_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_repository_new_options,
+		GIT_REPOSITORY_NEW_OPTIONS_INIT);
+	return 0;
+}
+
 int git_repository_new_ext(
 	git_repository **out,
 	git_repository_new_options *opts)

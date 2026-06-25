@@ -365,6 +365,18 @@ int git_commit_graph_validate(git_commit_graph *cgraph) {
 	return 0;
 }
 
+int git_commit_graph_open_options_init(
+	git_commit_graph_open_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_commit_graph_open_options,
+		GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT);
+	return 0;
+}
+
 int git_commit_graph_open(
 	git_commit_graph **cgraph_out,
 	const char *objects_dir

@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
  * The returned object should be released with `git_commit_free` when no
  * longer needed.
  *
- * @param commit pointer to the looked up commit
+ * @param[out] commit pointer to the looked up commit
  * @param repo the repo to use when locating the commit.
  * @param id identity of the commit to locate. If the object is
  *		an annotated tag it will be peeled back to the commit.
@@ -182,13 +182,15 @@ GIT_EXTERN(const git_signature *) git_commit_author(const git_commit *commit);
  *
  * Call `git_signature_free` to free the signature.
  *
- * @param out a pointer to store the resolved signature.
+ * @param[out] out a pointer to store the resolved signature.
  * @param commit a previously loaded commit.
  * @param mailmap the mailmap to resolve with. (may be NULL)
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_commit_committer_with_mailmap(
-	git_signature **out, const git_commit *commit, const git_mailmap *mailmap);
+	git_signature **out,
+	const git_commit *commit,
+	const git_mailmap *mailmap);
 
 /**
  * Get the author of a commit, using the mailmap to map names and email
@@ -196,13 +198,15 @@ GIT_EXTERN(int) git_commit_committer_with_mailmap(
  *
  * Call `git_signature_free` to free the signature.
  *
- * @param out a pointer to store the resolved signature.
+ * @param[out] out a pointer to store the resolved signature.
  * @param commit a previously loaded commit.
  * @param mailmap the mailmap to resolve with. (may be NULL)
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_commit_author_with_mailmap(
-	git_signature **out, const git_commit *commit, const git_mailmap *mailmap);
+	git_signature **out,
+	const git_commit *commit,
+	const git_mailmap *mailmap);
 
 /**
  * Get the full raw text of the commit header.
@@ -215,7 +219,7 @@ GIT_EXTERN(const char *) git_commit_raw_header(const git_commit *commit);
 /**
  * Get the tree pointed to by a commit.
  *
- * @param tree_out pointer where to store the tree object
+ * @param[out] tree_out pointer where to store the tree object
  * @param commit a previously loaded commit.
  * @return 0 or an error code
  */
@@ -242,7 +246,7 @@ GIT_EXTERN(unsigned int) git_commit_parentcount(const git_commit *commit);
 /**
  * Get the specified parent of the commit.
  *
- * @param out Pointer where to store the parent commit
+ * @param[out] out Pointer where to store the parent commit
  * @param commit a previously loaded commit.
  * @param n the position of the parent (from 0 to `parentcount`)
  * @return 0 or an error code
@@ -360,6 +364,13 @@ typedef int GIT_CALLBACK(git_commit_signature_cb)(
 	const char *commit_content,
 	void *payload);
 
+/**
+ * Commit creation options for the simple commit creation options.
+ *
+ * @options[version] GIT_COMMIT_CREATE_OPTIONS_VERSION
+ * @options[init_macro] GIT_COMMIT_CREATE_OPTIONS_INIT
+ * @options[init_function] git_commit_create_options_init
+ */
 typedef struct {
 	unsigned int version;
 
@@ -402,6 +413,21 @@ typedef struct {
 #define GIT_COMMIT_CREATE_OPTIONS_INIT { GIT_COMMIT_CREATE_OPTIONS_VERSION }
 
 /**
+ * Initialize git_commit_create_options structure
+ *
+ * Initialize a `git_commit_create_options` with default values.
+ * Equivalent to creating an instance with GIT_COMMIT_CREATE_OPTIONS_INIT.
+ *
+ * @param opts The `git_commit_create_options` struct to initialize.
+ * @param version The struct version; pass
+ *                `GIT_COMMIT_CREATE_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_commit_create_options_init(
+	git_commit_create_options *opts,
+	unsigned int version);
+
+/**
  * Commits the staged changes in the repository; this is a near analog to
  * `git commit -m message`.
  *
@@ -419,6 +445,13 @@ GIT_EXTERN(int) git_commit_create_from_stage(
 	const char *message,
 	const git_commit_create_options *opts);
 
+/**
+ * Commit creation options for the extended commit creation options.
+ *
+ * @options[version] GIT_COMMIT_CREATE_EXT_OPTIONS_VERSION
+ * @options[init_macro] GIT_COMMIT_CREATE_EXT_OPTIONS_INIT
+ * @options[init_function] git_commit_create_ext_options_init
+ */
 typedef struct {
 	unsigned int version;
 
@@ -455,6 +488,22 @@ typedef struct {
 
 /** Static constructor for `git_commit_create_ext_options` */
 #define GIT_COMMIT_CREATE_EXT_OPTIONS_INIT { GIT_COMMIT_CREATE_EXT_OPTIONS_VERSION }
+
+/**
+ * Initialize git_commit_create_ext_options structure
+ *
+ * Initialize a `git_commit_create_ext_options` with default values.
+ * Equivalent to creating an instance with
+ * GIT_COMMIT_CREATE_EXT_OPTIONS_INIT.
+ *
+ * @param opts The `git_commit_create_ext_options` struct to initialize.
+ * @param version The struct version; pass
+ *                `GIT_COMMIT_CREATE_EXT_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_commit_create_ext_options_init(
+	git_commit_create_ext_options *opts,
+	unsigned int version);
 
 /**
  * Create a new commit object and write it to the object database.
@@ -791,7 +840,7 @@ GIT_EXTERN(int) git_commit_create_with_signature(
  * Create an in-memory copy of a commit. The copy must be explicitly
  * free'd or it will leak.
  *
- * @param out Pointer to store the copy of the commit
+ * @param[out] out Pointer to store the copy of the commit
  * @param source Original commit to copy
  * @return 0
  */

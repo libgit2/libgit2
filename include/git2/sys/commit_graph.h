@@ -24,6 +24,10 @@ GIT_BEGIN_DECL
  *
  * Initialize with `GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT`. Alternatively,
  * you can use `git_commit_graph_open_options_init`.
+ *
+ * @options[version] GIT_COMMIT_GRAPH_OPEN_OPTIONS_VERSION
+ * @options[init_macro] GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT
+ * @options[init_function] git_commit_graph_open_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -63,7 +67,7 @@ GIT_EXTERN(int) git_commit_graph_open_options_init(
  *
  * This finds, opens, and validates the `commit-graph` file.
  *
- * @param cgraph_out the `git_commit_graph` struct to initialize.
+ * @param[out] cgraph_out the `git_commit_graph` struct to initialize.
  * @param objects_dir the path to a git objects directory.
  * @return Zero on success; -1 on failure.
  */
@@ -103,6 +107,10 @@ typedef enum {
  *
  * Initialize with `GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT`. Alternatively,
  * you can use `git_commit_graph_writer_options_init`.
+ *
+ * @options[version] GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION
+ * @options[init_macro] GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT
+ * @options[init_function] git_commit_graph_writer_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -156,9 +164,9 @@ GIT_EXTERN(int) git_commit_graph_writer_options_init(
 /**
  * Create a new writer for `commit-graph` files.
  *
- * @param out Location to store the writer pointer.
+ * @param[out] out Location to store the writer pointer.
  * @param objects_info_dir The `objects/info` directory.
- * The `commit-graph` file will be written in this directory.
+ *        The `commit-graph` file will be written in this directory.
  * @param options The options for the commit graph writer.
  * @return 0 or an error code
  */

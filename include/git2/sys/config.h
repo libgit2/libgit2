@@ -144,7 +144,12 @@ GIT_EXTERN(int) git_config_add_backend(
 	const git_repository *repo,
 	int force);
 
-/** Options for in-memory configuration backends. */
+/**
+ * Options for in-memory configuration backends.
+ * @options[version] GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION
+ * @options[init_macro] GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT
+ * @options[init_function] git_config_backend_memory_options_init
+ */
 typedef struct {
 	unsigned int version;
 
@@ -167,12 +172,29 @@ typedef struct {
 /** Static constructor for `git_config_backend_memory_options` */
 #define GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT { GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION }
 
+/**
+ * Initialize git_config_backend_memory_options structure
+ *
+ * Initialize a `git_config_backend_memory_options` with default values.
+ * Equivalent to creating an instance with
+ * GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT.
+ *
+ * @param opts The `git_config_backend_memory_options` struct to
+ *             initialize.
+ * @param version The struct version; pass
+ *                `GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_config_backend_memory_options_init(
+	git_config_backend_memory_options *opts,
+	unsigned int version);
+
 
 /**
  * Create an in-memory configuration backend from a string in standard
  * git configuration file format.
  *
- * @param out the new backend
+ * @param[out] out the new backend
  * @param cfg the configuration that is to be parsed
  * @param len the length of the string pointed to by `cfg`
  * @param opts the options to initialize this backend with, or NULL
@@ -188,7 +210,7 @@ extern int git_config_backend_from_string(
  * Create an in-memory configuration backend from a list of name/value
  * pairs.
  *
- * @param out the new backend
+ * @param[out] out the new backend
  * @param values the configuration values to set (in "key=value" format)
  * @param len the length of the values array
  * @param opts the options to initialize this backend with, or NULL

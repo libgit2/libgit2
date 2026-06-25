@@ -82,7 +82,7 @@ typedef enum {
 /**
  * Compile a pathspec
  *
- * @param out Output of the compiled pathspec
+ * @param[out] out Output of the compiled pathspec
  * @param pathspec A git_strarray of the paths to match
  * @return 0 on success, <0 on failure
  */
@@ -127,7 +127,7 @@ GIT_EXTERN(int) git_pathspec_matches_path(
  * pathspecs with no match (if you used the `GIT_PATHSPEC_FIND_FAILURES`
  * flag).  You must call `git_pathspec_match_list_free()` on this object.
  *
- * @param out Output list of matches; pass NULL to just get return value
+ * @param[out] out Output list of matches; pass NULL to just get return value
  * @param repo The repository in which to match; bare repo is an error
  * @param flags Combination of git_pathspec_flag_t options to control match
  * @param ps Pathspec to be matched
@@ -156,7 +156,7 @@ GIT_EXTERN(int) git_pathspec_match_workdir(
  * pathspecs with no match (if you used the `GIT_PATHSPEC_FIND_FAILURES`
  * flag).  You must call `git_pathspec_match_list_free()` on this object.
  *
- * @param out Output list of matches; pass NULL to just get return value
+ * @param[out] out Output list of matches; pass NULL to just get return value
  * @param index The index to match against
  * @param flags Combination of git_pathspec_flag_t options to control match
  * @param ps Pathspec to be matched
@@ -180,7 +180,7 @@ GIT_EXTERN(int) git_pathspec_match_index(
  * pathspecs with no match (if you used the `GIT_PATHSPEC_FIND_FAILURES`
  * flag).  You must call `git_pathspec_match_list_free()` on this object.
  *
- * @param out Output list of matches; pass NULL to just get return value
+ * @param[out] out Output list of matches; pass NULL to just get return value
  * @param tree The root-level tree to match against
  * @param flags Combination of git_pathspec_flag_t options to control match
  * @param ps Pathspec to be matched
@@ -204,7 +204,7 @@ GIT_EXTERN(int) git_pathspec_match_tree(
  * pathspecs with no match (if you used the `GIT_PATHSPEC_FIND_FAILURES`
  * flag).  You must call `git_pathspec_match_list_free()` on this object.
  *
- * @param out Output list of matches; pass NULL to just get return value
+ * @param[out] out Output list of matches; pass NULL to just get return value
  * @param diff A generated diff list
  * @param flags Combination of git_pathspec_flag_t options to control match
  * @param ps Pathspec to be matched
