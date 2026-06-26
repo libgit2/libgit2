@@ -19,6 +19,14 @@ void test_init__reinit_succeeds(void)
 	cl_sandbox_set_search_path_defaults();
 }
 
+void test_init__extra_shutdown_returns_zero(void)
+{
+	cl_assert_equal_i(0, git_libgit2_shutdown());
+	cl_assert_equal_i(0, git_libgit2_shutdown());
+	cl_assert_equal_i(1, git_libgit2_init());
+	cl_sandbox_set_search_path_defaults();
+}
+
 #ifdef GIT_THREADS
 static void *reinit(void *unused)
 {
