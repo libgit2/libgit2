@@ -283,7 +283,7 @@ GIT_EXTERN(int) git_patch_to_buf(
 	git_buf *out,
 	git_patch *patch);
 
-/**@}*/
+/** @} */
 GIT_END_DECL
 
 #endif

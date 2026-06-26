@@ -5,12 +5,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "futils.h"
+#include "git2/futils.h"
 
-#include "runtime.h"
-#include "hash.h"
-#include "rand.h"
-#include "hashmap_str.h"
+#include "git2/runtime.h"
+#include "git2/hash.h"
+#include "git2/rand.h"
+#include "git2/hashmap_str.h"
 
 #include <ctype.h>
 

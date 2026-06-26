@@ -1,6 +1,6 @@
 #include "describe_helpers.h"
 
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 
 void assert_describe(
 	const char *expected_output,

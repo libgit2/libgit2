@@ -12,10 +12,10 @@
 #include "common.h"
 
 #include "config.h"
-#include "net.h"
+#include "git2/net.h"
 #include "path.h"
-#include "futils.h"
-#include "process.h"
+#include "git2/futils.h"
+#include "git2/process.h"
 #include "transports/smart.h"
 
 typedef struct {

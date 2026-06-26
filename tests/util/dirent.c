@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 typedef struct name_data {
 	int count; /* return count */

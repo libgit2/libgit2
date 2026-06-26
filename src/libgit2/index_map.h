@@ -8,7 +8,7 @@
 #define INCLUDE_index_map_h__
 
 #include "common.h"
-#include "hashmap.h"
+#include "git2/hashmap.h"
 
 typedef struct {
 	unsigned int ignore_case;

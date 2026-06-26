@@ -13,8 +13,8 @@
 #include "sighandler.h"
 #include "progress.h"
 
-#include "fs_path.h"
-#include "futils.h"
+#include "git2/fs_path.h"
+#include "git2/futils.h"
 
 #define COMMAND_NAME "clone"
 

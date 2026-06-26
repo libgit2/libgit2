@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "regexp.h"
+#include "git2/regexp.h"
 
 #if defined(GIT_REGEX_PCRE)
 

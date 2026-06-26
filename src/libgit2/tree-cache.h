@@ -10,8 +10,8 @@
 
 #include "common.h"
 
-#include "pool.h"
-#include "str.h"
+#include "git2/pool.h"
+#include "git2/str.h"
 #include "git2/oid.h"
 
 typedef struct git_tree_cache {

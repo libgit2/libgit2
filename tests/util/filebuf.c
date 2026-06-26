@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 
 /* make sure git_filebuf_open doesn't delete an existing lock */
 void test_filebuf__0(void)

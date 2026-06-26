@@ -7,7 +7,7 @@
 #ifndef INCLUDE_userdiff_h__
 #define INCLUDE_userdiff_h__
 
-#include "regexp.h"
+#include "git2/regexp.h"
 
 /*
  * This file isolates the built in diff driver function name patterns.

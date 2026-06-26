@@ -18,12 +18,12 @@
 
 #include "checkout.h"
 #include "remote.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "refs.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "repository.h"
 #include "odb.h"
-#include "net.h"
+#include "git2/net.h"
 
 static int create_branch(
 	git_reference **branch,

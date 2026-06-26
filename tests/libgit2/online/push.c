@@ -1,11 +1,11 @@
 #include "clar_libgit2.h"
-#include "posix.h"
-#include "vector.h"
+#include "git2/posix.h"
+#include "git2/vector.h"
 #include "../submodule/submodule_helpers.h"
 #include "push_util.h"
 #include "refspec.h"
 #include "remote.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 static git_repository *_repo;
 

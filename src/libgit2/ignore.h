@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "repository.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "attr_file.h"
 
 #define GIT_IGNORE_FILE			".gitignore"

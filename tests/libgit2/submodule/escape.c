@@ -1,8 +1,8 @@
 #include "clar_libgit2.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "path.h"
 #include "submodule_helpers.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "repository.h"
 
 static git_repository *g_repo = NULL;

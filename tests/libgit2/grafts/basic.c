@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 #include "grafts.h"
 
 static git_repository *g_repo;

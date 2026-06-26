@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "net.h"
+#include "git2/net.h"
 
 void test_hostname__matches_cert(void)
 {

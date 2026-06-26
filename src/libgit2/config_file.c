@@ -10,17 +10,17 @@
 #include "git2/config.h"
 #include "git2/sys/config.h"
 
-#include "array.h"
-#include "str.h"
+#include "git2/array.h"
+#include "git2/str.h"
 #include "config_backend.h"
 #include "config_list.h"
 #include "config_parse.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "refdb.h"
-#include "regexp.h"
+#include "git2/regexp.h"
 #include "sysdir.h"
-#include "wildmatch.h"
-#include "hash.h"
+#include "git2/wildmatch.h"
+#include "git2/hash.h"
 
 /* Max depth for [include] directives */
 #define MAX_INCLUDE_DEPTH 10

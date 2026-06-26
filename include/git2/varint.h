@@ -1,0 +1,22 @@
+/*
+ * Copyright (C) the libgit2 contributors. All rights reserved.
+ *
+ * This file is part of libgit2, distributed under the GNU GPL v2 with
+ * a Linking Exception. For full terms see the included COPYING file.
+ */
+#ifndef INCLUDE_varint_h__
+#define INCLUDE_varint_h__
+
+#include "git2/git2_util.h"
+
+#include <stdint.h>
+
+GIT_BEGIN_DECL
+
+GIT_EXTERN(int) git_encode_varint(unsigned char *, size_t, uintmax_t);
+GIT_EXTERN(uintmax_t) git_decode_varint(const unsigned char *, size_t *);
+
+/** @} */
+GIT_END_DECL
+
+#endif

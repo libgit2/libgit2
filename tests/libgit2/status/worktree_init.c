@@ -1,11 +1,11 @@
 #include "clar_libgit2.h"
 #include "git2/sys/repository.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 #include "ignore.h"
 #include "status_helpers.h"
-#include "posix.h"
-#include "util.h"
+#include "git2/posix.h"
+#include "git2/util.h"
 #include "path.h"
 #include "index.h"
 

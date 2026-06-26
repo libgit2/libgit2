@@ -10,7 +10,7 @@
 #include "refdb.h"
 #include "reflog.h"
 #include "signature.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 
 #include <git2/object.h>
 #include <git2/oid.h>

@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "diff.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "index.h"
 
 enum {

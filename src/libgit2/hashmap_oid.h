@@ -7,7 +7,7 @@
 #ifndef INCLUDE_hashmap_oid_h__
 #define INCLUDE_hashmap_oid_h__
 
-#include "hashmap.h"
+#include "git2/hashmap.h"
 
 GIT_INLINE(uint32_t) git_hashmap_oid_hashcode(const git_oid *oid)
 {

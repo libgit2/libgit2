@@ -2,7 +2,7 @@
 #include <git2.h>
 #include "mwindow.h"
 #include "pack.h"
-#include "hashmap.h"
+#include "git2/hashmap.h"
 
 extern git_mwindow_packmap git_mwindow__pack_cache;
 

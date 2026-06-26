@@ -5,13 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "util.h"
+#include "git2/util.h"
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #ifdef GIT_WIN32
-# include "win32/utf-conv.h"
-# include "win32/w32_buffer.h"
+# include "git2/win32/utf-conv.h"
+# include "git2/win32/w32_buffer.h"
 
 # ifndef WIN32_LEAN_AND_MEAN
 #  define WIN32_LEAN_AND_MEAN

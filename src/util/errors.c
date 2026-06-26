@@ -5,12 +5,12 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
-#include "errors.h"
-#include "posix.h"
-#include "str.h"
-#include "runtime.h"
+#include "git2/errors.h"
+#include "git2/posix.h"
+#include "git2/str.h"
+#include "git2/runtime.h"
 
 /*
  * Some static error data that is used when we're out of memory, TLS

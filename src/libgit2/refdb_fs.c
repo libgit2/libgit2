@@ -6,18 +6,18 @@
  */
 
 #include "refs.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "repository.h"
-#include "futils.h"
-#include "filebuf.h"
+#include "git2/futils.h"
+#include "git2/filebuf.h"
 #include "pack.h"
 #include "parse.h"
 #include "reflog.h"
 #include "refdb.h"
-#include "iterator.h"
-#include "sortedcache.h"
+#include "git2/iterator.h"
+#include "git2/sortedcache.h"
 #include "signature.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 #include "path.h"
 
 #include <git2/tag.h>

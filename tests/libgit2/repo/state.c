@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "refs.h"
-#include "posix.h"
-#include "futils.h"
+#include "git2/posix.h"
+#include "git2/futils.h"
 
 static git_repository *_repo;
 static git_str _path;

@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "refs.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "odb.h"
 #include "repository.h"
 

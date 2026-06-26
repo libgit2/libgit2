@@ -8,24 +8,24 @@
 #include "settings.h"
 
 #include <git2.h>
-#include "alloc.h"
+#include "git2/alloc.h"
 #include "buf.h"
 #include "cache.h"
 #include "common.h"
 #include "filter.h"
 #include "grafts.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "index.h"
 #include "merge_driver.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "mwindow.h"
 #include "object.h"
 #include "odb.h"
-#include "rand.h"
+#include "git2/rand.h"
 #include "refs.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "sysdir.h"
-#include "thread.h"
+#include "git2/thread.h"
 #include "git2/global.h"
 #include "streams/registry.h"
 #include "streams/mbedtls.h"
@@ -36,7 +36,7 @@
 #include "transports/ssh_libssh2.h"
 
 #ifdef GIT_WIN32
-# include "win32/w32_leakcheck.h"
+# include "git2/win32/w32_leakcheck.h"
 #endif
 
 /* Declarations for tuneable settings */

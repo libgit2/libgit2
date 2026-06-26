@@ -13,7 +13,7 @@
 #include "attr_file.h"
 #include "ignore.h"
 #include "git2/oid.h"
-#include "hashmap_str.h"
+#include "git2/hashmap_str.h"
 #include <ctype.h>
 
 const char *git_attr__true  = "[internal]__TRUE__";

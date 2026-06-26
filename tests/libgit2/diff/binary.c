@@ -3,7 +3,7 @@
 #include "git2/sys/diff.h"
 
 #include "delta.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "repository.h"
 #include "../patch/patch_common.h"
 

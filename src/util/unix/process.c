@@ -10,11 +10,11 @@
 #include <signal.h>
 #include <git2.h>
 
-#include "git2_util.h"
-#include "vector.h"
-#include "futils.h"
-#include "process.h"
-#include "strlist.h"
+#include "git2/git2_util.h"
+#include "git2/vector.h"
+#include "git2/futils.h"
+#include "git2/process.h"
+#include "git2/strlist.h"
 
 #ifdef __APPLE__
 	#include <crt_externs.h>

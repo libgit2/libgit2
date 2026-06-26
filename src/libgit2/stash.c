@@ -21,7 +21,7 @@
 #include "git2/merge.h"
 #include "index.h"
 #include "signature.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "merge.h"
 #include "diff.h"
 #include "diff_generate.h"

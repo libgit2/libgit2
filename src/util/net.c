@@ -5,13 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "net.h"
+#include "git2/net.h"
 
 #include <ctype.h>
 
-#include "posix.h"
-#include "str.h"
-#include "runtime.h"
+#include "git2/posix.h"
+#include "git2/str.h"
+#include "git2/runtime.h"
 
 #define DEFAULT_PORT_HTTP  "80"
 #define DEFAULT_PORT_HTTPS "443"

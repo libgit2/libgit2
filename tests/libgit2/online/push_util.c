@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "push_util.h"
 
 void updated_tip_free(updated_tip *t)

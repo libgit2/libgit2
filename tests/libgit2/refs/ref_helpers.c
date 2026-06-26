@@ -1,7 +1,7 @@
 #include "git2/repository.h"
 #include "git2/refs.h"
 #include "common.h"
-#include "util.h"
+#include "git2/util.h"
 #include "path.h"
 #include "ref_helpers.h"
 

@@ -6,7 +6,7 @@
  */
 
 #include "common.h"
-#include "hashmap.h"
+#include "git2/hashmap.h"
 #include "index_map.h"
 
 typedef git_index_entrymap git_index_entrymap_default;

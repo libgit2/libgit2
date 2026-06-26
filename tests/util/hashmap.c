@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
-#include "hashmap.h"
-#include "hashmap_str.h"
+#include "git2/hashmap.h"
+#include "git2/hashmap_str.h"
 
 GIT_HASHMAP_STR_SETUP(git_hashmap_test, char *);
 

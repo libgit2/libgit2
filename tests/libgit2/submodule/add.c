@@ -1,9 +1,9 @@
 #include "clar_libgit2.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "path.h"
 #include "submodule_helpers.h"
 #include "config/config_helpers.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "repository.h"
 #include "git2/sys/commit.h"
 

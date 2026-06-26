@@ -11,8 +11,8 @@
 
 #include "git2.h"
 #include "git2/transport.h"
-#include "posix.h"
-#include "str.h"
+#include "git2/posix.h"
+#include "git2/str.h"
 #include "smart.h"
 #include "remote.h"
 #include "repository.h"

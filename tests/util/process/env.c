@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
-#include "process.h"
-#include "vector.h"
+#include "git2/process.h"
+#include "git2/vector.h"
 
 static git_str env_cmd = GIT_STR_INIT;
 static git_str accumulator = GIT_STR_INIT;

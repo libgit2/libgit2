@@ -12,7 +12,7 @@
 #include "git2/commit.h"
 #include "tree.h"
 #include "repository.h"
-#include "array.h"
+#include "git2/array.h"
 
 #include <time.h>
 

@@ -6,9 +6,9 @@ worldwide. This software is distributed without any warranty.
 
 See <http://creativecommons.org/publicdomain/zero/1.0/>. */
 
-#include "git2_util.h"
-#include "rand.h"
-#include "runtime.h"
+#include "git2/git2_util.h"
+#include "git2/rand.h"
+#include "git2/runtime.h"
 
 #if defined(GIT_WIN32)
 # include <wincrypt.h>

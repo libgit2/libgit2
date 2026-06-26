@@ -3,7 +3,7 @@
 #include "git2/clone.h"
 #include "git2/transport.h"
 #include "git2/sys/transport.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 static int custom_transport(
 	git_transport **out,

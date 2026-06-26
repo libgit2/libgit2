@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include <git2/trace.h>
-#include "str.h"
+#include "git2/str.h"
 
 struct git_trace_data {
 	git_trace_level_t level;

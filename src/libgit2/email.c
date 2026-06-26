@@ -12,7 +12,7 @@
 #include "diff_generate.h"
 #include "diff_stats.h"
 #include "patch.h"
-#include "date.h"
+#include "git2/date.h"
 
 #include "git2/email.h"
 #include "git2/patch.h"

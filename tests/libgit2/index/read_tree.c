@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 /* Test that reading and writing a tree is a no-op */
 void test_index_read_tree__read_write_involution(void)

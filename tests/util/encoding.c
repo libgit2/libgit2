@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "varint.h"
+#include "git2/varint.h"
 
 void test_encoding__decode(void)
 {

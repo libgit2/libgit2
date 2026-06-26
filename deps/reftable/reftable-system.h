@@ -8,9 +8,9 @@
  * header is expected to be changed by the individual project.
  */
 
-#include "map.h"
-#include "posix.h"
-#include "util.h"
+#include "git2/map.h"
+#include "git2/posix.h"
+#include "git2/util.h"
 #include <zlib.h>
 
 /*

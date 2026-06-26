@@ -1,6 +1,6 @@
 #include "system.h"
 #include "basics.h"
-#include "rand.h"
+#include "git2/rand.h"
 #include "reftable-error.h"
 
 uint32_t reftable_rand(void)

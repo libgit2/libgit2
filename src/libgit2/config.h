@@ -11,7 +11,7 @@
 
 #include "git2.h"
 #include "git2/config.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "repository.h"
 
 #define GIT_CONFIG_FILENAME_PROGRAMDATA "config"

@@ -16,7 +16,8 @@ set(LIBGIT2_INCLUDES
 file(GLOB SRC_H
 	"${PROJECT_SOURCE_DIR}/include/git2.h"
 	"${PROJECT_SOURCE_DIR}/include/git2/*.h"
-	"${PROJECT_SOURCE_DIR}/include/git2/sys/*.h")
+	"${PROJECT_SOURCE_DIR}/include/git2/sys/*.h"
+	"${PROJECT_SOURCE_DIR}/include/git2/unix/*.h")
 list(SORT SRC_H)
 target_sources(libgit2 PRIVATE ${SRC_H})
 

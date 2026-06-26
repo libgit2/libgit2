@@ -12,8 +12,8 @@
 #include "git2/tree.h"
 #include "repository.h"
 #include "odb.h"
-#include "vector.h"
-#include "pool.h"
+#include "git2/vector.h"
+#include "git2/pool.h"
 
 struct git_tree_entry {
 	uint16_t attr;

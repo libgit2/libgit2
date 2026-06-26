@@ -10,11 +10,11 @@
 #include "common.h"
 
 #include "git2.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "push.h"
-#include "str.h"
+#include "git2/str.h"
 #include "oidarray.h"
-#include "staticstr.h"
+#include "git2/staticstr.h"
 #include "git2/sys/transport.h"
 
 #define GIT_SMART_BUFFER_SIZE  65536

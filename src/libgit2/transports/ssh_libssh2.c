@@ -11,10 +11,10 @@
 
 #include <libssh2.h>
 
-#include "runtime.h"
-#include "net.h"
+#include "git2/runtime.h"
+#include "git2/net.h"
 #include "smart.h"
-#include "process.h"
+#include "git2/process.h"
 #include "streams/socket.h"
 #include "sysdir.h"
 

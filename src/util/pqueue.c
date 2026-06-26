@@ -5,9 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "pqueue.h"
+#include "git2/pqueue.h"
 
-#include "util.h"
+#include "git2/util.h"
 
 #define PQUEUE_LCHILD_OF(I) (((I)<<1)+1)
 #define PQUEUE_RCHILD_OF(I) (((I)<<1)+2)

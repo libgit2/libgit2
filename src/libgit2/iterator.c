@@ -5,7 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "iterator.h"
+#include "git2/iterator.h"
+
+#include "common.h"
+
+#include "ignore.h"
 
 #include "tree.h"
 #include "index.h"

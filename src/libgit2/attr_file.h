@@ -11,10 +11,10 @@
 
 #include "git2/oid.h"
 #include "git2/attr.h"
-#include "vector.h"
-#include "pool.h"
-#include "str.h"
-#include "futils.h"
+#include "git2/vector.h"
+#include "git2/pool.h"
+#include "git2/str.h"
+#include "git2/futils.h"
 
 #define GIT_ATTR_FILE			".gitattributes"
 #define GIT_ATTR_FILE_INREPO	"attributes"

@@ -11,9 +11,9 @@
 
 #include "common.h"
 #include "diff.h"
-#include "map.h"
+#include "git2/map.h"
 #include "config.h"
-#include "regexp.h"
+#include "git2/regexp.h"
 #include "repository.h"
 #include "userdiff.h"
 

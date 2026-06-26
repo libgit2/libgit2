@@ -11,7 +11,7 @@
 
 #include "diff.h"
 #include "diff_driver.h"
-#include "map.h"
+#include "git2/map.h"
 
 /* expanded information for one side of a delta */
 typedef struct {

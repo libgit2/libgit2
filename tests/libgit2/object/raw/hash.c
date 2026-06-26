@@ -2,7 +2,7 @@
 #include "clar_libgit2.h"
 
 #include "odb.h"
-#include "hash.h"
+#include "git2/hash.h"
 
 #include "data.h"
 

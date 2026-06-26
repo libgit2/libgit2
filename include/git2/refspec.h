@@ -9,7 +9,7 @@
 
 #include "common.h"
 #include "types.h"
-#include "net.h"
+#include "git2/net.h"
 #include "buffer.h"
 
 /**

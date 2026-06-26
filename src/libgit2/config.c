@@ -12,10 +12,10 @@
 
 #include "buf.h"
 #include "config_backend.h"
-#include "regexp.h"
+#include "git2/regexp.h"
 #include "sysdir.h"
 #include "transaction.h"
-#include "vector.h"
+#include "git2/vector.h"
 #if GIT_WIN32
 # include <windows.h>
 #endif

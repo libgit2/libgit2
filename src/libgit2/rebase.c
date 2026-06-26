@@ -7,13 +7,13 @@
 
 #include "common.h"
 
-#include "str.h"
+#include "git2/str.h"
 #include "repository.h"
-#include "posix.h"
-#include "filebuf.h"
+#include "git2/posix.h"
+#include "git2/filebuf.h"
 #include "commit.h"
 #include "merge.h"
-#include "array.h"
+#include "git2/array.h"
 #include "config.h"
 #include "annotated_commit.h"
 #include "index.h"

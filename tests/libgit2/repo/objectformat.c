@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "sysdir.h"
 #include "repository.h"
 #include <ctype.h>

@@ -13,8 +13,8 @@
 #include "git2/sys/filter.h"
 
 #include "buf.h"
-#include "futils.h"
-#include "hash.h"
+#include "git2/futils.h"
+#include "git2/hash.h"
 #include "filter.h"
 #include "repository.h"
 

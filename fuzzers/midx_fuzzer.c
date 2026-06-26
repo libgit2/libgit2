@@ -12,8 +12,8 @@
 #include "git2.h"
 
 #include "common.h"
-#include "futils.h"
-#include "hash.h"
+#include "git2/futils.h"
+#include "git2/hash.h"
 #include "midx.h"
 
 #include "standalone_driver.h"
