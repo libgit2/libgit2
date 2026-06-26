@@ -44,6 +44,34 @@ void git_reflog_free(git_reflog *reflog)
 	git__free(reflog);
 }
 
+int git_reflog__alloc(
+	git_reflog **reflog,
+	const char *name,
+	git_oid_t oid_type)
+{
+	git_reflog *log;
+
+	*reflog = NULL;
+
+	log = git__calloc(1, sizeof(git_reflog));
+	GIT_ERROR_CHECK_ALLOC(log);
+
+	log->ref_name = git__strdup(name);
+	GIT_ERROR_CHECK_ALLOC(log->ref_name);
+
+	log->oid_type = oid_type;
+
+	if (git_vector_init(&log->entries, 0, NULL) < 0) {
+		git__free(log->ref_name);
+		git__free(log);
+		return -1;
+	}
+
+	*reflog = log;
+
+	return 0;
+}
+
 int git_reflog_read(git_reflog **reflog, git_repository *repo,  const char *name)
 {
 	git_refdb *refdb;
