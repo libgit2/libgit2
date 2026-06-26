@@ -828,12 +828,39 @@ int git_pkt_buffer_wants(
 	}
 
 	if (wants->depth > 0) {
+
+		if (wants->shallow_since > 0) {
+			git_error_set(
+			        GIT_ERROR_NET,
+			        "depth and shallow-since must not be used together");
+			return GIT_EINVALID;
+		}
+
 		git_str deepen_buf = GIT_STR_INIT;
 
 		git_str_printf(&deepen_buf, "deepen %d\n", wants->depth);
 		git_str_printf(buf,"%04x%s", (unsigned int)git_str_len(&deepen_buf) + 4, git_str_cstr(&deepen_buf));
 
 		git_str_dispose(&deepen_buf);
+
+		if (git_str_oom(buf))
+			return -1;
+
+	} else if (wants->shallow_since > 0) {
+
+		git_str shallow_since_buf = GIT_STR_INIT;
+
+		/* The git command-line option is "shallow-since", but the protocol uses "deepen-since" */
+		git_str_printf(
+		        &shallow_since_buf, "deepen-since %d\n",
+		        wants->shallow_since);
+
+		git_str_printf(
+		        buf, "%04x%s",
+		        (unsigned int)git_str_len(&shallow_since_buf) + 4,
+		        git_str_cstr(&shallow_since_buf));
+
+		git_str_dispose(&shallow_since_buf);
 
 		if (git_str_oom(buf))
 			return -1;
