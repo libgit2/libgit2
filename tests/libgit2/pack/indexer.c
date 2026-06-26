@@ -342,6 +342,29 @@ static int find_tmp_file_recurs(void *opaque, git_str *path)
 	return 0;
 }
 
+void test_pack_indexer__delta_chain(void)
+{
+	git_indexer *idx = NULL;
+	git_indexer_progress stats = { 0 };
+
+#ifdef GIT_EXPERIMENTAL_SHA256
+	cl_git_pass(git_indexer_new(&idx, ".", NULL));
+#else
+	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, NULL));
+#endif
+
+	cl_git_pass(git_indexer_append(
+		idx, out_of_order_pack, out_of_order_pack_len, &stats));
+	cl_git_pass(git_indexer_commit(idx, &stats));
+
+	cl_assert_equal_i(stats.total_objects, 3);
+	cl_assert_equal_i(stats.received_objects, 3);
+	cl_assert_equal_i(stats.indexed_objects, 3);
+	cl_assert_equal_i(stats.indexed_deltas, 2);
+
+	git_indexer_free(idx);
+}
+
 void test_pack_indexer__no_tmp_files(void)
 {
 	git_indexer *idx = NULL;
