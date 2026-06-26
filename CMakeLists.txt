@@ -90,6 +90,10 @@ if(NOT WIN32)
 	add_definitions(-D_FILE_OFFSET_BITS=64)
 endif()
 
+if(NOT BUILD_SHARED_LIBS)
+	add_definitions(-DGIT_STATIC_BUILD=1)
+endif()
+
 
 # Modules
 
