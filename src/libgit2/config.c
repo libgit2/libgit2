@@ -1300,12 +1300,20 @@ int git_config_open_default(git_config **out)
 	int error;
 	git_config *config = NULL;
 	git_str buf = GIT_STR_INIT;
+	int found_global = 0;
 
 	if ((error = git_config_new(&config)) < 0)
 		return error;
 
-	if (!git_config__find_global(&buf) ||
-	    !git_config__global_location(&buf)) {
+	/* GIT_CONFIG_GLOBAL overrides the global configuration file */
+	if (git__getenv(&buf, "GIT_CONFIG_GLOBAL") == 0) {
+		found_global = 1;
+	} else if (!git_config__find_global(&buf) ||
+	           !git_config__global_location(&buf)) {
+		found_global = 1;
+	}
+
+	if (found_global) {
 		error = git_config_add_file_ondisk(config, buf.ptr,
 			GIT_CONFIG_LEVEL_GLOBAL, NULL, 0);
 	}
@@ -1314,9 +1322,31 @@ int git_config_open_default(git_config **out)
 		error = git_config_add_file_ondisk(config, buf.ptr,
 			GIT_CONFIG_LEVEL_XDG, NULL, 0);
 
-	if (!error && !git_config__find_system(&buf))
-		error = git_config_add_file_ondisk(config, buf.ptr,
-			GIT_CONFIG_LEVEL_SYSTEM, NULL, 0);
+	/* GIT_CONFIG_NOSYSTEM and GIT_CONFIG_SYSTEM override system config */
+	if (!error) {
+		git_str no_system_buf = GIT_STR_INIT;
+		int no_system = 0;
+		int env_error;
+
+		env_error = git__getenv(&no_system_buf, "GIT_CONFIG_NOSYSTEM");
+
+		if (env_error && env_error != GIT_ENOTFOUND) {
+			git_str_dispose(&no_system_buf);
+			error = env_error;
+		} else {
+			git_config_parse_bool(&no_system, no_system_buf.ptr);
+			git_str_dispose(&no_system_buf);
+
+			if (!no_system) {
+				if (git__getenv(&buf, "GIT_CONFIG_SYSTEM") != 0)
+					git_config__find_system(&buf);
+
+				if (git_str_len(&buf))
+					error = git_config_add_file_ondisk(config, buf.ptr,
+						GIT_CONFIG_LEVEL_SYSTEM, NULL, 0);
+			}
+		}
+	}
 
 	if (!error && !git_config__find_programdata(&buf))
 		error = git_config_add_file_ondisk(config, buf.ptr,
