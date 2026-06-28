@@ -21,6 +21,12 @@ static const char *const git_generated_prefixes[] = {
 	NULL
 };
 
+static int is_linear_whitespace(char c)
+{
+	/* See RFC 822 */
+	return c == ' ' || c == '\t';
+}
+
 static int is_blank_line(const char *str)
 {
 	const char *s = str;
@@ -95,7 +101,8 @@ static bool find_separator(size_t *out, const char *line, const char *separators
 
 		if (!whitespace_found && (git__isalnum(*c) || *c == '-'))
 			continue;
-		if (c != line && (*c == ' ' || *c == '\t')) {
+		if (c != line && is_linear_whitespace(*c))
+			{
 			whitespace_found = 1;
 			continue;
 		}
@@ -258,9 +265,13 @@ static size_t find_trailer_end(const char *buf, size_t len)
 	return len - ignore_non_trailer(buf, len);
 }
 
-static char *extract_trailer_block(const char *message, size_t *len)
+static char *extract_trailer_block(
+        const char *message,
+        size_t *len,
+        const git_message_trailers_options* options)
 {
-	size_t patch_start = find_patch_start(message);
+	int no_divider = options && options->no_divider;
+	size_t patch_start = (no_divider) ? strlen(message) : find_patch_start(message);
 	size_t trailer_end = find_trailer_end(message, patch_start);
 	size_t trailer_start = find_trailer_start(message, trailer_end);
 
@@ -285,8 +296,9 @@ enum trailer_state {
 	S_SEP_WS = 3,
 	S_VALUE = 4,
 	S_VALUE_NL = 5,
-	S_VALUE_END = 6,
-	S_IGNORE = 7
+	S_VALUE_CONT = 6,
+	S_VALUE_END = 7,
+	S_IGNORE = 8
 };
 
 #define NEXT(st) { state = (st); ptr++; continue; }
@@ -294,7 +306,10 @@ enum trailer_state {
 
 typedef git_array_t(git_message_trailer) git_array_trailer_t;
 
-int git_message_trailers(git_message_trailer_array *trailer_arr, const char *message)
+int git_message_trailers_ext(
+        git_message_trailer_array *trailer_arr,
+        const char *message,
+        const git_message_trailers_options *options)
 {
 	enum trailer_state state = S_START;
 	int rc = 0;
@@ -303,8 +318,11 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 	char *value = NULL;
 	git_array_trailer_t arr = GIT_ARRAY_INIT;
 
+	int unfold = options && options->unfold;
+	char *unfolded_value_end = NULL;
+
 	size_t trailer_len;
-	char *trailer = extract_trailer_block(message, &trailer_len);
+	char *trailer = extract_trailer_block(message, &trailer_len, options);
 	if (trailer == NULL)
 		return -1;
 
@@ -328,7 +346,7 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 					NEXT(S_KEY);
 				}
 
-				if (*ptr == ' ' || *ptr == '\t') {
+				if (is_linear_whitespace(*ptr)) {
 					/* optional whitespace before separator */
 					*ptr = 0;
 					NEXT(S_KEY_WS);
@@ -347,7 +365,7 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 					goto ret;
 				}
 
-				if (*ptr == ' ' || *ptr == '\t') {
+				if (is_linear_whitespace(*ptr)) {
 					NEXT(S_KEY_WS);
 				}
 
@@ -363,11 +381,17 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 					goto ret;
 				}
 
-				if (*ptr == ' ' || *ptr == '\t') {
+				if (is_linear_whitespace(*ptr)) {
 					NEXT(S_SEP_WS);
 				}
 
 				value = ptr;
+
+				if (*ptr == '\n')
+			        {
+				        NEXT(S_VALUE_NL);
+			        }
+
 				NEXT(S_VALUE);
 			}
 			case S_VALUE: {
@@ -379,25 +403,60 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 					NEXT(S_VALUE_NL);
 				}
 
+				if (unfolded_value_end)
+				        *unfolded_value_end++ = *ptr;
+
 				NEXT(S_VALUE);
 			}
 			case S_VALUE_NL: {
-				if (*ptr == ' ') {
+			        if (is_linear_whitespace(*ptr)) {
 					/* continuation; */
-					NEXT(S_VALUE);
+				        if (unfold) {
+					        if (!unfolded_value_end) {
+						        unfolded_value_end =
+						                ptr - 1;
+					        }
+					        /* replace newline with a single space. */
+					        *unfolded_value_end++ = ' ';
+				        }
+				        NEXT(S_VALUE_CONT);
 				}
 
-				ptr[-1] = 0;
+				/* Trim trailing whitespace. */
+			        char *end_of_value = ptr - 1;
+			        while (end_of_value > value &&
+			               is_linear_whitespace(*(end_of_value - 1)))
+				        end_of_value--;
+			        *end_of_value = 0;
+
 				GOTO(S_VALUE_END);
 			}
-			case S_VALUE_END: {
-				git_message_trailer *t = git_array_alloc(arr);
+		        case S_VALUE_CONT: {
+			        if (is_linear_whitespace(*ptr)) {
+				        /* leading whitespace before continuation of value; */
+				        NEXT(S_VALUE_CONT);
+			        }
+			        if (unfold) {
+				        *unfolded_value_end++ = *ptr;
+			        }
+			        NEXT(S_VALUE);
+		        }
+		        case S_VALUE_END: {
 
-				t->key = key;
-				t->value = value;
+				if (unfolded_value_end) {
+				        *unfolded_value_end++ = 0;
+				}
+
+				if (!options || !options->trim_empty || strlen(value)) {
+				        git_message_trailer *t =
+				                git_array_alloc(arr);
+				        t->key = key;
+				        t->value = value;
+			        }
 
 				key = NULL;
 				value = NULL;
+			        unfolded_value_end = NULL;
 
 				GOTO(S_START);
 			}
@@ -422,6 +481,12 @@ ret:
 
 	return rc;
 }
+
+int git_message_trailers(git_message_trailer_array *trailer_arr, const char *message)
+{
+	return git_message_trailers_ext(trailer_arr, message, NULL);
+}
+
 
 void git_message_trailer_array_free(git_message_trailer_array *arr)
 {

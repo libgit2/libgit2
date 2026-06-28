@@ -60,6 +60,18 @@ typedef struct {
 } git_message_trailer_array;
 
 /**
+ * Options to be passed to git_message_trailers_ext.
+ */
+typedef struct {
+       int trim_empty;
+       int no_divider;
+       int unfold;
+} git_message_trailers_options;
+
+/** Static constructor for `git_message_trailers_options` */
+#define GIT_MESSAGE_TRAILERS_OPTIONS_INIT { FALSE, FALSE, FALSE }
+
+/**
  * Parse trailers out of a message, filling the array pointed to by +arr+.
  *
  * Trailers are key/value pairs in the last paragraph of a message, not
@@ -71,6 +83,15 @@ typedef struct {
  * @return 0 on success, or non-zero on error.
  */
 GIT_EXTERN(int) git_message_trailers(git_message_trailer_array *arr, const char *message);
+
+/**
+ * Parse trailers out of a message, with extended options.
+ */
+GIT_EXTERN(int)
+git_message_trailers_ext(
+        git_message_trailer_array *arr,
+        const char *message,
+        const git_message_trailers_options *opts);
 
 /**
  * Clean's up any allocated memory in the git_message_trailer_array filled by
