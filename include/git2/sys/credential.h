@@ -48,6 +48,7 @@ struct git_credential_username {
 struct git_credential_ssh_key {
 	git_credential parent; /**< The parent credential */
 	char *username;        /**< The username to authenticate as */
+	char *identity_path;   /**< The path to an agent's identity socket (e.g. $SSH_AUTH_SOCK) */
 	char *publickey;       /**< The path to a public key */
 	char *privatekey;      /**< The path to a private key */
 	char *passphrase;      /**< Passphrase to decrypt the private key */
