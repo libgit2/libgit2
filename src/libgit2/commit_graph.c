@@ -198,6 +198,42 @@ static int commit_graph_parse_extra_edge_list(
 	return 0;
 }
 
+static int commit_graph_parse_bloom_filter(
+		git_commit_graph_file *file,
+		const unsigned char *data,
+		struct git_commit_graph_chunk *bloom_filter_index,
+		struct git_commit_graph_chunk *bloom_filter_data
+)
+{
+	const uint32_t *data_header = (const uint32_t *)(data + bloom_filter_data->offset);
+	uint32_t hash_version;
+	/*
+	 * Both index and data need to be present to have a valid bloom filter
+	 * For the filter data, there's a 12 byte header at the beginning,
+	 *  thus we need at the very least 12 bytes to consider it usable
+	 */
+	if (bloom_filter_index->length == 0 ||
+		bloom_filter_data->length < 12)
+		return 0;
+
+	if (bloom_filter_index->length != file->num_commits * sizeof(uint32_t))
+		return commit_graph_error("malformed Bloom Filter Index chunk");
+	
+	hash_version = ntohl(data_header[0]);
+
+	if (hash_version < 1 || hash_version > 2)
+		return commit_graph_error("unknown Bloom Filter Hash version");
+
+	file->bloom_filter_indexes = (const uint32_t *)(data + bloom_filter_index->offset);
+
+	file->bloom_filter_hash_version = hash_version;
+	file->bloom_filter_num_hashes = ntohl(data_header[1]);
+	file->bloom_filter_bits = ntohl(data_header[2]);
+	file->bloom_filter_data = data + bloom_filter_data->offset + 12;
+	return 0;
+}
+
+
 int git_commit_graph_file_parse(
 		git_commit_graph_file *file,
 		const unsigned char *data,
@@ -212,7 +248,8 @@ int git_commit_graph_file_parse(
 	int error;
 	struct git_commit_graph_chunk chunk_oid_fanout = {0}, chunk_oid_lookup = {0},
 				      chunk_commit_data = {0}, chunk_extra_edge_list = {0},
-				      chunk_unsupported = {0};
+				      chunk_bloom_filter_index = {0}, chunk_bloom_filter_data = {0},
+					  chunk_unsupported = {0};
 
 	GIT_ASSERT_ARG(file);
 
@@ -276,7 +313,15 @@ int git_commit_graph_file_parse(
 			break;
 
 		case COMMIT_GRAPH_BLOOM_FILTER_INDEX_ID:
+			chunk_bloom_filter_index.offset = last_chunk_offset;
+			last_chunk = &chunk_bloom_filter_index;
+			break;
+
 		case COMMIT_GRAPH_BLOOM_FILTER_DATA_ID:
+			chunk_bloom_filter_data.offset = last_chunk_offset;
+			last_chunk = &chunk_bloom_filter_data;
+			break;
+
 		case COMMIT_GRAPH_GENERATION_DATA_ID:
 		case COMMIT_GRAPH_GENERATION_DATA_OVERFLOW_ID:
 			chunk_unsupported.offset = last_chunk_offset;
@@ -289,17 +334,12 @@ int git_commit_graph_file_parse(
 	}
 	last_chunk->length = (size_t)(trailer_offset - last_chunk_offset);
 
-	error = commit_graph_parse_oid_fanout(file, data, &chunk_oid_fanout);
-	if (error < 0)
-		return error;
-	error = commit_graph_parse_oid_lookup(file, data, &chunk_oid_lookup);
-	if (error < 0)
-		return error;
-	error = commit_graph_parse_commit_data(file, data, &chunk_commit_data);
-	if (error < 0)
-		return error;
-	error = commit_graph_parse_extra_edge_list(file, data, &chunk_extra_edge_list);
-	if (error < 0)
+	if ((error = commit_graph_parse_oid_fanout(file, data, &chunk_oid_fanout)) < 0 ||
+		(error = commit_graph_parse_oid_lookup(file, data, &chunk_oid_lookup)) < 0 ||
+		(error = commit_graph_parse_commit_data(file, data, &chunk_commit_data)) < 0 ||
+		(error = commit_graph_parse_extra_edge_list(file, data, &chunk_extra_edge_list)) < 0 ||
+		(error = commit_graph_parse_bloom_filter(file, data,
+			&chunk_bloom_filter_index, &chunk_bloom_filter_data)) < 0)
 		return error;
 
 	return 0;
