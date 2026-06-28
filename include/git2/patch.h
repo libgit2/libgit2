@@ -37,6 +37,14 @@ typedef struct git_patch git_patch;
 GIT_EXTERN(git_repository *) git_patch_owner(const git_patch *patch);
 
 /**
+ * Get the context lines setting from the diff options.
+ *
+ * @param patch the patch
+ * @return context lines setting
+ */
+GIT_EXTERN(int) git_patch_context_lines(const git_patch *patch);
+
+/**
  * Return a patch for an entry in the diff list.
  *
  * The `git_patch` is a newly created object contains the text diffs
