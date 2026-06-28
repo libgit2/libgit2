@@ -233,7 +233,7 @@ static int socket_connect(git_stream *stream)
 		s = INVALID_SOCKET;
 
 		if (error == GIT_TIMEOUT)
-			break;
+			continue;
 	}
 
 	/* Oops, we couldn't connect to any address */
