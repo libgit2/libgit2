@@ -725,6 +725,45 @@ int git_openssl__set_cert_location(const char *file, const char *path)
 	return 0;
 }
 
+int git_openssl__set_user_password_callback(pem_password_cb *cb, void *userdata)
+{
+	if (openssl_ensure_initialized() < 0)
+		return -1;
+
+	SSL_CTX_set_default_passwd_cb(git__ssl_ctx, cb);
+
+	SSL_CTX_set_default_passwd_cb_userdata(git__ssl_ctx, userdata);
+	return 0;
+}
+
+int git_openssl__set_user_keys(const char *keyPath, const char *certPath)
+{
+	if (openssl_ensure_initialized() < 0)
+		return -1;
+
+	if (SSL_CTX_use_certificate_chain_file(git__ssl_ctx, certPath) == 0) {
+		char errmsg[256];
+
+		ERR_error_string_n(ERR_get_error(), errmsg, sizeof(errmsg));
+		git_error_set(GIT_ERROR_SSL, "OpenSSL error: failed to load user certificate: %s",
+			errmsg);
+
+		return -1;
+
+	}
+	if (SSL_CTX_use_PrivateKey_file(git__ssl_ctx, keyPath, SSL_FILETYPE_PEM) == 0) {
+		char errmsg[256];
+
+		ERR_error_string_n(ERR_get_error(), errmsg, sizeof(errmsg));
+		git_error_set(GIT_ERROR_SSL, "OpenSSL error: failed to load user private key: %s",
+			errmsg);
+
+		return -1;
+	}
+
+	return 0;
+}
+
 int git_openssl__add_x509_cert(X509 *cert)
 {
 	X509_STORE *cert_store;
