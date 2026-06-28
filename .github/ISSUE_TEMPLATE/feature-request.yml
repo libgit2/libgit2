@@ -1,0 +1,52 @@
+name: "\U0001F4A1 Feature request"
+description: Suggest an enhancement for libgit2
+title: "[Feature]: "
+labels: ["feature"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for contributing to libgit2's development.
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: Problem Description
+      description: Explain the current limitation or challenge in libgit2
+      placeholder: "I'm encountering difficulties with [specific Git operation/functionality]..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe your proposed enhancement for libgit2
+      placeholder: "It would be helpful if the library could support/improve..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Provide specific scenarios where this feature would be valuable
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Approaches
+      description: Describe any alternative solutions you've considered
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Information
+      description: Include code snippets, error logs, or other relevant context
+    validations:
+      required: false
