@@ -652,6 +652,16 @@ int git_blame__like_git(git_blame *blame, uint32_t opt)
 		if (!suspect)
 			break;
 
+		/* Callback to indicate that blame loading is still
+		 * in progress with the ability to abort the loading */
+		if (blame->options.progress_cb) {
+			const git_oid *id = git_commit_id(suspect->commit);
+			if ((error = blame->options.progress_cb(id, blame->options.payload))) {
+				/* Abort loading */
+				break;
+			}
+		}
+
 		/* We'll use this suspect later in the loop, so hold on to it for now. */
 		origin_incref(suspect);
 
