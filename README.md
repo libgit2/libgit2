@@ -491,6 +491,8 @@ Here are the bindings to libgit2 that are currently available:
     * chicken-git <https://wiki.call-cc.org/egg/git>
 * D
     * dlibgit <https://github.com/s-ludwig/dlibgit>
+* Dart
+    * git2dart <https://github.com/DartGit-dev/git2dart>
 * Delphi
     * GitForDelphi <https://github.com/libgit2/GitForDelphi>
     * libgit2-delphi <https://github.com/todaysoftware/libgit2-delphi>
