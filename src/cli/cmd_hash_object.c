@@ -9,7 +9,7 @@
 #include "common.h"
 #include "cmd.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 
 #define COMMAND_NAME "hash-object"
 

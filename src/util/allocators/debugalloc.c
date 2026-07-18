@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "debugalloc.h"
+#include "git2/allocators/debugalloc.h"
 
 static void *debugalloc__malloc(size_t len, const char *file, int line)
 {

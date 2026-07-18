@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "stdalloc.h"
+#include "git2/allocators/stdalloc.h"
 
 static void *stdalloc__malloc(size_t len, const char *file, int line)
 {

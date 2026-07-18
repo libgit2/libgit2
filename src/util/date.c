@@ -5,15 +5,15 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "git2_util.h"
+#include "git2/git2_util.h"
 
 #ifndef GIT_WIN32
 #include <sys/time.h>
 #endif
 
-#include "util.h"
-#include "posix.h"
-#include "date.h"
+#include "git2/util.h"
+#include "git2/posix.h"
+#include "git2/date.h"
 
 #include <ctype.h>
 #include <time.h>

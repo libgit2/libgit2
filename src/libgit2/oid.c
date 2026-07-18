@@ -9,7 +9,7 @@
 
 #include "git2/oid.h"
 #include "repository.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include <string.h>
 #include <limits.h>
 

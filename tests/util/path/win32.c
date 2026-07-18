@@ -2,7 +2,7 @@
 #include "clar_libgit2.h"
 
 #ifdef GIT_WIN32
-#include "win32/path_w32.h"
+#include "git2/win32/path_w32.h"
 #endif
 
 #ifdef GIT_WIN32

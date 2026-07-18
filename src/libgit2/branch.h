@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "str.h"
+#include "git2/str.h"
 
 int git_branch__remote_name(
 	git_str *out,

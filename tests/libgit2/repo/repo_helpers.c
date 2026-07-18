@@ -3,7 +3,7 @@
 #include "repo_helpers.h"
 #include "repository.h"
 #include "refdb.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 void make_head_unborn(git_repository* repo, const char *target)
 {

@@ -9,7 +9,7 @@
 
 #include "buf.h"
 #include "common.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "diff.h"
 #include "patch_generate.h"
 

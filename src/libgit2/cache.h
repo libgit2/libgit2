@@ -13,7 +13,7 @@
 #include "git2/oid.h"
 #include "git2/odb.h"
 
-#include "thread.h"
+#include "git2/thread.h"
 #include "hashmap_oid.h"
 
 enum {

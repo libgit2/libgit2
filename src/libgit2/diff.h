@@ -14,10 +14,10 @@
 #include "git2/sys/diff.h"
 #include "git2/oid.h"
 
-#include "vector.h"
-#include "iterator.h"
+#include "git2/vector.h"
+#include "git2/iterator.h"
 #include "repository.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "odb.h"
 
 #define DIFF_OLD_PREFIX_DEFAULT "a/"

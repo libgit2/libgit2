@@ -8,8 +8,8 @@
 #include "common.h"
 
 #include "git2/sys/hashsig.h"
-#include "futils.h"
-#include "util.h"
+#include "git2/futils.h"
+#include "git2/util.h"
 
 typedef uint32_t hashsig_t;
 typedef uint64_t hashsig_state;

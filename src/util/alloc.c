@@ -5,13 +5,13 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "alloc.h"
-#include "runtime.h"
+#include "git2/alloc.h"
+#include "git2/runtime.h"
 
-#include "allocators/stdalloc.h"
-#include "allocators/debugalloc.h"
-#include "allocators/failalloc.h"
-#include "allocators/win32_leakcheck.h"
+#include "git2/allocators/stdalloc.h"
+#include "git2/allocators/debugalloc.h"
+#include "git2/allocators/failalloc.h"
+#include "git2/allocators/win32_leakcheck.h"
 
 /* Fail any allocation until git_libgit2_init is called. */
 git_allocator git__allocator = {

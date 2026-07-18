@@ -10,7 +10,7 @@
 #include "git2/patch.h"
 #include "patch.h"
 #include "diff_parse.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 
 typedef struct {
 	git_patch base;

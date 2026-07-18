@@ -30,7 +30,7 @@
 #ifdef SHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C
 #include SHA1DC_CUSTOM_INCLUDE_UBC_CHECK_C
 #endif
-#include "ubc_check.h"
+#include "git2/hash/sha1dc/ubc_check.h"
 
 static const uint32_t DV_I_43_0_bit 	= (uint32_t)(1) << 0;
 static const uint32_t DV_I_44_0_bit 	= (uint32_t)(1) << 1;

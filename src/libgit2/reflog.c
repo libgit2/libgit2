@@ -8,7 +8,7 @@
 #include "reflog.h"
 
 #include "repository.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "signature.h"
 #include "refdb.h"
 

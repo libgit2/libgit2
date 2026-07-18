@@ -9,7 +9,7 @@
 
 #include "commit.h"
 #include "signature.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 #include "git2/object.h"
 #include "git2/repository.h"
 #include "git2/signature.h"

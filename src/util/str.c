@@ -5,8 +5,8 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "str.h"
-#include "posix.h"
+#include "git2/str.h"
+#include "git2/posix.h"
 #include <ctype.h>
 
 /* Used as default value for git_str->ptr so that people can always

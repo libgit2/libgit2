@@ -9,7 +9,7 @@
 
 #include "common.h"
 
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include <git2/sys/path.h>
 
 #define GIT_PATH_REJECT_DOT_GIT            (GIT_FS_PATH_REJECT_MAX << 1)

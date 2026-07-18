@@ -9,8 +9,8 @@
 
 #include "repository.h"
 #include "git2/common.h"
-#include "posix.h"
-#include "date.h"
+#include "git2/posix.h"
+#include "git2/date.h"
 
 void git_signature_free(git_signature *sig)
 {

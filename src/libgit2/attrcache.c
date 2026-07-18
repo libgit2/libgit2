@@ -13,7 +13,7 @@
 #include "sysdir.h"
 #include "ignore.h"
 #include "path.h"
-#include "hashmap_str.h"
+#include "git2/hashmap_str.h"
 
 GIT_HASHMAP_STR_SETUP(git_attr_cache_filemap, git_attr_file_entry *);
 GIT_HASHMAP_STR_SETUP(git_attr_cache_macromap, git_attr_rule *);

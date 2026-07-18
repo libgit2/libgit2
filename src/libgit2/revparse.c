@@ -7,11 +7,11 @@
 
 #include "common.h"
 
-#include "str.h"
+#include "git2/str.h"
 #include "tree.h"
 #include "refdb.h"
-#include "regexp.h"
-#include "date.h"
+#include "git2/regexp.h"
+#include "git2/date.h"
 
 #include "git2.h"
 

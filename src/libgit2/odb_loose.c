@@ -10,13 +10,13 @@
 #include <zlib.h>
 #include "git2/object.h"
 #include "git2/sys/odb_backend.h"
-#include "futils.h"
-#include "hash.h"
+#include "git2/futils.h"
+#include "git2/hash.h"
 #include "odb.h"
 #include "delta.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "object.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 
 #include "git2/odb_backend.h"
 #include "git2/types.h"

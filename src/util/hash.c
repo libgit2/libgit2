@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "hash.h"
+#include "git2/hash.h"
 
 int git_hash_global_init(void)
 {

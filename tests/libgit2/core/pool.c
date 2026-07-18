@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "git2/oid.h"
 
 static char to_hex[] = "0123456789abcdef";

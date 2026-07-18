@@ -16,7 +16,7 @@
  * Imported from git.git.
  */
 
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 
 #define GIT_SPACE 0x01
 #define GIT_DIGIT 0x02

@@ -8,7 +8,7 @@
 #include "auth_ntlm.h"
 
 #include "common.h"
-#include "str.h"
+#include "git2/str.h"
 #include "auth.h"
 #include "git2/sys/credential.h"
 

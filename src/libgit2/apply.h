@@ -11,7 +11,7 @@
 
 #include "git2/patch.h"
 #include "git2/apply.h"
-#include "str.h"
+#include "git2/str.h"
 
 extern int git_apply__patch(
 	git_str *out,

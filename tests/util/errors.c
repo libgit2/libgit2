@@ -32,8 +32,8 @@ void test_errors__public_api(void)
 }
 
 #include "common.h"
-#include "util.h"
-#include "posix.h"
+#include "git2/util.h"
+#include "git2/posix.h"
 
 void test_errors__new_school(void)
 {

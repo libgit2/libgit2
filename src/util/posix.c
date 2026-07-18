@@ -5,9 +5,9 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "posix.h"
+#include "git2/posix.h"
 
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include <stdio.h>
 #include <ctype.h>
 
@@ -226,7 +226,7 @@ int p_write(git_file fd, const void *buf, size_t cnt)
 
 #ifdef NO_MMAP
 
-#include "map.h"
+#include "git2/map.h"
 
 int git__page_size(size_t *page_size)
 {

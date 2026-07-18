@@ -1,7 +1,7 @@
 #include "clar.h"
 #include "clar_libgit2.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 #include "git2/cherrypick.h"
 
 #include "../merge/merge_helpers.h"

@@ -8,7 +8,7 @@
 #include "pack.h"
 
 #include "delta.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "mwindow.h"
 #include "odb.h"
 #include "oid.h"

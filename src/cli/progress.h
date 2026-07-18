@@ -9,7 +9,7 @@
 #define CLI_progress_h__
 
 #include <git2.h>
-#include "str.h"
+#include "git2/str.h"
 
 /*
  * A general purpose set of progress printing functions.  An individual

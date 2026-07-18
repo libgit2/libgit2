@@ -3,7 +3,7 @@
 #include "git2/clone.h"
 #include "../submodule/submodule_helpers.h"
 #include "remote.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "repository.h"
 #include "index.h"
 

@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#include "date.h"
+#include "git2/date.h"
 
 void test_date_rfc2822__format_rfc2822_no_offset(void)
 {

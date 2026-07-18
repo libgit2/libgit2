@@ -3,7 +3,7 @@
 #include <git2.h>
 #include <git2/sys/midx.h>
 
-#include "futils.h"
+#include "git2/futils.h"
 #include "midx.h"
 
 void test_pack_midx__parse(void)

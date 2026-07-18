@@ -8,8 +8,8 @@
 #include <git2.h>
 #include "common.h"
 #include "cmd.h"
-#include "futils.h"
-#include "process.h"
+#include "git2/futils.h"
+#include "git2/process.h"
 
 #define COMMAND_NAME "commit"
 

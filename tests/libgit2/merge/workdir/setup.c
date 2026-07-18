@@ -3,7 +3,7 @@
 #include "git2/merge.h"
 #include "merge.h"
 #include "refs.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 static git_repository *repo;
 static git_index *repo_index;

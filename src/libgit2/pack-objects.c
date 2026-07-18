@@ -8,13 +8,13 @@
 #include "pack-objects.h"
 
 #include "buf.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 #include "delta.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 #include "pack.h"
-#include "thread.h"
+#include "git2/thread.h"
 #include "tree.h"
-#include "util.h"
+#include "git2/util.h"
 #include "revwalk.h"
 #include "commit_list.h"
 

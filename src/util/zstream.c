@@ -5,11 +5,11 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "zstream.h"
+#include "git2/zstream.h"
 
 #include <zlib.h>
 
-#include "str.h"
+#include "git2/str.h"
 
 #define ZSTREAM_BUFFER_SIZE (1024 * 1024)
 #define ZSTREAM_BUFFER_MIN_EXTRA 8

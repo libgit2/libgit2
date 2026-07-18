@@ -11,7 +11,7 @@ You probably want to make changes to both files.
 #include "merge.h"
 #include "merge_helpers.h"
 #include "refs.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 #define TEST_REPO_PATH "merge-resolve"
 

@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "pool.h"
+#include "git2/pool.h"
 
 #include <git2.h>
 #include "git2/sys/commit.h"

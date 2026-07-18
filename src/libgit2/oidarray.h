@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "git2/oidarray.h"
-#include "array.h"
+#include "git2/array.h"
 
 typedef git_array_t(git_oid) git_array_oid_t;
 

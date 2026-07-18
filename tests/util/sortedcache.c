@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "sortedcache.h"
+#include "git2/sortedcache.h"
 
 static int name_only_cmp(const void *a, const void *b)
 {

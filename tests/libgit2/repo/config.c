@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "sysdir.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include <ctype.h>
 
 static git_str path = GIT_STR_INIT;

@@ -8,7 +8,7 @@
 #define INCLUDE_mailmap_h__
 
 #include "git2/mailmap.h"
-#include "vector.h"
+#include "git2/vector.h"
 
 /*
  * A mailmap is stored as a sorted vector of 'git_mailmap_entry's. These entries

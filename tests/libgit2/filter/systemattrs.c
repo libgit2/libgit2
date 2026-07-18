@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "crlf.h"
 #include "path.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 static git_repository *g_repo = NULL;
 static git_str orig_system_path = GIT_STR_INIT;

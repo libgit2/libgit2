@@ -12,10 +12,10 @@
 #include "git2/refdb.h"
 #include "git2/sys/refdb_backend.h"
 
-#include "hash.h"
+#include "git2/hash.h"
 #include "refs.h"
 #include "reflog.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 #define DEFAULT_NESTING_LEVEL	5
 #define MAX_NESTING_LEVEL		10

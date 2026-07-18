@@ -16,7 +16,7 @@
 #include "push.h"
 #include "pack-objects.h"
 #include "remote.h"
-#include "util.h"
+#include "git2/util.h"
 #include "revwalk.h"
 
 #define NETWORK_XFER_THRESHOLD (100*1024)

@@ -7,8 +7,8 @@
 #ifndef INCLUDE_common_h__
 #define INCLUDE_common_h__
 
-#include "git2_util.h"
-#include "errors.h"
+#include "git2/git2_util.h"
+#include "git2/errors.h"
 
 /*
 * Include the declarations for deprecated functions; this ensures
@@ -16,7 +16,7 @@
 */
 #include "git2/deprecated.h"
 
-#include "posix.h"
+#include "git2/posix.h"
 
 /**
  * Initialize a structure with a version.

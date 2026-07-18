@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "hash.h"
+#include "git2/hash.h"
 
 #define FIXTURE_DIR "sha1"
 

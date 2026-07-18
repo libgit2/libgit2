@@ -9,7 +9,7 @@
 
 #include "repository.h"
 #include "refdb.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "reflog.h"
 #include "signature.h"
 #include "config.h"

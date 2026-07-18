@@ -7,11 +7,11 @@
 
 #include "commit_graph.h"
 
-#include "array.h"
+#include "git2/array.h"
 #include "buf.h"
-#include "filebuf.h"
-#include "futils.h"
-#include "hash.h"
+#include "git2/filebuf.h"
+#include "git2/futils.h"
+#include "git2/hash.h"
 #include "oidarray.h"
 #include "pack.h"
 #include "repository.h"

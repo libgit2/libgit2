@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "bitvec.h"
+#include "git2/bitvec.h"
 
 #if 0
 static void print_bitvec(git_bitvec *bv)

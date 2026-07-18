@@ -9,15 +9,15 @@
 
 #include "buf.h"
 #include "common.h"
-#include "futils.h"
-#include "hash.h"
+#include "git2/futils.h"
+#include "git2/hash.h"
 #include "repository.h"
-#include "runtime.h"
+#include "git2/runtime.h"
 #include "git2/sys/filter.h"
 #include "git2/config.h"
 #include "blob.h"
 #include "attr_file.h"
-#include "array.h"
+#include "git2/array.h"
 #include "path.h"
 
 struct git_filter_source {

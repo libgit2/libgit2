@@ -12,7 +12,7 @@ bool git_http__expect_continue = false;
 
 #if defined(GIT_HTTP) && !defined(GIT_HTTPS_WINHTTP)
 
-#include "net.h"
+#include "git2/net.h"
 #include "remote.h"
 #include "smart.h"
 #include "auth.h"

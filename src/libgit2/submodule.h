@@ -11,8 +11,8 @@
 
 #include "git2/submodule.h"
 #include "git2/repository.h"
-#include "futils.h"
-#include "hashmap.h"
+#include "git2/futils.h"
+#include "git2/hashmap.h"
 
 /* Notes:
  *

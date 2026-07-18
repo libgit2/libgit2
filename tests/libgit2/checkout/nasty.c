@@ -3,7 +3,7 @@
 
 #include "git2/checkout.h"
 #include "repository.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 static const char *repo_name = "nasty";
 static git_repository *repo;

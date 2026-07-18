@@ -8,10 +8,10 @@
 #include "common.h"
 
 #include "buf.h"
-#include "futils.h"
-#include "hash.h"
+#include "git2/futils.h"
+#include "git2/hash.h"
 #include "odb.h"
-#include "array.h"
+#include "git2/array.h"
 #include "pack-objects.h"
 
 #include "git2/odb_backend.h"

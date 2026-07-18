@@ -8,13 +8,13 @@
 #include "attr_file.h"
 
 #include "repository.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "attrcache.h"
 #include "git2/blob.h"
 #include "git2/tree.h"
 #include "blob.h"
 #include "index.h"
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 #include <ctype.h>
 
 static void attr_file_free(git_attr_file *file)

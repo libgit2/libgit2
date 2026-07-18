@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "openssl.h"
+#include "git2/hash/openssl.h"
 
 #if defined(GIT_SHA1_OPENSSL_DYNAMIC) || defined(GIT_SHA256_OPENSSL_DYNAMIC)
 # include <dlfcn.h>

@@ -9,7 +9,7 @@
 
 #include "git2/sys/filter.h"
 #include "filter.h"
-#include "str.h"
+#include "git2/str.h"
 
 static int ident_find_id(
 	const char **id_start, const char **id_end, const char *start, size_t len)

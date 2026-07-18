@@ -8,9 +8,9 @@
 #include <git2.h>
 #include <git2/sys/config.h>
 
-#include "git2_util.h"
-#include "vector.h"
-#include "fs_path.h"
+#include "git2/git2_util.h"
+#include "git2/vector.h"
+#include "git2/fs_path.h"
 
 #include "common.h"
 #include "error.h"

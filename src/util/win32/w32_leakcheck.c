@@ -11,9 +11,9 @@
 
 #include "Windows.h"
 #include "Dbghelp.h"
-#include "win32/posix.h"
-#include "hash.h"
-#include "runtime.h"
+#include "git2/win32/posix.h"
+#include "git2/hash.h"
+#include "git2/runtime.h"
 
 /* Stack frames (for stack tracing, below) */
 

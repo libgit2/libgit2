@@ -8,8 +8,8 @@
 #include "path.h"
 
 #include "repository.h"
-#include "fs_path.h"
-#include "utf8.h"
+#include "git2/fs_path.h"
+#include "git2/utf8.h"
 
 typedef struct {
 	git_repository *repo;

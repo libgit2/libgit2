@@ -13,7 +13,7 @@
 #include "git2/odb_backend.h"
 
 #include "buf.h"
-#include "filebuf.h"
+#include "git2/filebuf.h"
 #include "filter.h"
 
 const void *git_blob_rawcontent(const git_blob *blob)

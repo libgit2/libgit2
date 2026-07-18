@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "zstream.h"
+#include "git2/zstream.h"
 
 static const char *data = "This is a test test test of This is a test";
 

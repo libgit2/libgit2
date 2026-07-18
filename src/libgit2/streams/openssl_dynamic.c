@@ -10,7 +10,7 @@
 
 #ifdef GIT_HTTPS_OPENSSL_DYNAMIC
 
-#include "runtime.h"
+#include "git2/runtime.h"
 
 #include <dlfcn.h>
 

@@ -1,4 +1,4 @@
-#include "thread.h"
+#include "git2/thread.h"
 
 void run_in_parallel(
 	int repeats,

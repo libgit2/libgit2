@@ -14,7 +14,7 @@
 #include "ntlmclient.h"
 #include "unicode.h"
 #include "ntlm.h"
-#include "util.h"
+#include "git2/util.h"
 #include "compat.h"
 
 typedef enum {

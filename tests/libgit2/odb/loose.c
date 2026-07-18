@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "odb.h"
 #include "git2/odb_backend.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "loose_data.h"
 #include "repository.h"
 

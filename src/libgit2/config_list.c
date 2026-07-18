@@ -6,7 +6,7 @@
  */
 
 #include "config_list.h"
-#include "hashmap_str.h"
+#include "git2/hashmap_str.h"
 
 typedef struct config_entry_list {
 	struct config_entry_list *next;

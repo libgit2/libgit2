@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 
-#include "wildmatch.h"
+#include "git2/wildmatch.h"
 
 #define assert_matches(string, pattern, wildmatch, iwildmatch, pathmatch, ipathmatch) \
 	assert_matches_(string, pattern, wildmatch, iwildmatch, pathmatch, ipathmatch, __FILE__, __func__, __LINE__)

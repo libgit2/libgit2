@@ -12,7 +12,7 @@
 #include "git2.h"
 #include "git2/sys/mempack.h"
 #include "common.h"
-#include "str.h"
+#include "git2/str.h"
 
 #include "standalone_driver.h"
 

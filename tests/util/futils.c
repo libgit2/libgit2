@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 /* Fixture setup and teardown */
 void test_futils__initialize(void)

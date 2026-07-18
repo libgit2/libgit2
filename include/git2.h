@@ -35,6 +35,7 @@
 #include "git2/ignore.h"
 #include "git2/index.h"
 #include "git2/indexer.h"
+#include "git2/iterator.h"
 #include "git2/mailmap.h"
 #include "git2/merge.h"
 #include "git2/message.h"

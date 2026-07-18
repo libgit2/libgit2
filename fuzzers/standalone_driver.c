@@ -8,7 +8,7 @@
 #include <stdio.h>
 
 #include "git2.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "path.h"
 
 #include "standalone_driver.h"

@@ -8,7 +8,7 @@
 #include "commit_list.h"
 
 #include "revwalk.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "odb.h"
 #include "commit.h"
 

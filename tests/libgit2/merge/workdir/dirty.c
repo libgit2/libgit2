@@ -3,7 +3,7 @@
 #include "merge.h"
 #include "index.h"
 #include "../merge_helpers.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 #define TEST_REPO_PATH "merge-resolve"
 #define MERGE_BRANCH_OID "7cb63eed597130ba4abb87b3e544b85021905520"

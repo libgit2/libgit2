@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "git2/rebase.h"
 #include "merge.h"
-#include "posix.h"
+#include "git2/posix.h"
 #include "annotated_commit.h"
 
 #include <fcntl.h>

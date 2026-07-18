@@ -1,8 +1,8 @@
 #include "clar_libgit2.h"
 
-#include "filebuf.h"
-#include "futils.h"
-#include "posix.h"
+#include "git2/filebuf.h"
+#include "git2/futils.h"
+#include "git2/posix.h"
 
 #define TEST_CONFIG "git-test-config"
 

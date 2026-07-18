@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "util.h"
+#include "git2/util.h"
 
 void test_hex__fromhex(void)
 {

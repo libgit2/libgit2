@@ -245,4 +245,7 @@ GIT_EXTERN(int) git_stream_register_tls(git_stream_cb ctor);
 /**@}*/
 GIT_END_DECL
 
+/** @} */
+GIT_END_DECL
+
 #endif

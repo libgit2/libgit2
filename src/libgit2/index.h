@@ -9,9 +9,9 @@
 
 #include "common.h"
 
-#include "futils.h"
-#include "filebuf.h"
-#include "vector.h"
+#include "git2/futils.h"
+#include "git2/filebuf.h"
+#include "git2/vector.h"
 #include "tree-cache.h"
 #include "index_map.h"
 #include "git2/odb.h"

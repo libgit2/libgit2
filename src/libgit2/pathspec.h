@@ -10,10 +10,10 @@
 #include "common.h"
 
 #include "git2/pathspec.h"
-#include "str.h"
-#include "vector.h"
-#include "pool.h"
-#include "array.h"
+#include "git2/str.h"
+#include "git2/vector.h"
+#include "git2/pool.h"
+#include "git2/array.h"
 
 /* public compiled pathspec */
 struct git_pathspec {

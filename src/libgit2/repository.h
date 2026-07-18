@@ -17,10 +17,10 @@
 #include "git2/config.h"
 #include "git2/sys/repository.h"
 
-#include "array.h"
+#include "git2/array.h"
 #include "cache.h"
 #include "refs.h"
-#include "str.h"
+#include "git2/str.h"
 #include "object.h"
 #include "attrcache.h"
 #include "submodule.h"

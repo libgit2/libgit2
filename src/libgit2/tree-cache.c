@@ -7,7 +7,7 @@
 
 #include "tree-cache.h"
 
-#include "pool.h"
+#include "git2/pool.h"
 #include "tree.h"
 
 static git_tree_cache *find_child(

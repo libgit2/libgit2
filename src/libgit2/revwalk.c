@@ -10,11 +10,11 @@
 #include "commit.h"
 #include "odb.h"
 #include "pathspec.h"
-#include "pool.h"
+#include "git2/pool.h"
 
 #include "git2/revparse.h"
 #include "merge.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "hashmap_oid.h"
 
 GIT_HASHMAP_OID_FUNCTIONS(git_revwalk_oidmap, GIT_HASHMAP_INLINE, git_commit_list_node *);

@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "thread_helpers.h"
-#include "iterator.h"
+#include "git2/iterator.h"
 
 static git_repository *_repo;
 

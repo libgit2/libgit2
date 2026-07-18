@@ -1,12 +1,12 @@
 #include "clar_libgit2.h"
 #include "checkout_helpers.h"
 #include "../filter/crlf.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 #include "git2/checkout.h"
 #include "repository.h"
 #include "index.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 static git_repository *g_repo;
 

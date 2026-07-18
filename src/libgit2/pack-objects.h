@@ -10,10 +10,10 @@
 
 #include "common.h"
 
-#include "str.h"
-#include "hash.h"
-#include "zstream.h"
-#include "pool.h"
+#include "git2/str.h"
+#include "git2/hash.h"
+#include "git2/zstream.h"
+#include "git2/pool.h"
 #include "indexer.h"
 #include "hashmap_oid.h"
 

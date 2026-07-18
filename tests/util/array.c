@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "array.h"
+#include "git2/array.h"
 
 static int int_lookup(const void *k, const void *a)
 {

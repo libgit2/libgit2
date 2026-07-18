@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "varint.h"
+#include "git2/varint.h"
 
 uintmax_t git_decode_varint(const unsigned char *bufp, size_t *varint_len)
 {

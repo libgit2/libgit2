@@ -10,8 +10,8 @@
 #include "common.h"
 
 #include "git2/refspec.h"
-#include "str.h"
-#include "vector.h"
+#include "git2/str.h"
+#include "git2/vector.h"
 
 struct git_refspec {
 	char *string;

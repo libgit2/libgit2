@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/sys/hashsig.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 #define SIMILARITY_TEST_DATA_1 \
 	"000\n001\n002\n003\n004\n005\n006\n007\n008\n009\n" \

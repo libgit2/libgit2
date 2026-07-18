@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 #include <signal.h>
-#include "git2_util.h"
+#include "git2/git2_util.h"
 #include "common.h"
 #include "sighandler.h"
 

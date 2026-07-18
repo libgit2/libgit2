@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "failalloc.h"
+#include "git2/allocators/failalloc.h"
 
 void *git_failalloc_malloc(size_t len, const char *file, int line)
 {

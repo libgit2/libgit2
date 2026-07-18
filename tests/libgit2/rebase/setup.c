@@ -1,6 +1,6 @@
 #include "clar_libgit2.h"
 #include "git2/rebase.h"
-#include "posix.h"
+#include "git2/posix.h"
 
 #include <fcntl.h>
 

@@ -7,7 +7,7 @@
 
 #include "win32.h"
 
-#include "runtime.h"
+#include "git2/runtime.h"
 
 #include <wincrypt.h>
 #include <strsafe.h>

@@ -12,7 +12,7 @@
 #include "git2/oid.h"
 #include "git2/refs.h"
 #include "git2/refdb.h"
-#include "str.h"
+#include "git2/str.h"
 #include "oid.h"
 
 extern bool git_reference__enable_symbolic_ref_target_validation;

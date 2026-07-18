@@ -3,10 +3,10 @@
 
 #include "index.h"
 #include "odb.h"
-#include "posix.h"
-#include "util.h"
+#include "git2/posix.h"
+#include "git2/util.h"
 #include "path.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 static git_repository *repo;
 

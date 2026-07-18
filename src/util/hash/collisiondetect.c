@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "collisiondetect.h"
+#include "git2/hash/collisiondetect.h"
 
 int git_hash_sha1_global_init(void)
 {

@@ -8,7 +8,7 @@
 #include "oidarray.h"
 
 #include "git2/oidarray.h"
-#include "array.h"
+#include "git2/array.h"
 
 void git_oidarray_dispose(git_oidarray *arr)
 {

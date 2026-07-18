@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "pool.h"
+#include "git2/pool.h"
 #include "git2/oid.h"
 
 void test_pool__0(void)

@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "stash_helpers.h"
 
 void setup_stash(git_repository *repo, git_signature *signature)

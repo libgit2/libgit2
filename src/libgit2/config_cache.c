@@ -7,11 +7,11 @@
 
 #include "common.h"
 
-#include "futils.h"
+#include "git2/futils.h"
 #include "repository.h"
 #include "config.h"
 #include "git2/config.h"
-#include "vector.h"
+#include "git2/vector.h"
 #include "filter.h"
 
 struct map_data {

@@ -1,5 +1,5 @@
 #include "clar_libgit2.h"
-#include "pqueue.h"
+#include "git2/pqueue.h"
 
 static int cmp_ints(const void *v1, const void *v2)
 {

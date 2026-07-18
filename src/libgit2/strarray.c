@@ -5,7 +5,7 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "util.h"
+#include "git2/util.h"
 
 #include "common.h"
 #include "strarray.h"

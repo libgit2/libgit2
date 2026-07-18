@@ -2,7 +2,7 @@
 #include "git2/repository.h"
 #include "git2/merge.h"
 #include "merge.h"
-#include "futils.h"
+#include "git2/futils.h"
 #include "../merge_helpers.h"
 #include "../conflict_data.h"
 

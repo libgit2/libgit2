@@ -13,7 +13,7 @@
 
 #include "git2.h"
 #include "git2/sys/transport.h"
-#include "futils.h"
+#include "git2/futils.h"
 
 #include "standalone_driver.h"
 #include "fuzzer_utils.h"

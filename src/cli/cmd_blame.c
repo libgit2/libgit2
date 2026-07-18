@@ -13,10 +13,10 @@
 #include "sighandler.h"
 #include "progress.h"
 
-#include "fs_path.h"
-#include "futils.h"
-#include "date.h"
-#include "hashmap.h"
+#include "git2/fs_path.h"
+#include "git2/futils.h"
+#include "git2/date.h"
+#include "git2/hashmap.h"
 
 #define COMMAND_NAME "blame"
 

@@ -13,7 +13,7 @@
 
 #include "buf.h"
 #include "commit.h"
-#include "hash.h"
+#include "git2/hash.h"
 #include "tree.h"
 #include "blob.h"
 #include "oid.h"

@@ -10,7 +10,7 @@
 #include "common.h"
 
 #include "git2/reflog.h"
-#include "vector.h"
+#include "git2/vector.h"
 
 #define GIT_REFLOG_DIR "logs/"
 #define GIT_REFLOG_DIR_MODE 0777

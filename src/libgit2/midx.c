@@ -7,16 +7,16 @@
 
 #include "midx.h"
 
-#include "array.h"
+#include "git2/array.h"
 #include "buf.h"
-#include "filebuf.h"
-#include "futils.h"
-#include "hash.h"
+#include "git2/filebuf.h"
+#include "git2/futils.h"
+#include "git2/hash.h"
 #include "odb.h"
 #include "pack.h"
-#include "fs_path.h"
+#include "git2/fs_path.h"
 #include "repository.h"
-#include "str.h"
+#include "git2/str.h"
 
 #define MIDX_SIGNATURE 0x4d494458 /* "MIDX" */
 #define MIDX_VERSION 1

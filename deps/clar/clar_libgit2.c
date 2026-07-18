@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
-#include "posix.h"
-#include "fs_path.h"
-#include "futils.h"
+#include "git2/posix.h"
+#include "git2/fs_path.h"
+#include "git2/futils.h"
 #include "git2/sys/repository.h"
 
 void cl_git_report_failure(
@@ -97,7 +97,7 @@ bool cl_is_env_set(const char *name)
 
 #ifdef GIT_WIN32
 
-#include "win32/utf-conv.h"
+#include "git2/win32/utf-conv.h"
 
 int cl_setenv(const char *name, const char *value)
 {

@@ -8,7 +8,7 @@
 #include "dir.h"
 
 #define GIT__WIN32_NO_WRAP_DIR
-#include "posix.h"
+#include "git2/posix.h"
 
 git__DIR *git__opendir(const char *dir)
 {

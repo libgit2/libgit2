@@ -17,7 +17,7 @@
 #include "clone.h"
 #include "describe.h"
 #include "diff.h"
-#include "errors.h"
+#include "git2/errors.h"
 #include "filter.h"
 #include "index.h"
 #include "indexer.h"

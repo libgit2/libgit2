@@ -9,7 +9,7 @@
 #define INCLUDE_transports_auth_h__
 
 #include "common.h"
-#include "net.h"
+#include "git2/net.h"
 
 typedef enum {
 	GIT_HTTP_AUTH_BASIC = 1,
