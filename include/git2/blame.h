@@ -83,6 +83,19 @@ typedef enum {
 } git_blame_flag_t;
 
 /**
+ * Blame progress callback.
+ *
+ * Called for each blame suspect.
+ *
+ * - 'suspect' is the id of the suspect commit.
+ *
+ * Returning a non-zero value will abort the blame.
+ */
+typedef int (*git_blame_progress_cb)(
+	const git_oid *suspect,
+	void *payload);
+
+/**
  * Blame options structure
  *
  * Initialize with `GIT_BLAME_OPTIONS_INIT`. Alternatively, you can
@@ -129,6 +142,9 @@ typedef struct git_blame_options {
 	 * The default is the last line of the file.
 	 */
 	size_t max_line;
+
+	git_blame_progress_cb progress_cb;
+	void *payload;
 } git_blame_options;
 
 /** Current version for the `git_blame_options` structure */
