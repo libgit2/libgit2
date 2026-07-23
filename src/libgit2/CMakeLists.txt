@@ -65,7 +65,7 @@ if (NOT BUILD_SHARED_LIBS AND XCODE_VERSION)
 endif()
 
 add_library(libgit2package ${SRC_RC} ${LIBGIT2_OBJECTS})
-target_link_libraries(libgit2package ${LIBGIT2_SYSTEM_LIBS})
+target_link_libraries(libgit2package PRIVATE ${LIBGIT2_SYSTEM_LIBS})
 target_include_directories(libgit2package SYSTEM PRIVATE ${LIBGIT2_INCLUDES})
 target_include_directories(libgit2package INTERFACE $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
 
