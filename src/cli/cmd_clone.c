@@ -122,17 +122,25 @@ static void interrupt_cleanup(void)
 	exit(130);
 }
 
-static int create_remote_cb(git_remote **out, git_repository *repo,
-							const char *name, const char *url, void *payload)
+static int create_remote_cb(
+	git_remote **out,
+	git_repository *repo,
+	const char *name,
+	const char *url,
+	void *payload)
 {
-    const char *branch = payload;
+	const char *branch = payload;
 	git_str fetchspec = GIT_STR_INIT;
+	int ret;
 
 	git_str_printf(&fetchspec, "+refs/heads/%s:refs/remotes/%s/%s",
 				   branch, name, branch);
 
-    return git_remote_create_with_fetchspec(out, repo, name, url,
-											git_str_cstr(&fetchspec));
+	ret = git_remote_create_with_fetchspec(out, repo, name, url,
+		git_str_cstr(&fetchspec));
+
+	git_str_dispose(&fetchspec);
+	return ret;
 }
 
 int cmd_clone(int argc, char **argv)
