@@ -4008,7 +4008,7 @@ int git_repository_is_shallow(git_repository *repo)
 	struct stat st;
 	int error;
 
-	if ((error = git_str_joinpath(&path, repo->gitdir, "shallow")) < 0)
+	if ((error = git_str_joinpath(&path, repo->commondir, "shallow")) < 0)
 		return error;
 
 	error = git_fs_path_lstat(path.ptr, &st);
