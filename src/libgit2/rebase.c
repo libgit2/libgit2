@@ -288,15 +288,43 @@ static int rebase_alloc(git_rebase **out, const git_rebase_options *rebase_opts)
 
 	*out = NULL;
 
-	if (rebase_opts)
-		memcpy(&rebase->options, rebase_opts, sizeof(git_rebase_options));
-	else
+	if (!rebase_opts) {
 		git_rebase_options_init(&rebase->options, GIT_REBASE_OPTIONS_VERSION);
+	} else {
+		memcpy(&rebase->options, rebase_opts, sizeof(git_rebase_options));
+		if (rebase_opts->rewrite_notes_ref) {
+			rebase->options.rewrite_notes_ref = git__strdup(rebase_opts->rewrite_notes_ref);
+			GIT_ERROR_CHECK_ALLOC(rebase->options.rewrite_notes_ref);
+		}
 
-	if (rebase_opts && rebase_opts->rewrite_notes_ref) {
-		rebase->options.rewrite_notes_ref = git__strdup(rebase_opts->rewrite_notes_ref);
-		GIT_ERROR_CHECK_ALLOC(rebase->options.rewrite_notes_ref);
+		if (rebase_opts->merge_options.default_driver) {
+			rebase->options.merge_options.default_driver = git__strdup(rebase_opts->merge_options.default_driver);
+			GIT_ERROR_CHECK_ALLOC(rebase_opts->merge_options.default_driver);
+		}
+
+		if (rebase_opts->checkout_options.baseline) {
+			git_tree_dup(&rebase->options.checkout_options.baseline, rebase_opts->checkout_options.baseline);
+		}
+		if (rebase_opts->checkout_options.target_directory) {
+			rebase->options.checkout_options.target_directory = git__strdup(rebase_opts->checkout_options.target_directory);
+			GIT_ERROR_CHECK_ALLOC(rebase_opts->checkout_options.target_directory);
+		}
+		if (rebase_opts->checkout_options.ancestor_label) {
+			rebase->options.checkout_options.ancestor_label = git__strdup(rebase_opts->checkout_options.ancestor_label);
+			GIT_ERROR_CHECK_ALLOC(rebase_opts->checkout_options.ancestor_label);
+		}
+		if (rebase_opts->checkout_options.our_label) {
+			rebase->options.checkout_options.our_label = git__strdup(rebase_opts->checkout_options.our_label);
+			GIT_ERROR_CHECK_ALLOC(rebase_opts->checkout_options.our_label);
+		}
+		if (rebase_opts->checkout_options.their_label) {
+			rebase->options.checkout_options.their_label = git__strdup(rebase_opts->checkout_options.their_label);
+			GIT_ERROR_CHECK_ALLOC(rebase_opts->checkout_options.their_label);
+		}
 	}
+
+
+
 
 	*out = rebase;
 
@@ -1465,5 +1493,12 @@ void git_rebase_free(git_rebase *rebase)
 	git_str_dispose(&rebase->state_filename);
 	git_array_clear(rebase->operations);
 	git__free((char *)rebase->options.rewrite_notes_ref);
+	git_tree_free(rebase->options.checkout_options.baseline);
+	git_index_free(rebase->options.checkout_options.baseline_index);
+	git__free((char *) rebase->options.merge_options.default_driver);
+	git__free((char *) rebase->options.checkout_options.target_directory);
+	git__free((char *) rebase->options.checkout_options.ancestor_label);
+	git__free((char *) rebase->options.checkout_options.our_label);
+	git__free((char *) rebase->options.checkout_options.their_label);
 	git__free(rebase);
 }
