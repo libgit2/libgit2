@@ -42,6 +42,7 @@ typedef struct {
 	git_repository *repo;
 	refdb_reftable_stack *stack;
 	refdb_reftable_stack *worktree_stack;
+	struct reftable_write_options write_opts;
 } refdb_reftable;
 
 typedef struct {
@@ -123,7 +124,7 @@ static void refdb_reftable_return_stack(refdb_reftable *backend,
 static int refdb_reftable_stack_for(refdb_reftable_stack **out,
 				    refdb_reftable *backend, refdb_reftable_stack_t which)
 {
-	struct reftable_write_options options = { 0 };
+	struct reftable_stack_options options = { 0 };
 	refdb_reftable_stack **stack_ptr, *stack;
 	const char *parent_directory;
 	git_str path = GIT_STR_INIT;
@@ -146,7 +147,6 @@ static int refdb_reftable_stack_for(refdb_reftable_stack **out,
 #else
 	options.hash_id = REFTABLE_HASH_SHA1;
 #endif
-	options.lock_timeout_ms = 100;
 
 	switch (which) {
 	case REFDB_REFTABLE_STACK_WORKTREE:
@@ -520,7 +520,7 @@ static int refdb_reftable_init(git_refdb_backend *_backend,
 			data.error = 0;
 
 			if ((error = reftable_stack_add(stack->stack, refdb_reftable_write_head_table,
-							&data, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+							&data, &backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
 				if (data.error)
 					error = data.error;
 				else
@@ -1010,7 +1010,7 @@ static int refdb_reftable_write(git_refdb_backend *_backend,
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_table, &data,
-					REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1165,7 +1165,7 @@ static int refdb_reftable_delete(git_refdb_backend *_backend,
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_delete_table, &data,
-					REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1355,7 +1355,7 @@ static int refdb_reftable_rename(git_reference **out,
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_rename_table, &data,
-					REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1454,7 +1454,7 @@ static int refdb_reftable_ensure_log(git_refdb_backend *_backend,
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_log_existence_table, &data,
-					REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1657,7 +1657,7 @@ static int refdb_reftable_reflog_write(git_refdb_backend *_backend, git_reflog *
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_reflog_table, &data,
-					REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1724,7 +1724,7 @@ static int refdb_reftable_reflog_rename(git_refdb_backend *_backend, const char 
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_reflog_write_rename_table, &data,
-					REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1780,7 +1780,7 @@ static int refdb_reftable_reflog_delete(git_refdb_backend *_backend, const char 
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_reflog_write_delete_table, &data,
-					REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1802,7 +1802,7 @@ static int refdb_reftable_compress(git_refdb_backend *_backend)
 	if ((error = refdb_reftable_stack_for(&stack, backend, REFDB_REFTABLE_STACK_MAIN)) < 0)
 		goto out;
 
-	if ((error = reftable_stack_compact_all(stack->stack, NULL)) < 0) {
+	if ((error = reftable_stack_compact_all(stack->stack, &backend->write_opts, NULL)) < 0) {
 		error = refdb_reftable_error(error, "could not compact stack");
 		goto out;
 	}
@@ -1812,7 +1812,7 @@ static int refdb_reftable_compress(git_refdb_backend *_backend)
 						      REFDB_REFTABLE_STACK_WORKTREE)) < 0)
 			goto out;
 
-		if ((error = reftable_stack_compact_all(wt_stack->stack, NULL)) < 0) {
+		if ((error = reftable_stack_compact_all(wt_stack->stack, &backend->write_opts, NULL)) < 0) {
 			error = refdb_reftable_error(error, "could not compact worktree stack");
 			goto out;
 		}
@@ -1866,6 +1866,8 @@ int git_refdb_backend_reftable(git_refdb_backend **out,
 	backend->parent.reflog_delete = refdb_reftable_reflog_delete;
 	backend->parent.compress = refdb_reftable_compress;
 	/* TODO: transaction API */
+
+	backend->write_opts.lock_timeout_ms = 100;
 
 	*out = (git_refdb_backend *)backend;
 	backend = NULL;
