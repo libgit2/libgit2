@@ -147,6 +147,7 @@ static int refdb_reftable_stack_for(refdb_reftable_stack **out,
 #else
 	options.hash_id = REFTABLE_HASH_SHA1;
 #endif
+	options.suppress_deletions = 1;
 
 	switch (which) {
 	case REFDB_REFTABLE_STACK_WORKTREE:
