@@ -1,5 +1,5 @@
 libgit2 - the Git linkable library
-==================================
+
 [![OpenSSF Best Practices](https://www.bestpractices.dev/projects/9609/badge)](https://www.bestpractices.dev/projects/9609)
 
 | Build Status | |
