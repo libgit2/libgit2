@@ -1313,7 +1313,7 @@ static void index_existing_and_best(
 	}
 
 	*existing = NULL;
-	*existing_position = 0;
+	*existing_position = pos;
 	*best = NULL;
 
 	if (GIT_INDEX_ENTRY_STAGE(entry) == 0) {
