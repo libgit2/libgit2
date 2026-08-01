@@ -1,3 +1,11 @@
+if (WIN32)
+	if (BUILD_SHARED_LIBS)
+		add_definitions("-DGIT_EXTERN_DECL=__declspec(dllexport)")
+	else()
+		add_definitions(-DGIT_STATIC)
+	endif()
+endif()
+
 # Platform specific compilation flags
 if(MSVC)
 	add_definitions(-D_SCL_SECURE_NO_WARNINGS)
@@ -22,17 +30,25 @@ if(MSVC)
 	endif()
 
 	if(STATIC_CRT)
-		set(CRT_FLAG_DEBUG "/MTd")
-		set(CRT_FLAG_RELEASE "/MT")
+		set(CRT_C_FLAGS_DEBUG "/MTd")
+		set(CRT_C_FLAGS_RELEASE "/MT")
 	else()
-		set(CRT_FLAG_DEBUG "/MDd")
-		set(CRT_FLAG_RELEASE "/MD")
+		set(CRT_C_FLAGS_DEBUG "/MDd")
+		set(CRT_C_FLAGS_RELEASE "/MD")
 	endif()
 
 	if(DEBUG_LEAK_CHECKER STREQUAL "win32")
 		set(GIT_DEBUG_LEAKCHECK_WIN32 1)
-		set(CRT_FLAG_DEBUG "${CRT_FLAG_DEBUG}")
+		set(CRT_C_FLAGS_DEBUG "${CRT_C_FLAGS_DEBUG}")
 		set(CMAKE_C_STANDARD_LIBRARIES "${CMAKE_C_STANDARD_LIBRARIES} Dbghelp.lib")
+	endif()
+
+	# Whole program optiomization (link time code generation) is only
+	# enabled when building shared libraries; otherwise we influence the
+	# consumer unnecessarily.
+	if(BUILD_SHARED_LIBS)
+		set(WPO_C_FLAGS "/GL")
+		set(WPO_LINKER_FLAGS "/LTCG")
 	endif()
 
 	# /Zi - Create debugging information
@@ -41,22 +57,21 @@ if(MSVC)
 	# /MTd - Statically link the multithreaded debug version of the CRT
 	# /MDd - Dynamically link the multithreaded debug version of the CRT
 	# /RTC1 - Run time checks
-	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od /D_DEBUG /RTC1 ${CRT_FLAG_DEBUG}")
+	set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} /Zi /Od /D_DEBUG /RTC1 ${CRT_C_FLAGS_DEBUG}")
 
 	# /DNDEBUG - Disables asserts
 	# /MT - Statically link the multithreaded release version of the CRT
 	# /MD - Dynamically link the multithreaded release version of the CRT
 	# /O2 - Optimize for speed
 	# /Oy - Enable frame pointer omission (FPO) (otherwise CMake will automatically turn it off)
-	# /GL - Link time code generation (whole program optimization)
 	# /Gy - Function-level linking
-	set(CMAKE_C_FLAGS_RELEASE "/DNDEBUG /O2 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
+	set(CMAKE_C_FLAGS_RELEASE "/DNDEBUG /O2 /Oy /Gy ${WPO_C_FLAGS} ${CRT_C_FLAGS_RELEASE}")
 
 	# /Oy- - Disable frame pointer omission (FPO)
-	set(CMAKE_C_FLAGS_RELWITHDEBINFO "/DNDEBUG /Zi /O2 /Oy- /GL /Gy ${CRT_FLAG_RELEASE}")
+	set(CMAKE_C_FLAGS_RELWITHDEBINFO "/DNDEBUG /Zi /O2 /Oy- /Gy ${WPO_C_FLAGS} ${CRT_C_FLAGS_RELEASE}")
 
 	# /O1 - Optimize for size
-	set(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /O1 /Oy /GL /Gy ${CRT_FLAG_RELEASE}")
+	set(CMAKE_C_FLAGS_MINSIZEREL "/DNDEBUG /O1 /Oy /Gy ${WPO_C_FLAGS} ${CRT_C_FLAGS_RELEASE}")
 
 	# /IGNORE:4221 - Ignore empty compilation units
 	set(CMAKE_STATIC_LINKER_FLAGS "${CMAKE_STATIC_LINKER_FLAGS} /IGNORE:4221")
@@ -78,9 +93,9 @@ if(MSVC)
 	# /INCREMENTAL:NO - Required to use /LTCG
 	# /DEBUGTYPE:cv,fixup - Additional data embedded in the PDB (requires /INCREMENTAL:NO, so not on for Debug)
 	set(CMAKE_EXE_LINKER_FLAGS_DEBUG "/DEBUG")
-	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
-	set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "/DEBUG /RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO /DEBUGTYPE:cv,fixup")
-	set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "/RELEASE /LTCG /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+	set(CMAKE_EXE_LINKER_FLAGS_RELEASE "/RELEASE ${WPO_LINKER_FLAGS} /OPT:REF /OPT:ICF /INCREMENTAL:NO")
+	set(CMAKE_EXE_LINKER_FLAGS_RELWITHDEBINFO "/DEBUG /RELEASE ${WPO_LINKER_FLAGS} /OPT:REF /OPT:ICF /INCREMENTAL:NO /DEBUGTYPE:cv,fixup")
+	set(CMAKE_EXE_LINKER_FLAGS_MINSIZEREL "/RELEASE ${WPO_LINKER_FLAGS} /OPT:REF /OPT:ICF /INCREMENTAL:NO")
 
 	# Same linker settings for DLL as EXE
 	set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")

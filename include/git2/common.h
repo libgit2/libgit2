@@ -36,15 +36,22 @@
 typedef size_t size_t;
 #endif
 
+/** External API / visibility controls */
+#ifndef GIT_EXTERN_DECL
+# if defined(_WIN32) && !defined(GIT_STATIC)
+#  define GIT_EXTERN_DECL __declspec(dllimport)
+# elif __GNUC__ >= 4 && !defined(GIT_STATIC)
+#  define GIT_EXTERN_DECL extern __attribute__((visibility("default")))
+# else
+#  define GIT_EXTERN_DECL extern
+# endif
+#endif
+
 /** Declare a public function exported for application use. */
-#if __GNUC__ >= 4
-# define GIT_EXTERN(type) extern \
-			 __attribute__((visibility("default"))) \
-			 type
-#elif defined(_MSC_VER)
-# define GIT_EXTERN(type) __declspec(dllexport) type __cdecl
+#if defined(_MSC_VER)
+# define GIT_EXTERN(type) GIT_EXTERN_DECL type __cdecl
 #else
-# define GIT_EXTERN(type) extern type
+# define GIT_EXTERN(type) GIT_EXTERN_DECL type
 #endif
 
 /** Declare a callback function for application use. */
