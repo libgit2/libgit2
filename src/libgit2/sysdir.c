@@ -466,7 +466,6 @@ static int git_sysdir_check_selector(git_sysdir_t which)
 	if (which < ARRAY_SIZE(git_sysdir__dirs))
 		return 0;
 
-printf("which: %d / array size: %d\n", (int)which, (int) ARRAY_SIZE(git_sysdir__dirs));
 	git_error_set(GIT_ERROR_INVALID, "config directory selector out of range");
 	return -1;
 }

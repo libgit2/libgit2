@@ -306,6 +306,14 @@ typedef int (*git_commit_signing_cb)(
 /** @deprecated use git_cvar_map */
 typedef git_configmap git_cvar_map;
 
+/**
+ * This was used for system-wide configuration for compatibility with
+ * "Portable Git", however this setting was removed.
+ *
+ * @deprecated this option is ignored
+ */
+#define GIT_CONFIG_LEVEL_PROGRAMDATA 1
+
 /**@}*/
 
 /**

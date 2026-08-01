@@ -724,8 +724,6 @@ void cl_sandbox_set_search_path_defaults(void)
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_XDG, path.ptr);
 	git_libgit2_opts(
 		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_SYSTEM, path.ptr);
-	git_libgit2_opts(
-		GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_PROGRAMDATA, path.ptr);
 
 	git_str_dispose(&path);
 }

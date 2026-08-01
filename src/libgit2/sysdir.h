@@ -40,17 +40,6 @@ extern int git_sysdir_find_xdg_file(git_str *path, const char *filename);
 extern int git_sysdir_find_system_file(git_str *path, const char *filename);
 
 /**
- * Find a "ProgramData" file (i.e. one in %PROGRAMDATA%)
- *
- * Not used any more with Git >= 2.24, therefore, you should not use this any more.
- *
- * @param path buffer to write the full path into
- * @param filename name of file to find in the ProgramData directory
- * @return 0
- */
-extern int git_sysdir_find_programdata_file(git_str *path, const char *filename);
-
-/**
  * Find template directory.
  *
  * @param path buffer to write the full path into
@@ -97,10 +86,8 @@ typedef enum {
 	GIT_SYSDIR_SYSTEM      = 0,
 	GIT_SYSDIR_GLOBAL      = 1,
 	GIT_SYSDIR_XDG         = 2,
-	GIT_SYSDIR_PROGRAMDATA = 3,
-	GIT_SYSDIR_TEMPLATE    = 4,
-	GIT_SYSDIR_HOME        = 5,
-	GIT_SYSDIR__MAX        = 6
+	GIT_SYSDIR_TEMPLATE    = 3,
+	GIT_SYSDIR_HOME        = 4
 } git_sysdir_t;
 
 /**

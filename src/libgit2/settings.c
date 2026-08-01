@@ -81,9 +81,6 @@ static int config_level_to_sysdir(int *out, int config_level)
 	case GIT_CONFIG_LEVEL_GLOBAL:
 		*out = GIT_SYSDIR_GLOBAL;
 		return 0;
-	case GIT_CONFIG_LEVEL_PROGRAMDATA:
-		*out = GIT_SYSDIR_PROGRAMDATA;
-		return 0;
 	default:
 		break;
 	}
