@@ -1,3 +1,11 @@
+if (WIN32)
+	if (BUILD_SHARED_LIBS)
+		add_definitions("-DGIT_EXTERN_DECL=__declspec(dllexport)")
+	else()
+		add_definitions(-DGIT_STATIC)
+	endif()
+endif()
+
 # Platform specific compilation flags
 if(MSVC)
 	add_definitions(-D_SCL_SECURE_NO_WARNINGS)
