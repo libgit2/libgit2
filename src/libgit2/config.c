@@ -1235,6 +1235,7 @@ int git_config__find_system(git_str *path)
 	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_config_find_programdata(git_buf *path)
 {
 	git_str str = GIT_STR_INIT;
@@ -1247,6 +1248,7 @@ int git_config_find_programdata(git_buf *path)
 	git_str_dispose(&str);
 	return error;
 }
+#endif
 
 int git_config__find_programdata(git_str *path)
 {

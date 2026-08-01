@@ -48,11 +48,6 @@ GIT_BEGIN_DECL
  */
 typedef enum {
 	/**
-	 * System-wide on Windows, for compatibility with "Portable Git".
-	 */
-	GIT_CONFIG_LEVEL_PROGRAMDATA = 1,
-
-	/**
 	 * System-wide configuration file; `/etc/gitconfig` on Linux.
 	 */
 	GIT_CONFIG_LEVEL_SYSTEM = 2,
@@ -210,17 +205,6 @@ GIT_EXTERN(int) git_config_find_xdg(git_buf *out);
  *	found. Its path will be stored in `out`.
  */
 GIT_EXTERN(int) git_config_find_system(git_buf *out);
-
-/**
- * Locate the path to the configuration file in ProgramData
- *
- * Look for the file in `%PROGRAMDATA%\Git\config` used by portable git.
- *
- * @param out Pointer to a user-allocated git_buf in which to store the path
- * @return 0 if a ProgramData configuration file has been
- *	found. Its path will be stored in `out`.
- */
-GIT_EXTERN(int) git_config_find_programdata(git_buf *out);
 
 /**
  * Open the global, XDG and system configuration files
