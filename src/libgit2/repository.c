@@ -1346,8 +1346,7 @@ static int load_config(
 	git_repository *repo,
 	const char *global_config_path,
 	const char *xdg_config_path,
-	const char *system_config_path,
-	const char *programdata_path)
+	const char *system_config_path)
 {
 	git_str config_path = GIT_STR_INIT;
 	git_config *cfg = NULL;
@@ -1393,12 +1392,6 @@ static int load_config(
 	if (system_config_path != NULL &&
 		(error = git_config_add_file_ondisk(
 			cfg, system_config_path, GIT_CONFIG_LEVEL_SYSTEM, repo, 0)) < 0 &&
-		error != GIT_ENOTFOUND)
-		goto on_error;
-
-	if (programdata_path != NULL &&
-		(error = git_config_add_file_ondisk(
-			cfg, programdata_path, GIT_CONFIG_LEVEL_PROGRAMDATA, repo, 0)) < 0 &&
 		error != GIT_ENOTFOUND)
 		goto on_error;
 
@@ -1473,15 +1466,12 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_str system_buf = GIT_STR_INIT;
 		git_str global_buf = GIT_STR_INIT;
 		git_str xdg_buf = GIT_STR_INIT;
-		git_str programdata_buf = GIT_STR_INIT;
 		bool use_env = repo->use_env;
 		git_config *config = NULL;
 
 		if (!(error = config_path_system(&system_buf, use_env)) &&
-		    !(error = config_path_global(&global_buf, use_env))) {
+		    !(error = config_path_global(&global_buf, use_env)))
 			git_config__find_xdg(&xdg_buf);
-			git_config__find_programdata(&programdata_buf);
-		}
 
 		if (!error) {
 			/*
@@ -1495,8 +1485,7 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 				&config, repo,
 				path_unless_empty(&global_buf),
 				path_unless_empty(&xdg_buf),
-				path_unless_empty(&system_buf),
-				path_unless_empty(&programdata_buf));
+				path_unless_empty(&system_buf));
 		}
 
 		if (!error) {
@@ -1511,7 +1500,6 @@ int git_repository_config__weakptr(git_config **out, git_repository *repo)
 		git_str_dispose(&global_buf);
 		git_str_dispose(&xdg_buf);
 		git_str_dispose(&system_buf);
-		git_str_dispose(&programdata_buf);
 	}
 
 	*out = repo->_config;
@@ -2226,25 +2214,21 @@ static int load_global_config(git_config **config, bool use_env)
 	git_str global_buf = GIT_STR_INIT;
 	git_str xdg_buf = GIT_STR_INIT;
 	git_str system_buf = GIT_STR_INIT;
-	git_str programdata_buf = GIT_STR_INIT;
 	int error;
 
 	if (!(error = config_path_system(&system_buf, use_env)) &&
 	    !(error = config_path_global(&global_buf, use_env))) {
 		git_config__find_xdg(&xdg_buf);
-		git_config__find_programdata(&programdata_buf);
 
 		error = load_config(config, NULL,
 		                    path_unless_empty(&global_buf),
 		                    path_unless_empty(&xdg_buf),
-		                    path_unless_empty(&system_buf),
-		                    path_unless_empty(&programdata_buf));
+		                    path_unless_empty(&system_buf));
 	}
 
 	git_str_dispose(&global_buf);
 	git_str_dispose(&xdg_buf);
 	git_str_dispose(&system_buf);
-	git_str_dispose(&programdata_buf);
 
 	return error;
 }
