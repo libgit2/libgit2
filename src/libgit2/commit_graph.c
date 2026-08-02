@@ -202,11 +202,11 @@ static int commit_graph_parse_bloom_filter(
 		git_commit_graph_file *file,
 		const unsigned char *data,
 		struct git_commit_graph_chunk *bloom_filter_index,
-		struct git_commit_graph_chunk *bloom_filter_data
-)
+		struct git_commit_graph_chunk *bloom_filter_data)
 {
 	const uint32_t *data_header = (const uint32_t *)(data + bloom_filter_data->offset);
 	uint32_t hash_version;
+
 	/*
 	 * Both index and data need to be present to have a valid bloom filter
 	 * For the filter data, there's a 12 byte header at the beginning,
@@ -232,7 +232,6 @@ static int commit_graph_parse_bloom_filter(
 	file->bloom_filter_data = data + bloom_filter_data->offset + 12;
 	return 0;
 }
-
 
 int git_commit_graph_file_parse(
 		git_commit_graph_file *file,
