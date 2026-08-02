@@ -335,15 +335,9 @@ void test_online_shallow__preserve_unrelated_roots(void)
 	char *second_commit = "6e1475206e57110fcef4b92320436c1e9872a322";
 	char *third_commit = "7f822839a2fe9760f386cbbbcb3f92c5fe81def7";
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_git_pass(git_oid_from_string(&first_oid, first_commit, GIT_OID_SHA1));
 	cl_git_pass(git_oid_from_string(&second_oid, second_commit, GIT_OID_SHA1));
 	cl_git_pass(git_oid_from_string(&third_oid, third_commit, GIT_OID_SHA1));
-#else
-	cl_git_pass(git_oid_fromstr(&first_oid, first_commit));
-	cl_git_pass(git_oid_fromstr(&second_oid, second_commit));
-	cl_git_pass(git_oid_fromstr(&third_oid, third_commit));
-#endif
 
 	/* setup empty repository without cloning */
 	git_str_joinpath(&path, clar_sandbox_path(), "preserve_unrelated_roots");

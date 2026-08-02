@@ -26,11 +26,7 @@ void test_pack_limits__max_object_size(void)
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_PACK_MAX_OBJECT_SIZE, 42 * 1024 * 1024));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_git_pass(git_indexer_new(&idx, ".", &opts));
-#else
-	cl_git_pass(git_indexer_new(&idx, ".", 0, NULL, &opts));
-#endif
 
 	cl_git_pass(git_indexer_append(idx, pack.ptr, pack.size, &stats));
 	cl_git_fail(git_indexer_commit(idx, &stats));

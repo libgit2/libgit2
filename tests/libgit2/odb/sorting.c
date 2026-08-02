@@ -87,11 +87,7 @@ void test_odb_sorting__override_default_backend_priority(void)
 
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_ODB_LOOSE_PRIORITY, 5));
 	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_ODB_PACKED_PRIORITY, 3));
-	git_odb_backend_pack(&packed, "./testrepo.git/objects"
-#ifdef GIT_EXPERIMENTAL_SHA256
-		, NULL
-#endif
-	);
+	git_odb_backend_pack(&packed, "./testrepo.git/objects", NULL);
 	git_odb__backend_loose(&loose, "./testrepo.git/objects", NULL);
 
 	cl_git_pass(git_odb_open(&new_odb, cl_fixture("testrepo.git/objects")));

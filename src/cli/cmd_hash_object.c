@@ -58,15 +58,8 @@ static int hash_buf(
 	if (!literally) {
 		int valid = 0;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 		if (git_object_rawcontent_is_valid(&valid, buf->ptr, buf->size, object_type, oid_type) < 0 || !valid)
 			return cli_error_git();
-#else
-		GIT_UNUSED(oid_type);
-
-		if (git_object_rawcontent_is_valid(&valid, buf->ptr, buf->size, object_type) < 0 || !valid)
-			return cli_error_git();
-#endif
 	}
 
 	if (write_object) {

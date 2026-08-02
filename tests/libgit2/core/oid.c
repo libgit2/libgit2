@@ -11,7 +11,6 @@ const char *str_oid_sha1_m = "ae90f12eea699729ed24555e40b9fd669da12a12THIS IS EX
 
 const char *str_zero_sha1 = "0000000000000000000000000000000000000000";
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 static git_oid id_sha256;
 static git_oid idp_sha256;
 static git_oid idm_sha256;
@@ -19,7 +18,6 @@ static git_oid idm_sha256;
 const char *str_oid_sha256 = "d3e63d2f2e43d1fee23a74bf19a0ede156cba2d1bd602eba13de433cea1bb512";
 const char *str_oid_sha256_p = "d3e63d2f2e43d1fee2";
 const char *str_oid_sha256_m = "d3e63d2f2e43d1fee23a74bf19a0ede156cba2d1bd602eba13de433cea1bb512 GARBAGE EXTRA TEXT AT THE END";
-#endif
 
 void test_core_oid__initialize(void)
 {
@@ -27,11 +25,9 @@ void test_core_oid__initialize(void)
 	cl_git_pass(git_oid_from_prefix(&idp_sha1, str_oid_sha1_p, strlen(str_oid_sha1_p), GIT_OID_SHA1));
 	cl_git_fail(git_oid_from_prefix(&idm_sha1, str_oid_sha1_m, strlen(str_oid_sha1_m), GIT_OID_SHA1));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_git_pass(git_oid_from_string(&id_sha256, str_oid_sha256, GIT_OID_SHA256));
 	cl_git_pass(git_oid_from_prefix(&idp_sha256, str_oid_sha256_p, strlen(str_oid_sha256_p), GIT_OID_SHA256));
 	cl_git_fail(git_oid_from_prefix(&idm_sha256, str_oid_sha256_m, strlen(str_oid_sha256_m), GIT_OID_SHA256));
-#endif
 }
 
 void test_core_oid__streq_sha1(void)
@@ -54,9 +50,6 @@ void test_core_oid__streq_sha1(void)
 
 void test_core_oid__streq_sha256(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	cl_assert_equal_i(0, git_oid_streq(&id_sha256, str_oid_sha256));
 	cl_assert_equal_i(-1, git_oid_streq(&id_sha256, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"));
 
@@ -71,7 +64,6 @@ void test_core_oid__streq_sha256(void)
 
 	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "deadbeef"));
 	cl_assert_equal_i(-1, git_oid_streq(&idp_sha1, "I'm not an oid.... :)"));
-#endif
 }
 
 void test_core_oid__strcmp_sha1(void)
@@ -94,9 +86,6 @@ void test_core_oid__strcmp_sha1(void)
 
 void test_core_oid__strcmp_sha256(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	cl_assert_equal_i(0, git_oid_strcmp(&id_sha256, str_oid_sha256));
 	cl_assert(git_oid_strcmp(&id_sha256, "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef") < 0);
 
@@ -111,7 +100,6 @@ void test_core_oid__strcmp_sha256(void)
 
 	cl_assert(git_oid_strcmp(&idp_sha256, "deadbeef") < 0);
 	cl_assert_equal_i(-1, git_oid_strcmp(&idp_sha256, "I'm not an oid.... :)"));
-#endif
 }
 
 void test_core_oid__ncmp_sha1(void)
@@ -135,9 +123,6 @@ void test_core_oid__ncmp_sha1(void)
 
 void test_core_oid__ncmp_sha256(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 0));
 	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 1));
 	cl_assert(!git_oid_ncmp(&id_sha256, &idp_sha256, 2));
@@ -159,7 +144,6 @@ void test_core_oid__ncmp_sha256(void)
 	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 63));
 	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 64));
 	cl_assert(!git_oid_ncmp(&id_sha256, &id_sha256, 65));
-#endif
 }
 
 void test_core_oid__is_hexstr(void)
@@ -201,11 +185,9 @@ void test_core_oid__type_lookup(void)
 	cl_assert_equal_i(GIT_OID_SHA1, git_oid_type_fromstrn("sha1...", 4));
 	cl_assert_equal_s("sha1", git_oid_type_name(GIT_OID_SHA1));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_assert_equal_i(GIT_OID_SHA256, git_oid_type_fromstr("sha256"));
 	cl_assert_equal_i(GIT_OID_SHA256, git_oid_type_fromstrn("sha256...", 6));
 	cl_assert_equal_s("sha256", git_oid_type_name(GIT_OID_SHA256));
-#endif
 
 	cl_assert_equal_i(0, git_oid_type_fromstr("sha42"));
 	cl_assert_equal_i(0, git_oid_type_fromstrn("sha1", 3));
@@ -223,17 +205,13 @@ void test_core_oid__zero_suffixed(void)
 	memset(&id, 0xff, sizeof(git_oid));
 	cl_git_pass(git_oid_from_string(&id, str_zero_sha1, GIT_OID_SHA1));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_assert(id.type == GIT_OID_SHA1);
-#endif
 	cl_assert(memcmp(id.id, zero.id, GIT_OID_MAX_SIZE) == 0);
 
 
 	memset(&id, 0xff, sizeof(git_oid));
 	cl_git_pass(git_oid_from_raw(&id, zero.id, GIT_OID_SHA1));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_assert(id.type == GIT_OID_SHA1);
-#endif
 	cl_assert(memcmp(id.id, zero.id, GIT_OID_MAX_SIZE) == 0);
 }

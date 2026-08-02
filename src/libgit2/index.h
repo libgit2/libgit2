@@ -200,19 +200,4 @@ extern int git_indexwriter_commit(git_indexwriter *writer);
  */
 extern void git_indexwriter_cleanup(git_indexwriter *writer);
 
-/* SHA256 support */
-
-#ifndef GIT_EXPERIMENTAL_SHA256
-
-int git_index_open_ext(
-	git_index **index_out,
-	const char *index_path,
-	const git_index_options *opts);
-
-GIT_EXTERN(int) git_index_new_ext(
-	git_index **index_out,
-	const git_index_options *opts);
-
-#endif
-
 #endif

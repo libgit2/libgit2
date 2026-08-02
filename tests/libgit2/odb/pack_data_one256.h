@@ -1,5 +1,4 @@
 /* Just a few to make sure it's working, the rest is tested already */
-#ifdef GIT_EXPERIMENTAL_SHA256
 static const char *packed_objects_one256[] = {
 	"ea926306b1bab6d3f25f45609907eb6dff91a1460b25e63bf4a0494c70e7a269",
 	"d048ba2ef4fafa502a44cbc1a50cd58359b9bc243b84a08f541a08ca5f621137",
@@ -18,4 +17,3 @@ static const char *packed_objects_one256[] = {
 	"753ddabab8ae9c1e733cda15e8e3c83dd43f5a2d939ae32cc3b30b0be1e91f96",
 	"46333d32b3801cf11d9f80b557245c9e32b0e05deca61dae968914fde159f0e5"
 };
-#endif
