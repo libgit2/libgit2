@@ -13,7 +13,7 @@
 typedef struct git_hash_sha1_ctx git_hash_sha1_ctx;
 typedef struct git_hash_sha256_ctx git_hash_sha256_ctx;
 
-#if defined(GIT_SHA1_BUILTIN)
+#if defined(GIT_SHA1_BUILTIN) || defined(GIT_SHA1_COLLISIONDETECTION)
 # include "collisiondetect.h"
 #endif
 
