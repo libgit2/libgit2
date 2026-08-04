@@ -78,7 +78,14 @@ typedef enum {
 	 *
 	 * @see git_credential_ssh_key_memory_new
 	 */
-	GIT_CREDENTIAL_SSH_MEMORY = (1u << 6)
+	GIT_CREDENTIAL_SSH_MEMORY = (1u << 6),
+
+	/**
+	 * An SSH key-based authentication request, with a custom signature by
+	 * a security key
+	 * @see git_credential_ssh_custom_sk_new
+	 */
+	GIT_CREDENTIAL_SSH_CUSTOM_SK = (1u << 7)
 } git_credential_t;
 
 /**
@@ -108,6 +115,11 @@ typedef struct git_credential_ssh_interactive git_credential_ssh_interactive;
  * A key with a custom signature function
  */
 typedef struct git_credential_ssh_custom git_credential_ssh_custom;
+
+/**
+ * A key with a custom signature function using a security key
+ */
+typedef struct git_credential_ssh_custom_sk git_credential_ssh_custom_sk;
 
 /**
  * Credential acquisition callback.
@@ -240,6 +252,7 @@ GIT_EXTERN(int) git_credential_ssh_key_memory_new(
  */
 #ifndef LIBSSH2_VERSION
 typedef struct _LIBSSH2_SESSION LIBSSH2_SESSION;
+typedef struct _LIBSSH2_SK_SIG_INFO LIBSSH2_SK_SIG_INFO;
 typedef struct _LIBSSH2_USERAUTH_KBDINT_PROMPT LIBSSH2_USERAUTH_KBDINT_PROMPT;
 typedef struct _LIBSSH2_USERAUTH_KBDINT_RESPONSE LIBSSH2_USERAUTH_KBDINT_RESPONSE;
 #endif
@@ -335,6 +348,62 @@ GIT_EXTERN(int) git_credential_ssh_custom_new(
 	const char *publickey,
 	size_t publickey_len,
 	git_credential_sign_cb sign_callback,
+	void *payload);
+
+/**
+ * Callback for credential signing with security key.
+ *
+ * @param session The libssh2 session.
+ * @param sig_info The signature data used to build the response.
+ * @param data The challenge to be signed.
+ * @param data_len The length of the challenge.
+ * @param algorithm The algorithm (e.g. LIBSSH2_HOSTKEY_TYPE_ED25519).
+ * @param flags The security key flags.
+ * @param application The relaying party, typically "ssh:".
+ * @param key_handle The credential id.
+ * @param key_handle_len The length of the credential id.
+ * @param abstract Additional data to pass to the callback.
+ * @return 0 for success, < 0 to indicate an error, > 0 to indicate
+ *       no credential was acquired
+ */
+typedef int GIT_CALLBACK(git_credential_sign_sk_cb)(
+	LIBSSH2_SESSION *session, LIBSSH2_SK_SIG_INFO *sig_info,
+	const unsigned char *data, size_t data_len,
+	int algorithm, uint8_t flags,
+	const char *application, const unsigned char *key_handle,
+	size_t handle_len,
+	void **abstract);
+
+/**
+ * Create an ssh key credential with a custom signing function for a security
+ * key.
+ *
+ * This lets you use your own function to sign the challenge.
+ *
+ * This function and its credential type is provided for completeness
+ * and wraps `libssh2_userauth_publickey_sk()`, which is undocumented.
+ *
+ * The supplied credential parameter will be internally duplicated.
+ *
+ * @param out The newly created credential object.
+ * @param username username to use to authenticate
+ * @param publickey The bytes of the public key.
+ * @param publickey_len The length of the public key in bytes.
+ * @param privatekey The bytes of the private key.
+ * @param privatekey_len The length of the private key in bytes.
+ * @param sign_callback The callback method to sign the data during the challenge.
+ * @param payload Additional data to pass to the callback.
+ * @return 0 for success or an error code for failure
+ */
+GIT_EXTERN(int) git_credential_ssh_custom_sk_new(
+	git_credential **out,
+	const char *username,
+	const char *publickey,
+	size_t publickey_len,
+	const char *privatekey,
+	size_t privatekey_len,
+	const char *passphrase,
+	git_credential_sign_sk_cb sign_callback,
 	void *payload);
 
 /** @} */
