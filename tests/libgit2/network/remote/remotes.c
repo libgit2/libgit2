@@ -4,6 +4,7 @@
 #include "remote.h"
 
 static git_remote *_remote;
+static git_remote *_https_remote;
 static git_repository *_repo;
 static const git_refspec *_refspec;
 
@@ -12,6 +13,7 @@ void test_network_remote_remotes__initialize(void)
 	_repo = cl_git_sandbox_init("testrepo.git");
 
 	cl_git_pass(git_remote_lookup(&_remote, _repo, "test"));
+	cl_git_pass(git_remote_lookup(&_https_remote, _repo, "https"));
 
 	_refspec = git_remote_get_refspec(_remote, 0);
 	cl_assert(_refspec != NULL);
@@ -21,6 +23,9 @@ void test_network_remote_remotes__cleanup(void)
 {
 	git_remote_free(_remote);
 	_remote = NULL;
+
+	git_remote_free(_https_remote);
+	_https_remote = NULL;
 
 	cl_git_sandbox_cleanup();
 }
@@ -95,6 +100,47 @@ void test_network_remote_remotes__remote_ready(void)
 	cl_assert_equal_s(url.ptr, "push_url");
 
 	git_str_dispose(&url);
+}
+
+static int connected_callback_call_counter = 0;
+static int about_to_disconnect_callback_call_counter = 0;
+static void connected_callback(git_remote *remote, void *payload)
+{
+    connected_callback_call_counter ++;
+	cl_assert_equal_p(remote, _https_remote);
+    cl_assert_equal_s(payload, "payload");
+}
+
+static void about_to_disconnect_callback(git_remote *remote, void *payload)
+{
+    about_to_disconnect_callback_call_counter ++;
+	cl_assert_equal_p(remote, _https_remote);
+    cl_assert_equal_s(payload, "payload");
+}
+
+void test_network_remote_remotes__connected_disconnected(void)
+{
+	git_fetch_options opts = GIT_FETCH_OPTIONS_INIT;
+    opts.callbacks.connected = connected_callback;
+    opts.callbacks.about_to_disconnect = about_to_disconnect_callback;
+    opts.callbacks.payload = "payload";
+
+	cl_assert_equal_s(git_remote_name(_https_remote), "https");
+	cl_assert_equal_s(git_remote_url(_https_remote), "https://github.com/libgit2/libgit2");
+	cl_assert(git_remote_pushurl(_https_remote) == NULL);
+
+	cl_git_pass(git_remote_fetch(_https_remote, NULL, &opts, NULL));
+
+    cl_assert_equal_i(connected_callback_call_counter, 1); // check that called only once
+    cl_assert_equal_i(about_to_disconnect_callback_call_counter, 1); // check that called only once
+}
+
+void test_network_remote_remotes__connected_disconnected_no_call(void)
+{
+	cl_git_pass(git_remote_fetch(_https_remote, NULL, NULL, NULL));
+
+	cl_assert_equal_i(connected_callback_call_counter, 1); // check that called only once
+	cl_assert_equal_i(about_to_disconnect_callback_call_counter, 1); // check that called only once
 }
 
 #ifndef GIT_DEPRECATE_HARD
@@ -413,7 +459,7 @@ void test_network_remote_remotes__list(void)
 	git_config *cfg;
 
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 5);
+	cl_assert(list.count == 6);
 	git_strarray_dispose(&list);
 
 	cl_git_pass(git_repository_config(&cfg, _repo));
@@ -425,7 +471,7 @@ void test_network_remote_remotes__list(void)
 	cl_git_pass(git_config_set_string(cfg, "remote.no-remote-url.pushurl", "http://example.com"));
 
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 7);
+	cl_assert(list.count == 8);
 	git_strarray_dispose(&list);
 
 	git_config_free(cfg);
