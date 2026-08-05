@@ -68,6 +68,14 @@ struct git_pack_idx_header {
 	uint32_t idx_version;
 };
 
+#define PACK_RIDX_SIGNATURE 0x52494458	/* "RIDX" */
+
+struct git_pack_ridx_header {
+	uint32_t ridx_signature;
+	uint32_t ridx_version;
+	uint32_t ridx_oid_type;
+};
+
 typedef struct git_pack_cache_entry {
 	size_t last_usage; /* enough? */
 	git_atomic32 refcount;
@@ -108,7 +116,9 @@ typedef struct {
 struct git_pack_file {
 	git_mwindow_file mwf;
 	git_map index_map;
-	git_mutex lock; /* protect updates to index_map */
+	git_map revindex_map;
+	uint32_t *revindex;
+	git_mutex lock; /* protect updates to index_map & revindex_map/revindex */
 	git_atomic32 refcount;
 
 	uint32_t num_objects;
@@ -178,6 +188,14 @@ int git_packfile_resolve_header(
 		git_object_t *type_p,
 		struct git_pack_file *p,
 		off64_t offset);
+
+int git_packfile_get_delta(
+        git_oid *base_out,
+        void **z_data_out,
+        size_t *size_out,
+        size_t *z_size_out,
+        struct git_pack_file *p,
+        off64_t offset);
 
 int git_packfile_unpack(git_rawobj *obj, struct git_pack_file *p, off64_t *obj_offset);
 
