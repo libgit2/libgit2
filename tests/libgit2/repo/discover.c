@@ -23,6 +23,7 @@
 #define ALTERNATE_MALFORMED_FOLDER2 DISCOVER_FOLDER "/alternate_malformed_repo2"
 #define ALTERNATE_MALFORMED_FOLDER3 DISCOVER_FOLDER "/alternate_malformed_repo3"
 #define ALTERNATE_NOT_FOUND_FOLDER DISCOVER_FOLDER "/alternate_not_found_repo"
+#define NO_REPOSITORY_FOLDER_SUB TEMP_REPO_FOLDER "no_repo/sub"
 
 static void ensure_repository_discover(const char *start_path,
 				       const char *ceiling_dirs,
@@ -30,12 +31,12 @@ static void ensure_repository_discover(const char *start_path,
 {
 	git_buf found_path = GIT_BUF_INIT;
 	git_str resolved = GIT_STR_INIT;
-
+	
 	git_str_attach(&resolved, p_realpath(expected_path, NULL), 0);
 	cl_assert(resolved.size > 0);
 	cl_git_pass(git_fs_path_to_dir(&resolved));
 	cl_git_pass(git_repository_discover(&found_path, start_path, 1, ceiling_dirs));
-
+	
 	cl_assert_equal_s(found_path.ptr, resolved.ptr);
 
 	git_str_dispose(&resolved);
@@ -108,6 +109,7 @@ void test_repo_discover__initialize(void)
 	write_file(ALTERNATE_MALFORMED_FOLDER3 "/" DOT_GIT, "gitdir: \n\n\n");
 	cl_git_pass(git_futils_mkdir_r(ALTERNATE_NOT_FOUND_FOLDER, mode));
 	write_file(ALTERNATE_NOT_FOUND_FOLDER "/" DOT_GIT, "gitdir: a_repository_that_surely_does_not_exist");
+	cl_git_pass(git_futils_mkdir_r(NO_REPOSITORY_FOLDER_SUB, mode));
 
 	git_repository_free(repo);
 }
@@ -131,6 +133,41 @@ void test_repo_discover__discovering_repo_with_exact_path_succeeds(void)
 void test_repo_discover__discovering_nonexistent_dir_fails(void)
 {
 	cl_assert_equal_i(GIT_ENOTFOUND, git_repository_discover(&discovered, DISCOVER_FOLDER "-nonexistent", 0, NULL));
+}
+
+void test_repo_discover__discovering_nonexistent_subpath_inside_repo_succeeds(void)
+{ 
+	ensure_repository_discover(SUB_REPOSITORY_FOLDER_SUB_SUB_SUB "/missing1/missing2",
+		ceiling_dirs.ptr,
+		SUB_REPOSITORY_GITDIR);
+}
+
+void test_repo_discover__discovering_nonexistent_branch_without_existing_parent_fails(void)
+{
+	cl_assert_equal_i(
+		GIT_ENOTFOUND,
+		git_repository_discover(
+			&discovered,
+			TEMP_REPO_FOLDER "missing_parent/missing_child",
+			0,
+			NULL));
+}
+
+void test_repo_discover__discovering_relative_nonrepo_path_with_dot_ceiling_fails(void)
+{
+	git_str ceiling = GIT_STR_INIT;
+
+	append_ceiling_dir(&ceiling, ".");
+
+	cl_assert_equal_i(
+		GIT_ENOTFOUND,
+		git_repository_discover(
+			&discovered,
+			NO_REPOSITORY_FOLDER_SUB "/missing",
+			0,
+			ceiling.ptr));
+
+	git_str_dispose(&ceiling);
 }
 
 void test_repo_discover__discovering_repo_with_subdirectory_succeeds(void)
