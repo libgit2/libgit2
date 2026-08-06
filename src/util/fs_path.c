@@ -1409,6 +1409,10 @@ int git_fs_path_diriter_init(
 
 	memset(diriter, 0, sizeof(git_fs_path_diriter));
 
+#ifdef GIT_I18N_ICONV
+	diriter->ic.map = (iconv_t)-1;
+#endif
+
 	if (git_str_puts(&diriter->path, path) < 0)
 		return -1;
 

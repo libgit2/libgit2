@@ -843,6 +843,21 @@ void test_path_core__dirlen(void)
 	cl_assert_equal_sz(0, git_fs_path_dirlen(""));
 }
 
+void test_path_core__diriter_without_precompose(void)
+{
+	git_fs_path_diriter diriter = GIT_FS_PATH_DIRITER_INIT;
+
+	cl_git_pass(git_fs_path_diriter_init(&diriter, ".", 0));
+	git_fs_path_diriter_free(&diriter);
+}
+
+void test_path_core__diriter_uninitialized(void)
+{
+	git_fs_path_diriter diriter = GIT_FS_PATH_DIRITER_INIT;
+
+	git_fs_path_diriter_free(&diriter);
+}
+
 static void test_make_relative(
 	const char *expected_path,
 	const char *path,
