@@ -448,6 +448,32 @@ void test_checkout_crlf__autocrlf_false_text_auto_attr(void)
 	}
 }
 
+void test_checkout_crlf__filtered_working_tree_file_equals_target(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+
+	cl_git_mkfile("./crlf/.gitattributes", "* text=auto\n");
+
+	if (GIT_EOL_NATIVE == GIT_EOL_CRLF) {
+		cl_git_mkfile("./crlf/all-lf", ALL_LF_TEXT_AS_LF);
+		cl_git_mkfile("./crlf/all-crlf", ALL_CRLF_TEXT_AS_LF);
+	} else {
+		cl_git_mkfile("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+		cl_git_mkfile("./crlf/all-crlf", ALL_CRLF_TEXT_AS_LF);
+	}
+
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	if (GIT_EOL_NATIVE == GIT_EOL_CRLF) {
+		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_AS_CRLF);
+		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_AS_CRLF);
+	} else {
+		check_file_contents("./crlf/all-lf", ALL_LF_TEXT_RAW);
+		check_file_contents("./crlf/all-crlf", ALL_CRLF_TEXT_RAW);
+	}
+}
+
 void test_checkout_crlf__autocrlf_true_text_auto_attr(void)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
