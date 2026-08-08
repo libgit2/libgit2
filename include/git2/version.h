@@ -21,13 +21,13 @@ GIT_BEGIN_DECL
  * The version string for libgit2.  This string follows semantic
  * versioning (v2) guidelines.
  */
-#define LIBGIT2_VERSION           "1.9.0"
+#define LIBGIT2_VERSION           "2.0.0-rc.1"
 
 /** The major version number for this version of libgit2. */
-#define LIBGIT2_VERSION_MAJOR      1
+#define LIBGIT2_VERSION_MAJOR      2
 
 /** The minor version number for this version of libgit2. */
-#define LIBGIT2_VERSION_MINOR      9
+#define LIBGIT2_VERSION_MINOR      0
 
 /** The revision ("teeny") version number for this version of libgit2. */
 #define LIBGIT2_VERSION_REVISION   0
@@ -41,18 +41,19 @@ GIT_BEGIN_DECL
  * a prerelease name like "beta" or "rc1".  For final releases, this will
  * be `NULL`.
  */
-#define LIBGIT2_VERSION_PRERELEASE NULL
+#define LIBGIT2_VERSION_PRERELEASE "rc.1"
 
 /**
  * The library ABI soversion for this version of libgit2. This should
  * only be changed when the library has a breaking ABI change, and so
  * may not reflect the library's API version number.
  */
-#define LIBGIT2_SOVERSION         "1.9"
+#define LIBGIT2_SOVERSION         "2.0"
 
 /**
  * An integer value representing the libgit2 version number. For example,
- * libgit2 1.6.3 is 1060300.
+ * libgit2 1.6.3 is 1060300. Note that this does not take prerelease
+ * information into account.
  */
 #define LIBGIT2_VERSION_NUMBER (    \
     (LIBGIT2_VERSION_MAJOR * 1000000) + \
@@ -67,6 +68,8 @@ GIT_BEGIN_DECL
  *  #if LIBGIT2_VERSION_CHECK(1, 6, 3)
  *  # error libgit2 version is >= 1.6.3
  *  #endif
+ *
+ * Note that this does not take prerelease information into account.
  */
 #define LIBGIT2_VERSION_CHECK(major, minor, revision) \
 	(LIBGIT2_VERSION_NUMBER >= ((major)*1000000)+((minor)*10000)+((revision)*100))
