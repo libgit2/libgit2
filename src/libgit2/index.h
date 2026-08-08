@@ -52,6 +52,7 @@ struct git_index {
 
 	git_vector names;
 	git_vector reuc;
+	git_vector extensions;
 
 	git_vector_cmp entries_cmp_path;
 	git_vector_cmp entries_search;

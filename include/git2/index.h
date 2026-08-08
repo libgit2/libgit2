@@ -939,6 +939,48 @@ GIT_EXTERN(int) git_index_conflict_next(
 GIT_EXTERN(void) git_index_conflict_iterator_free(
 	git_index_conflict_iterator *iterator);
 
+/**
+ * Look up an index extension by its signature
+ *
+ * @param out the extension's data (not including the header)
+ * @param index an existing index object
+ * @param signature the 4 character signature of the desired extension
+ * @return 0 (no error), GIT_ENOTFOUND (extension not present),
+ *         or an error code
+ */
+GIT_EXTERN(int) git_index_extension_lookup(
+	git_buf *out,
+	git_index *index,
+	const char *signature);
+
+/**
+ * Add an extension to the index
+ *
+ * @param index an existing index object
+ * @param signature the 4 character signature of the desired extension
+ * @param data the contents of the extension (not including the header)
+ * @param data_len the length of the data
+ * @return 0 (no error), GIT_EEXISTS (extension already present),
+ *         or an error code
+ */
+GIT_EXTERN(int) git_index_extension_add(
+	git_index *index,
+	const char *signature,
+	const char *data,
+	size_t data_len);
+
+/**
+ * Remove an index extension by its signature
+ *
+ * @param index an existing index object
+ * @param signature the 4 character signature of the desired extension
+ * @return 0 (no error), GIT_ENOTFOUND (extension not present),
+ *         or an error code
+ */
+GIT_EXTERN(int) git_index_extension_remove(
+	git_index *index,
+	const char *signature);
+
 /** @} */
 GIT_END_DECL
 
