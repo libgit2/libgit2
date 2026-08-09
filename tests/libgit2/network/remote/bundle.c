@@ -28,8 +28,11 @@ void test_network_remote_bundle__cleanup(void)
 	cl_fixture_cleanup("noextension");
 	cl_fixture_cleanup("arbitrary.txt");
 	cl_fixture_cleanup("unreadable.bundle");
+
+#ifndef GIT_WIN32
 	cl_fixture_cleanup("host:like.bundle");
-	cl_fixture_cleanup("subdir");
+	cl_fixture_cleanup("b:");
+#endif
 }
 
 static void copy_fixture(const char *fixture, const char *to)
@@ -199,12 +202,10 @@ void test_network_remote_bundle__read_failure_propagates(void)
 	cl_must_pass(p_chmod("unreadable.bundle", 0666));
 }
 
-/*
- * A colon before any path separator is an scp-style remote, so it is
- * never probed; a colon after one is just a local path.
- */
+/* Unix preserves its historical rule that any colon selects SSH first. */
 void test_network_remote_bundle__distinguishes_scp_style_paths(void)
 {
+#ifndef GIT_WIN32
 	git_remote *remote;
 
 	copy_fixture("bundle/testrepo.bundle", "host:like.bundle");
@@ -214,12 +215,16 @@ void test_network_remote_bundle__distinguishes_scp_style_paths(void)
 		NULL, NULL, NULL));
 	git_remote_free(remote);
 
-	cl_must_pass(p_mkdir("subdir", 0777));
-	copy_fixture("bundle/testrepo.bundle", "subdir/host:like.bundle");
+	/* A one-character SSH host must not look like a DOS drive on Unix. */
+	cl_must_pass(p_mkdir("b:", 0777));
+	copy_fixture("bundle/testrepo.bundle", "b:/like.bundle");
 
-	connect_to(&remote, "./subdir/host:like.bundle");
-	assert_is_bundle_transport(remote);
+	cl_git_pass(git_remote_create_anonymous(&remote, g_repo,
+		"b:/like.bundle"));
+	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH,
+		NULL, NULL, NULL));
 	git_remote_free(remote);
+#endif
 }
 
 void test_network_remote_bundle__advertises_all_refs_with_head_first(void)

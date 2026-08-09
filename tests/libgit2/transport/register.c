@@ -1,9 +1,17 @@
 #include "clar_libgit2.h"
+#include "futils.h"
+#include "posix.h"
 #include "git2/sys/remote.h"
 #include "git2/sys/transport.h"
 
 static const char *proxy_url = "https://proxy";
 static git_transport _transport = GIT_TRANSPORT_INIT;
+
+void test_transport_register__cleanup(void)
+{
+	git_transport_unregister("ssh");
+	cl_fixture_cleanup("colon-path");
+}
 
 static int dummy_transport(git_transport **transport, git_remote *owner, void *param)
 {
@@ -78,6 +86,24 @@ void test_transport_register__custom_transport_ssh(void)
 		transport->free(transport);
 #endif
 	}
+}
+
+void test_transport_register__custom_ssh_precedes_colon_bundle_path(void)
+{
+#ifndef GIT_WIN32
+	git_transport *transport;
+
+	cl_must_pass(p_mkdir("colon-path", 0777));
+	cl_git_pass(git_futils_cp(cl_fixture("bundle/testrepo.bundle"),
+		"colon-path/host:like.bundle", 0666));
+	cl_git_pass(git_transport_register("ssh", dummy_transport, NULL));
+
+	cl_git_pass(git_transport_new(&transport, NULL,
+		"./colon-path/host:like.bundle"));
+	cl_assert(transport == &_transport);
+
+	cl_git_pass(git_transport_unregister("ssh"));
+#endif
 }
 
 static int custom_subtransport_stream__read(

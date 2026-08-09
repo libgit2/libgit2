@@ -86,6 +86,7 @@ static int transport_find_fn(
 {
 	transport_definition *definition = transport_find_by_url(url);
 	git_bundle_probe_t probe;
+	bool bundle_probed = false;
 	int error;
 
 #ifdef GIT_WIN32
@@ -98,25 +99,34 @@ static int transport_find_fn(
 		definition = &local_transport_definition;
 #endif
 
-	/* A bundle is a regular file, so both the Windows directory check
-	 * above and the one below fall through to here.  This runs before
-	 * the SSH check because a Windows drive letter would otherwise be
-	 * mistaken for an SSH host; the probe itself rejects scp-style
-	 * `host:path` strings without touching the filesystem, so genuine
-	 * SSH remotes still avoid the probe. */
-	if (!definition) {
+#ifdef GIT_WIN32
+	/* Probe a drive-rooted file before the colon check so that a Windows
+	 * drive letter is not mistaken for an SSH host. */
+	if (!definition && git_fs_path_root(url) > 0) {
 		if ((error = git_transport_bundle__probe(&probe, url)) < 0)
 			return error;
+
+		bundle_probed = true;
 
 		if (probe != GIT_BUNDLE_PROBE_NONE)
 			definition = &bundle_transport_definition;
 	}
+#endif
 
 	/* It could be a SSH remote path. Check to see if there's a : */
 	if (!definition && strrchr(url, ':')) {
 		/* re-search transports again with ssh:// as url
 		 * so that we can find a third party ssh transport */
 		definition = transport_find_by_url("ssh://");
+	}
+
+	/* A bundle is a regular file, so the directory checks fall through. */
+	if (!definition && !bundle_probed) {
+		if ((error = git_transport_bundle__probe(&probe, url)) < 0)
+			return error;
+
+		if (probe != GIT_BUNDLE_PROBE_NONE)
+			definition = &bundle_transport_definition;
 	}
 
 #ifndef GIT_WIN32

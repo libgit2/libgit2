@@ -16,6 +16,7 @@
 #include "git2/refs.h"
 
 #define BUNDLE_READ_CHUNK 8192
+#define BUNDLE_HEADER_LINE_MAX (1024 * 1024)
 
 #define BUNDLE_CAP_OBJECT_FORMAT "object-format"
 #define BUNDLE_CAP_FILTER "filter"
@@ -127,13 +128,15 @@ static int reader_fill(git_bundle_reader *reader)
 static int reader_readline(
 	git_str *out, git_bundle_reader *reader, size_t max_len)
 {
-	const char *nl;
-	size_t linelen;
+	const char *nl = NULL;
+	size_t linelen, scan_offset = 0;
 	int error;
 
 	git_str_clear(out);
 
-	while ((nl = memchr(reader->buf.ptr, '\n', reader->buf.size)) == NULL) {
+	while (reader->buf.size == scan_offset ||
+	       (nl = memchr(reader->buf.ptr + scan_offset, '\n',
+			reader->buf.size - scan_offset)) == NULL) {
 		if (reader->buf.size > max_len) {
 			git_error_set(GIT_ERROR_INVALID,
 				"bundle header line is too long");
@@ -148,6 +151,8 @@ static int reader_readline(
 				"truncated bundle header");
 			return GIT_EINVALID;
 		}
+
+		scan_offset = reader->buf.size;
 
 		if ((error = reader_fill(reader)) < 0)
 			return error;
@@ -180,16 +185,12 @@ static int reader_readline(
 static int parse_oid(
 	git_oid *out, const char **endptr, const char *line, git_oid_t oid_type)
 {
-	char hex[GIT_OID_MAX_HEXSIZE + 1];
 	size_t hexsize = git_oid_hexsize(oid_type);
 
 	if (strlen(line) < hexsize)
 		goto invalid;
 
-	memcpy(hex, line, hexsize);
-	hex[hexsize] = '\0';
-
-	if (git_oid_from_string(out, hex, oid_type) < 0)
+	if (git_oid_from_prefix(out, line, hexsize, oid_type) < 0)
 		goto invalid;
 
 	*endptr = line + hexsize;
@@ -397,7 +398,8 @@ int git_bundle_header_parse(
 		goto on_error;
 	}
 
-	while ((error = reader_readline(&line, reader, SIZE_MAX)) == 0) {
+	while ((error = reader_readline(&line, reader,
+			BUNDLE_HEADER_LINE_MAX)) == 0) {
 		if (line.size == 0)
 			break;
 
@@ -490,8 +492,12 @@ int git_bundle_check_prerequisites(
 		size_t size;
 		git_object_t type;
 
-		if (git_odb_read_header(&size, &type, odb, oid) == 0)
+		error = git_odb_read_header(&size, &type, odb, oid);
+
+		if (error == 0)
 			continue;
+		else if (error != GIT_ENOTFOUND)
+			return error;
 
 		git_oid_tostr(str, sizeof(str), oid);
 		git_error_set(GIT_ERROR_ODB,

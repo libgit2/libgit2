@@ -24,7 +24,6 @@
 typedef struct {
 	git_transport parent;
 	git_remote *owner;
-	char *url;
 	int fd;
 	git_bundle_header header;
 	git_remote_connect_options connect_opts;
@@ -47,8 +46,10 @@ static bool bundle_is_local_path(const char *url)
 	if (git_net_str_is_url(url))
 		return false;
 
+#ifdef GIT_WIN32
 	if (git_fs_path_root(url) > 0)
 		return true;
+#endif
 
 	for (c = url; *c; c++) {
 		if (*c == ':')
@@ -143,9 +144,6 @@ static void bundle_reset(transport_bundle *t)
 		t->fd = -1;
 	}
 
-	git__free(t->url);
-	t->url = NULL;
-
 	git_bundle_header_dispose(&t->header);
 
 	t->connected = 0;
@@ -179,9 +177,6 @@ static int bundle_connect(
 		return -1;
 
 	bundle_reset(t);
-
-	t->url = git__strdup(url);
-	GIT_ERROR_CHECK_ALLOC(t->url);
 
 	if ((t->fd = p_open(url, O_RDONLY)) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to open bundle '%s'", url);
@@ -286,7 +281,12 @@ static int bundle_negotiate_fetch(
 
 	/* a result must never leak across attempts or repositories */
 	t->verified = 0;
-	git_atomic32_set(&t->cancelled, 0);
+
+	if (git_atomic32_get(&t->cancelled)) {
+		git_atomic32_set(&t->cancelled, 0);
+		git_error_set(GIT_ERROR_NET, "the fetch was cancelled");
+		return GIT_EUSER;
+	}
 
 	if (wants->depth != GIT_FETCH_DEPTH_FULL) {
 		git_error_set(GIT_ERROR_NET,
@@ -379,6 +379,7 @@ static int bundle_download_pack(
 
 	while (true) {
 		if (git_atomic32_get(&t->cancelled)) {
+			git_atomic32_set(&t->cancelled, 0);
 			git_error_set(GIT_ERROR_NET, "the fetch was cancelled");
 			error = GIT_EUSER;
 			goto done;
@@ -434,9 +435,6 @@ static int bundle_close(git_transport *transport)
 		p_close(t->fd);
 		t->fd = -1;
 	}
-
-	git__free(t->url);
-	t->url = NULL;
 
 	t->connected = 0;
 	t->verified = 0;

@@ -4,6 +4,8 @@
 #include "futils.h"
 #include "posix.h"
 
+#include "git2/sys/odb_backend.h"
+
 #define TMP_BUNDLE "parse_tmp.bundle"
 
 #define SHA1_A "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"
@@ -24,6 +26,7 @@
 void test_bundle_parse__cleanup(void)
 {
 	cl_fixture_cleanup(TMP_BUNDLE);
+	cl_fixture_cleanup("prereq.git");
 }
 
 static int parse_memory(
@@ -330,6 +333,93 @@ void test_bundle_parse__bounds_signature_reads(void)
 	cl_assert_equal_i(1, (int)calls);
 
 	git_bundle_reader_dispose(&reader);
+	git_bundle_header_dispose(&header);
+}
+
+static int endless_header_read(
+	void *payload, void *buf, size_t len, size_t *out_read)
+{
+	size_t *calls = payload;
+	const char signature[] = GIT_BUNDLE_SIGNATURE_V2 "\n";
+
+	(*calls)++;
+
+	if (*calls > 200) {
+		git_error_set(GIT_ERROR_OS, "bundle header read was not bounded");
+		return -1;
+	}
+
+	memset(buf, 'x', len);
+
+	if (*calls == 1)
+		memcpy(buf, signature, sizeof(signature) - 1);
+
+	*out_read = len;
+	return 0;
+}
+
+void test_bundle_parse__bounds_header_line_reads(void)
+{
+	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_reader reader = { 0 };
+	size_t calls = 0;
+
+	reader.read = endless_header_read;
+	reader.payload = &calls;
+
+	cl_assert_equal_i(GIT_EINVALID,
+		git_bundle_header_parse(&header, &reader));
+	cl_assert(calls < 200);
+	cl_assert(strstr(git_error_last()->message, "line is too long") != NULL);
+
+	git_bundle_reader_dispose(&reader);
+	git_bundle_header_dispose(&header);
+}
+
+static int failing_read_header(
+	size_t *len, git_object_t *type, git_odb_backend *backend,
+	const git_oid *oid)
+{
+	GIT_UNUSED(len);
+	GIT_UNUSED(type);
+	GIT_UNUSED(backend);
+	GIT_UNUSED(oid);
+
+	git_error_set(GIT_ERROR_ODB, "injected object database failure");
+	return GIT_EUSER;
+}
+
+static void failing_backend_free(git_odb_backend *backend)
+{
+	git__free(backend);
+}
+
+void test_bundle_parse__prerequisite_check_propagates_odb_errors(void)
+{
+	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_odb_backend *backend;
+	git_repository *repo;
+	git_odb *odb;
+	const char *data = "# v2 git bundle\n-" SHA1_A "\n\n";
+
+	cl_git_pass(parse_memory(&header, data, strlen(data)));
+	cl_git_pass(git_repository_init(&repo, "prereq.git", true));
+	cl_git_pass(git_repository_odb(&odb, repo));
+
+	backend = git__calloc(1, sizeof(git_odb_backend));
+	cl_assert(backend != NULL);
+	backend->version = GIT_ODB_BACKEND_VERSION;
+	backend->read_header = failing_read_header;
+	backend->free = failing_backend_free;
+	cl_git_pass(git_odb_add_backend(odb, backend, 100));
+
+	cl_git_fail_with(GIT_EUSER,
+		git_bundle_check_prerequisites(&header, repo));
+	cl_assert_equal_s("injected object database failure",
+		git_error_last()->message);
+
+	git_odb_free(odb);
+	git_repository_free(repo);
 	git_bundle_header_dispose(&header);
 }
 

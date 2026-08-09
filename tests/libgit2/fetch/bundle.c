@@ -315,6 +315,27 @@ void test_fetch_bundle__retry_after_stop(void)
 		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
 }
 
+void test_fetch_bundle__stop_before_negotiation(void)
+{
+	git_fetch_options opts;
+
+	init_dest();
+	add_remote("bundle/testrepo.bundle");
+	fetch_opts_init(&opts);
+
+	cl_git_pass(git_remote_connect(g_remote, GIT_DIRECTION_FETCH,
+		&opts.callbacks, NULL, NULL));
+	cl_git_pass(git_remote_stop(g_remote));
+
+	cl_git_fail_with(GIT_EUSER,
+		git_remote_fetch(g_remote, NULL, &opts, NULL));
+	assert_no_ref("refs/remotes/origin/master");
+
+	cl_git_pass(git_remote_fetch(g_remote, NULL, &opts, NULL));
+	assert_ref_equals("refs/remotes/origin/master",
+		"a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+}
+
 void test_fetch_bundle__rejects_depth(void)
 {
 	git_fetch_options opts;
