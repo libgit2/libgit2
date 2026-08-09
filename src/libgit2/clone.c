@@ -162,6 +162,63 @@ done:
 	return error;
 }
 
+static int update_head_to_branch(
+		git_repository *repo,
+		git_remote *remote,
+		const char *branch,
+		const char *reflog_message);
+
+/*
+ * The remote advertised no HEAD, so there is nothing to resolve.  Git
+ * selects and checks out the configured initial branch, but only when
+ * that exact branch name was advertised; otherwise it leaves the
+ * configured branch unborn rather than guessing another one.
+ *
+ * A remote whose own HEAD is unborn reaches this path too, because a
+ * reference with no object id cannot be advertised.  Git tells the two
+ * apart -- upload-pack sends an unborn HEAD's symref target as a
+ * capability -- and leaves HEAD unborn at that target.  Our transports
+ * do not carry that information, so such a clone lands here and checks
+ * out the configured initial branch instead.
+ */
+static int update_head_to_initialbranch(
+	git_repository *repo,
+	git_remote *remote,
+	const git_remote_head **refs,
+	size_t refs_len,
+	const char *reflog_message)
+{
+	git_str initialbranch = GIT_STR_INIT;
+	size_t i;
+	int error;
+
+	if ((error = git_repository_initialbranch(&initialbranch, repo)) < 0)
+		goto done;
+
+	if (git__prefixcmp(initialbranch.ptr, GIT_REFS_HEADS_DIR) != 0) {
+		git_error_set(GIT_ERROR_INVALID, "invalid initial branch '%s'", initialbranch.ptr);
+		error = -1;
+		goto done;
+	}
+
+	for (i = 0; i < refs_len; i++) {
+		if (strcmp(refs[i]->name, initialbranch.ptr) == 0)
+			break;
+	}
+
+	if (i == refs_len) {
+		error = update_head_to_default(repo);
+		goto done;
+	}
+
+	error = update_head_to_branch(repo, remote,
+		initialbranch.ptr + strlen(GIT_REFS_HEADS_DIR), reflog_message);
+
+done:
+	git_str_dispose(&initialbranch);
+	return error;
+}
+
 static int update_remote_head(
 	git_repository *repo,
 	git_remote *remote,
@@ -225,9 +282,10 @@ static int update_head_to_remote(
 	if ((error = git_remote_ls(&refs, &refs_len, remote)) < 0)
 		return error;
 
-	/* We cloned an empty repository or one with an unborn HEAD */
+	/* We cloned an empty repository or one that did not advertise HEAD */
 	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_REF))
-		return update_head_to_default(repo);
+		return update_head_to_initialbranch(repo, remote, refs, refs_len,
+			reflog_message);
 
 	/* We know we have HEAD, let's see where it points */
 	remote_head = refs[0];
