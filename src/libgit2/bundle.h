@@ -118,9 +118,10 @@ typedef enum {
  * A path that is not a local path, does not exist, or does not name a
  * regular file is `GIT_BUNDLE_PROBE_NONE`, as is a regular file whose
  * header is not a bundle header; those cases return 0 with no error
- * left set.  Allocation, permission, and read failures on an existing
- * regular file are returned as negative values so that transport
- * selection does not turn them into "unsupported URL".
+ * left set.  A path the initial stat cannot classify follows existing
+ * transport selection.  Allocation, open, and read failures after a path
+ * has been classified as an existing regular file are returned as negative
+ * values.
  *
  * Implemented by the bundle transport.
  */

@@ -298,6 +298,41 @@ void test_bundle_parse__rejects_bad_signature(void)
 	assert_invalid("# v2 git bundle");
 }
 
+static int long_signature_read(
+	void *payload, void *buf, size_t len, size_t *out_read)
+{
+	size_t *calls = payload;
+
+	(*calls)++;
+
+	if (*calls > 1) {
+		git_error_set(GIT_ERROR_OS, "signature read was not bounded");
+		return -1;
+	}
+
+	memset(buf, 'x', len);
+	*out_read = len;
+	return 0;
+}
+
+void test_bundle_parse__bounds_signature_reads(void)
+{
+	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_reader reader = { 0 };
+	size_t calls = 0;
+
+	reader.read = long_signature_read;
+	reader.payload = &calls;
+	cl_assert_equal_i(GIT_EINVALID,
+		git_bundle_header_parse(&header, &reader));
+
+	/* Probing a non-bundle does not buffer its entire first line. */
+	cl_assert_equal_i(1, (int)calls);
+
+	git_bundle_reader_dispose(&reader);
+	git_bundle_header_dispose(&header);
+}
+
 void test_bundle_parse__rejects_missing_separator(void)
 {
 	assert_invalid("# v2 git bundle\n" SHA1_A " refs/heads/master\n");

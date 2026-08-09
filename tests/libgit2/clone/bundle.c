@@ -61,11 +61,8 @@ void test_clone_bundle__self_contained_sha1(void)
 	cl_assert(git_fs_path_exists("./bundle-clone/README"));
 }
 
-/*
- * The bundle records no HEAD.  Its only branch is the configured
- * initial branch, so clone selects and checks it out, the way Git does.
- */
-void test_clone_bundle__no_head_selects_initial_branch(void)
+/* Preserve clone's existing behavior when a remote advertises no HEAD. */
+void test_clone_bundle__no_head_leaves_initial_branch_unborn(void)
 {
 	git_reference *ref;
 	git_buf upstream = GIT_BUF_INIT;
@@ -76,17 +73,20 @@ void test_clone_bundle__no_head_selects_initial_branch(void)
 	cl_assert_equal_s("refs/heads/master", git_reference_symbolic_target(ref));
 	git_reference_free(ref);
 
-	cl_assert_equal_i(0, git_repository_head_unborn(g_repo));
+	cl_assert_equal_i(1, git_repository_head_unborn(g_repo));
 
 	cl_git_pass(git_branch_upstream_name(&upstream, g_repo, "refs/heads/master"));
 	cl_assert_equal_s("refs/remotes/origin/master", upstream.ptr);
 	git_buf_dispose(&upstream);
 
-	/* the bundle advertised no HEAD, so none is invented */
+	cl_git_fail_with(GIT_ENOTFOUND,
+		git_reference_lookup(&ref, g_repo, "refs/heads/master"));
+
+	/* The bundle advertised no HEAD, so none is invented. */
 	cl_git_fail_with(GIT_ENOTFOUND,
 		git_reference_lookup(&ref, g_repo, "refs/remotes/origin/HEAD"));
 
-	cl_assert(git_fs_path_exists("./bundle-clone/README"));
+	cl_assert(!git_fs_path_exists("./bundle-clone/README"));
 }
 
 /*

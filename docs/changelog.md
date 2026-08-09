@@ -4,28 +4,14 @@ Unreleased
 ## Major changes
 
 * **Clone and fetch from a git bundle**
-  A local git bundle file can now be used wherever a remote is
-  accepted: `git_clone` and `git_remote_fetch` recognize a bundle by
-  its contents, whatever the path's extension. Self-contained and
-  incremental bundles are both supported, in SHA1 and SHA256, along
-  with transfer progress and cancellation. Creating bundles, pushing to
-  them, shallow operations, filtered bundles, and Git's bundle-URI
-  protocol are not supported. The low-level constructor is available as
-  `git_transport_bundle`.
+  `git_clone` can now clone a self-contained local git bundle, and `git_remote_fetch` can fetch a self-contained or incremental bundle whose prerequisites exist in the destination.
+  Bundles are recognized by their contents, whatever the path's extension.
+  SHA1 and SHA256, transfer progress, and cancellation are supported.
+  Creating bundles, pushing to them, shallow operations, filtered bundles, and Git's bundle-URI protocol are not supported.
+  The low-level constructor is available as `git_transport_bundle`.
 
-  A bundle does not have to record `HEAD`, and libgit2 does not invent
-  one when it is missing. To match Git, clone now selects and checks
-  out the configured initial branch when a remote advertises no `HEAD`
-  and that exact branch name was advertised; when the configured name
-  was not advertised, the branch is left unborn as before.
-
-  This changes one existing behaviour: cloning a repository whose own
-  `HEAD` is unborn now checks out the configured initial branch instead
-  of leaving `HEAD` unborn. An unborn reference cannot be advertised,
-  so clone cannot distinguish that case from a remote that records no
-  `HEAD` at all. Git distinguishes them because `upload-pack` sends an
-  unborn `HEAD`'s symref target as a capability, which none of our
-  transports carry today.
+  A bundle does not have to record `HEAD`, and libgit2 does not invent one when it is missing.
+  Such a clone preserves libgit2's existing behavior for a remote that advertises no `HEAD`: the configured initial branch remains unborn and no files are checked out.
 
 v1.9.0
 ------

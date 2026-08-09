@@ -514,9 +514,10 @@ No implementation files should be edited until this plan is accepted.
 
 ## Implementation outcome
 
-Implemented on `git-bundles-clone-fetch` as the three commits described above.
+The parser and transport were implemented on `git-bundles-clone-fetch`.
+The initial implementation also included the generic no-`HEAD` clone-policy commit described above, but that change was backed out after review to preserve existing libgit2 behavior.
 All eight verification steps were run except where noted under unverified coverage.
-Each commit configures, builds, and passes the full `libgit2_tests` suite on its own in a clean build directory; `git diff --check` is clean; the fixtures regenerate byte for byte and Git 2.50.1 accepts all five.
+The functional bundle changes configure, build, and pass their focused tests; `git diff --check` is clean; the fixtures regenerate byte for byte and Git 2.50.1 accepts all five.
 No CMake edits were required, confirming the assumption recorded under sources and constraints.
 `git_transport_bundle` is exposed from `include/git2/sys/transport.h`, taking the option this plan left open.
 
@@ -536,12 +537,18 @@ A `GIT_ERROR_BUNDLE` class remains available if maintainers want one.
 Without it, a retry after a cancelled or failed download would resume in the middle of the pack.
 This makes `download_pack` idempotent for the cost of one `lseek`.
 
-### Behaviour change this plan did not anticipate
+The fixed bundle signature line has an exact length bound, while subsequent valid header lines remain unbounded.
+This prevents content-based probing from buffering an arbitrarily large first line from a non-bundle file without imposing a format limit on reference names.
 
-Cloning a repository whose own `HEAD` is unborn now checks out the configured initial branch instead of leaving `HEAD` unborn, and `network::remote::defaultbranch::unborn_HEAD_with_branches` was updated to match.
-An unborn reference has no object id and so cannot be advertised, which means clone cannot distinguish that case from a remote that records no `HEAD` at all.
-Git distinguishes them because `upload-pack` sends an unborn `HEAD`'s symref target as a capability, which none of libgit2's transports carry.
-The change is recorded in `docs/changelog.md`, in a comment at the fallback in `src/libgit2/clone.c`, on the updated test, and in the pull request description; the fix is a follow-up below.
+Path probing retains existing transport-selection behavior when its initial stat cannot classify a path.
+Once a path is known to be an existing regular file, allocation, open, and read failures propagate as operating-system errors.
+
+### Behaviour change avoided after review
+
+The planned generic no-`HEAD` fallback made cloning a repository whose own `HEAD` is unborn check out libgit2's configured initial branch instead of preserving the existing unborn result.
+Clone cannot currently distinguish that case from a bundle that records no `HEAD`, because libgit2's transports do not carry an unborn `HEAD`'s symref target.
+Rather than trade one behavior for another or make generic clone policy bundle-aware, the fallback was removed.
+A bundle without `HEAD` therefore preserves existing libgit2 behavior: it fetches the advertised refs and objects, leaves the configured initial branch unborn, and performs no checkout.
 
 ### Coverage not achieved
 
@@ -562,8 +569,8 @@ These test-matrix entries are not covered by the committed tests:
 ### Unborn remote HEAD
 
 Teach the transports to advertise an unborn `HEAD` with its symref target, the way `upload-pack` does, so clone can tell a remote whose `HEAD` is unborn from one that records no `HEAD`.
-That would let clone honour the remote's target in the first case and apply the configured initial branch only in the second, matching Git for both and removing the divergence described above.
-This touches `src/libgit2/transports/local.c`, the smart transport's symref handling, and clone's recorded-`HEAD` path, which is why it was kept out of this pull request.
+That would let a future change honour the remote's target in the first case and apply the configured initial branch only in the second, matching Git for both without regressing existing clone behavior.
+This touches `src/libgit2/transports/local.c`, the smart transport's symref handling, and clone's recorded-`HEAD` path, so it remains outside this bundle transport change.
 
 ### Clar sandbox cleanup
 

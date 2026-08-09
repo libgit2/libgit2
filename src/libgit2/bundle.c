@@ -119,11 +119,13 @@ static int reader_fill(git_bundle_reader *reader)
 }
 
 /*
- * Read one line, without its newline, into `out`.  Returns GIT_ITEROVER
- * at a clean end of input and GIT_EINVALID for a truncated final line or
- * for bytes that may not appear in a header.
+ * Read one line, without its newline, into `out`.  `max_len` may be
+ * `SIZE_MAX` for no limit.  Returns GIT_ITEROVER at a clean end of input
+ * and GIT_EINVALID for a truncated final line or for bytes that may not
+ * appear in a header.
  */
-static int reader_readline(git_str *out, git_bundle_reader *reader)
+static int reader_readline(
+	git_str *out, git_bundle_reader *reader, size_t max_len)
 {
 	const char *nl;
 	size_t linelen;
@@ -132,6 +134,12 @@ static int reader_readline(git_str *out, git_bundle_reader *reader)
 	git_str_clear(out);
 
 	while ((nl = memchr(reader->buf.ptr, '\n', reader->buf.size)) == NULL) {
+		if (reader->buf.size > max_len) {
+			git_error_set(GIT_ERROR_INVALID,
+				"bundle header line is too long");
+			return GIT_EINVALID;
+		}
+
 		if (reader->eof) {
 			if (reader->buf.size == 0)
 				return GIT_ITEROVER;
@@ -146,6 +154,12 @@ static int reader_readline(git_str *out, git_bundle_reader *reader)
 	}
 
 	linelen = (size_t)(nl - reader->buf.ptr);
+
+	if (linelen > max_len) {
+		git_error_set(GIT_ERROR_INVALID,
+			"bundle header line is too long");
+		return GIT_EINVALID;
+	}
 
 	if (memchr(reader->buf.ptr, '\0', linelen) != NULL ||
 	    memchr(reader->buf.ptr, '\r', linelen) != NULL) {
@@ -362,7 +376,9 @@ int git_bundle_header_parse(
 	if ((error = git_vector_init(&header->refs, 0, NULL)) < 0)
 		goto on_error;
 
-	if ((error = reader_readline(&line, reader)) < 0) {
+	if ((error = reader_readline(&line, reader,
+			max(CONST_STRLEN(GIT_BUNDLE_SIGNATURE_V2),
+				CONST_STRLEN(GIT_BUNDLE_SIGNATURE_V3)))) < 0) {
 		if (error == GIT_ITEROVER) {
 			git_error_set(GIT_ERROR_INVALID, "not a bundle");
 			error = GIT_EINVALID;
@@ -381,7 +397,7 @@ int git_bundle_header_parse(
 		goto on_error;
 	}
 
-	while ((error = reader_readline(&line, reader)) == 0) {
+	while ((error = reader_readline(&line, reader, SIZE_MAX)) == 0) {
 		if (line.size == 0)
 			break;
 
