@@ -92,4 +92,38 @@ int git_bundle_header_parse(
 
 void git_bundle_header_dispose(git_bundle_header *header);
 
+/**
+ * Require every prerequisite object to exist in `repo`.
+ *
+ * This is what Git checks when it unbundles: existence, not full
+ * reachability.  Thin-pack resolution against the destination object
+ * database is the backstop for a delta base that is genuinely missing.
+ */
+int git_bundle_check_prerequisites(
+	git_bundle_header *header, git_repository *repo);
+
+/** The outcome of examining a path that may name a bundle. */
+typedef enum {
+	/** Not a bundle: the caller should keep looking for a transport. */
+	GIT_BUNDLE_PROBE_NONE = 0,
+	/** A bundle this build can read. */
+	GIT_BUNDLE_PROBE_SUPPORTED,
+	/** A real bundle whose semantics this build does not support. */
+	GIT_BUNDLE_PROBE_UNSUPPORTED
+} git_bundle_probe_t;
+
+/**
+ * Decide whether `url` names a bundle file, by parsing its header.
+ *
+ * A path that is not a local path, does not exist, or does not name a
+ * regular file is `GIT_BUNDLE_PROBE_NONE`, as is a regular file whose
+ * header is not a bundle header; those cases return 0 with no error
+ * left set.  Allocation, permission, and read failures on an existing
+ * regular file are returned as negative values so that transport
+ * selection does not turn them into "unsupported URL".
+ *
+ * Implemented by the bundle transport.
+ */
+int git_transport_bundle__probe(git_bundle_probe_t *out, const char *url);
+
 #endif

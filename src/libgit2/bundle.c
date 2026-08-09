@@ -8,8 +8,11 @@
 #include "bundle.h"
 
 #include "posix.h"
+#include "odb.h"
 #include "refs.h"
+#include "repository.h"
 
+#include "git2/odb.h"
 #include "git2/refs.h"
 
 #define BUNDLE_READ_CHUNK 8192
@@ -447,6 +450,42 @@ on_error:
 	git_str_dispose(&line);
 	git_bundle_header_dispose(header);
 	return error;
+}
+
+int git_bundle_check_prerequisites(
+	git_bundle_header *header, git_repository *repo)
+{
+	git_odb *odb;
+	size_t i;
+	int error;
+
+	GIT_ASSERT_ARG(header);
+	GIT_ASSERT_ARG(repo);
+
+	if (!header->prerequisites.size)
+		return 0;
+
+	if ((error = git_repository_odb__weakptr(&odb, repo)) < 0)
+		return error;
+
+	for (i = 0; i < header->prerequisites.size; i++) {
+		const git_oid *oid = &header->prerequisites.ptr[i];
+		char str[GIT_OID_MAX_HEXSIZE + 1];
+		size_t size;
+		git_object_t type;
+
+		if (git_odb_read_header(&size, &type, odb, oid) == 0)
+			continue;
+
+		git_oid_tostr(str, sizeof(str), oid);
+		git_error_set(GIT_ERROR_ODB,
+			"the bundle requires object %s, which is missing from the repository",
+			str);
+
+		return -1;
+	}
+
+	return 0;
 }
 
 void git_bundle_header_dispose(git_bundle_header *header)

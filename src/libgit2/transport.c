@@ -12,6 +12,7 @@
 #include "git2/net.h"
 #include "git2/transport.h"
 #include "git2/sys/transport.h"
+#include "bundle.h"
 #include "fs_path.h"
 
 typedef struct transport_definition {
@@ -31,6 +32,7 @@ static git_smart_subtransport_definition ssh_subtransport_definition = { git_sma
 #endif
 
 static transport_definition local_transport_definition = { "file://", git_transport_local, NULL };
+static transport_definition bundle_transport_definition = { "", git_transport_bundle, NULL };
 
 static transport_definition transports[] = {
 	{ "git://",   git_transport_smart, &git_subtransport_definition },
@@ -83,6 +85,8 @@ static int transport_find_fn(
 	void **param)
 {
 	transport_definition *definition = transport_find_by_url(url);
+	git_bundle_probe_t probe;
+	int error;
 
 #ifdef GIT_WIN32
 	/* On Windows, it might not be possible to discern between absolute local
@@ -94,8 +98,19 @@ static int transport_find_fn(
 		definition = &local_transport_definition;
 #endif
 
-	/* For other systems, perform the SSH check first, to avoid going to the
-	 * filesystem if it is not necessary */
+	/* A bundle is a regular file, so both the Windows directory check
+	 * above and the one below fall through to here.  This runs before
+	 * the SSH check because a Windows drive letter would otherwise be
+	 * mistaken for an SSH host; the probe itself rejects scp-style
+	 * `host:path` strings without touching the filesystem, so genuine
+	 * SSH remotes still avoid the probe. */
+	if (!definition) {
+		if ((error = git_transport_bundle__probe(&probe, url)) < 0)
+			return error;
+
+		if (probe != GIT_BUNDLE_PROBE_NONE)
+			definition = &bundle_transport_definition;
+	}
 
 	/* It could be a SSH remote path. Check to see if there's a : */
 	if (!definition && strrchr(url, ':')) {
