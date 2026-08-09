@@ -512,7 +512,66 @@ Before opening the pull request:
 
 No implementation files should be edited until this plan is accepted.
 
+## Implementation outcome
+
+Implemented on `git-bundles-clone-fetch` as the three commits described above.
+All eight verification steps were run except where noted under unverified coverage.
+Each commit configures, builds, and passes the full `libgit2_tests` suite on its own in a clean build directory; `git diff --check` is clean; the fixtures regenerate byte for byte and Git 2.50.1 accepts all five.
+No CMake edits were required, confirming the assumption recorded under sources and constraints.
+`git_transport_bundle` is exposed from `include/git2/sys/transport.h`, taking the option this plan left open.
+
+### Deviations from this plan
+
+An unsupported `object-format` returns `GIT_ENOTSUPPORTED` immediately rather than finishing syntax checking first.
+That capability fixes the width of every remaining object id, so no meaningful syntax remains to check, and parsing on would report a real bundle in an unknown format as malformed instead of unsupported.
+`filter` and unknown capabilities still record the outcome and continue, as this plan requires.
+The reasoning is in a comment at `src/libgit2/bundle.c:242`.
+
+No bundle-specific error class was added.
+This plan asked for a specific bundle error but did not list `include/git2/errors.h` among the expected files, and adding a value to a public enum is an API addition worth its own decision.
+Locally detected failures use `GIT_ERROR_INVALID` for header and format problems, `GIT_ERROR_OS` for descriptor failures, `GIT_ERROR_ODB` for a missing prerequisite, and `GIT_ERROR_NET` for transport-level refusals.
+A `GIT_ERROR_BUNDLE` class remains available if maintainers want one.
+
+`download_pack` seeks to the recorded pack offset before reading, rather than relying on the position connect left behind.
+Without it, a retry after a cancelled or failed download would resume in the middle of the pack.
+This makes `download_pack` idempotent for the cost of one `lseek`.
+
+### Behaviour change this plan did not anticipate
+
+Cloning a repository whose own `HEAD` is unborn now checks out the configured initial branch instead of leaving `HEAD` unborn, and `network::remote::defaultbranch::unborn_HEAD_with_branches` was updated to match.
+An unborn reference has no object id and so cannot be advertised, which means clone cannot distinguish that case from a remote that records no `HEAD` at all.
+Git distinguishes them because `upload-pack` sends an unborn `HEAD`'s symref target as a capability, which none of libgit2's transports carry.
+The change is recorded in `docs/changelog.md`, in a comment at the fallback in `src/libgit2/clone.c`, on the updated test, and in the pull request description; the fix is a follow-up below.
+
+### Coverage not achieved
+
+These test-matrix entries are not covered by the committed tests:
+
+- Prerequisites satisfied by objects not reachable from any persistent ref.
+- An injected allocation failure during probing.
+  Propagation is covered by a permission-denied regular file, which exercises the same path for a read failure.
+- A corrupt pack distinct from a truncated one.
+  Truncation is covered.
+- A direct assertion that `shallow_roots` returns an empty array.
+  This is covered indirectly by asserting that a successful fetch leaves no `shallow` file.
+- Windows drive-letter detection on Windows CI.
+  A test connects through the absolute fixture path, which is drive-rooted on Windows, but it has not been run there.
+
 ## Follow-ups
+
+### Unborn remote HEAD
+
+Teach the transports to advertise an unborn `HEAD` with its symref target, the way `upload-pack` does, so clone can tell a remote whose `HEAD` is unborn from one that records no `HEAD`.
+That would let clone honour the remote's target in the first case and apply the configured initial branch only in the second, matching Git for both and removing the divergence described above.
+This touches `src/libgit2/transports/local.c`, the smart transport's symref handling, and clone's recorded-`HEAD` path, which is why it was kept out of this pull request.
+
+### Clar sandbox cleanup
+
+`test_clone_nonetwork__clone_tag_to_tree` frees the clar sandbox repository directly and calls `cl_fixture_cleanup` without clearing clar's statics, leaving `_cl_repo` dangling.
+Any later suite that calls `cl_git_sandbox_cleanup` without first calling `cl_git_sandbox_init` then double-frees it and crashes the run.
+This is pre-existing and unrelated to bundles; the new suites work around it by cleaning the sandbox only when they created one.
+The fix belongs in that test, not in the workarounds.
+
 
 ### Bundle creation
 
