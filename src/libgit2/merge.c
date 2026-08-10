@@ -2399,7 +2399,9 @@ static int annotated_commit_tree(
 	if (!commit->tree)
 		error = git_commit_tree(&commit->tree, commit->commit);
 
-	*out = commit->tree;
+	if (!error)
+		error = git_tree_dup(out, commit->tree);
+
 	return error;
 }
 
@@ -2420,6 +2422,8 @@ static int iterator_for_annotated_commit(
 	} else {
 		if ((error = annotated_commit_tree(&tree, commit)) == 0)
 			error = git_iterator_for_tree(out, tree, &opts);
+
+		git_tree_free(tree);
 	}
 
 	return error;
