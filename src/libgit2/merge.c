@@ -2514,7 +2514,7 @@ static int merge_annotated_commits_octopus(
 	git_commit *base_commit = NULL;
 	git_tree *current_tree = NULL, *base_tree = NULL,
 	         *their_tree = NULL, *result_tree;
-	git_index *result;
+	git_index *result = NULL;
 	git_array_oid_t head_ids = GIT_ARRAY_INIT;
 	git_oid base, result_id;
 	const git_oid *our_commit_id, *their_commit_id;
@@ -2580,6 +2580,8 @@ static int merge_annotated_commits_octopus(
 			git_error_set(GIT_ERROR_MERGE,
 				"conflicts exist during octopus merge");
 			error = GIT_EMERGECONFLICT;
+
+			git_index_free(result);
 			goto done;
 		}
 
