@@ -535,16 +535,21 @@ void test_bundle_parse__propagates_read_errors(void)
 	int fd;
 
 	cl_git_mkfile(TMP_BUNDLE, V2_HEADER);
-	cl_must_pass(fd = p_open(TMP_BUNDLE, O_RDONLY));
-	cl_must_pass(p_close(fd));
 
-	/* the descriptor is closed, so the first read fails */
+	/*
+	 * A write-only descriptor fails every read.  A closed one would
+	 * too, but the Windows debug runtime aborts the process instead of
+	 * failing the call.
+	 */
+	cl_must_pass(fd = p_open(TMP_BUNDLE, O_WRONLY));
+
 	git_bundle_reader_fromfd(&reader, fd);
 	cl_assert_equal_i(-1, git_bundle_header_parse(&header, &reader));
 	cl_assert_equal_i(GIT_ERROR_OS, git_error_last()->klass);
 
 	git_bundle_reader_dispose(&reader);
 	git_bundle_header_dispose(&header);
+	p_close(fd);
 }
 
 void test_bundle_parse__parses_fixture_files(void)
