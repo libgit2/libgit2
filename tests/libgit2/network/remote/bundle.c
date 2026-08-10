@@ -185,8 +185,13 @@ void test_network_remote_bundle__read_failure_propagates(void)
 {
 	git_remote *remote;
 
-	if (!cl_is_chmod_supported() || geteuid() == 0)
+	if (!cl_is_chmod_supported())
 		cl_skip();
+
+#ifndef GIT_WIN32
+	if (geteuid() == 0)
+		cl_skip();
+#endif
 
 	copy_fixture("bundle/testrepo.bundle", "unreadable.bundle");
 	cl_must_pass(p_chmod("unreadable.bundle", 0000));

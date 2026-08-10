@@ -43,7 +43,7 @@ static int parse_memory(
 }
 
 static int parse_file(
-	git_bundle_header *header, const char *data, size_t len, off_t *out_pos)
+	git_bundle_header *header, const char *data, size_t len, git_off_t *out_pos)
 {
 	git_bundle_reader reader;
 	int fd, error;
@@ -96,7 +96,7 @@ static int parse_both(
 	git_bundle_header *header, const char *data, size_t len)
 {
 	git_bundle_header from_file = GIT_BUNDLE_HEADER_INIT;
-	off_t pos = 0;
+	git_off_t pos = 0;
 	int mem_error, file_error;
 
 	mem_error = parse_memory(header, data, len);
