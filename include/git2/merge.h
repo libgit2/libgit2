@@ -191,6 +191,10 @@ typedef enum {
 
 /**
  * Options for merging a file
+ *
+ * @options[version] GIT_MERGE_FILE_OPTIONS_VERSION
+ * @options[init_macro] GIT_MERGE_FILE_OPTIONS_INIT
+ * @options[init_function] git_merge_file_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -270,6 +274,10 @@ typedef struct {
 
 /**
  * Merging options
+ *
+ * @options[version] GIT_MERGE_OPTIONS_VERSION
+ * @options[init_macro] GIT_MERGE_OPTIONS_INIT
+ * @options[init_function] git_merge_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -568,8 +576,10 @@ GIT_EXTERN(int) git_merge_file(
 /**
  * Merge two files as they exist in the index, using the given common
  * ancestor as the baseline, producing a `git_merge_file_result` that
- * reflects the merge result.  The `git_merge_file_result` must be freed with
- * `git_merge_file_result_free`.
+ * reflects the merge result.  The `git_merge_file_result` must be
+ * freed with `git_merge_file_result_free`.
+ *
+ * At least one of `ancestor`, `ours`, or `theirs` must be non-null.
  *
  * @param out The git_merge_file_result to be filled in
  * @param repo The repository
@@ -602,7 +612,7 @@ GIT_EXTERN(void) git_merge_file_result_free(git_merge_file_result *result);
  *
  * The returned index must be freed explicitly with `git_index_free`.
  *
- * @param out pointer to store the index result in
+ * @param[out] out pointer to store the index result in
  * @param repo repository that contains the given trees
  * @param ancestor_tree the common ancestor between the trees (or null if none)
  * @param our_tree the tree that reflects the destination tree
@@ -626,7 +636,7 @@ GIT_EXTERN(int) git_merge_trees(
  *
  * The returned index must be freed explicitly with `git_index_free`.
  *
- * @param out pointer to store the index result in
+ * @param[out] out pointer to store the index result in
  * @param repo repository that contains the given trees
  * @param our_commit the commit that reflects the destination tree
  * @param their_commit the commit to merge in to `our_commit`
@@ -645,10 +655,6 @@ GIT_EXTERN(int) git_merge_commits(
  * directory.  Any changes are staged for commit and any conflicts are written
  * to the index.  Callers should inspect the repository's index after this
  * completes, resolve any conflicts and prepare a commit.
- *
- * If multiple commits are provided, they are merged using the octopus strategy.
- * Merges with this strategy admit no conflicts, and the merge will fail at the first
- * conflict encountered.
  *
  * For compatibility with git, the repository is put into a merging
  * state. Once the commit is done (or if the user wishes to abort),
