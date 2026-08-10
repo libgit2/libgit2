@@ -50,7 +50,6 @@ int git_utf8_to_16_with_len(
  * @param dest The buffer to receive the UTF-8 string.
  * @param dest_size The size of the buffer, in bytes.
  * @param src The wide string to convert.
- * @param src_len The length of the string to convert.
  * @return The length of the UTF-8 string, in bytes
  *         (not counting the NULL terminator), or < 0 for failure
  */
