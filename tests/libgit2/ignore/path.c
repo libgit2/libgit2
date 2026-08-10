@@ -284,6 +284,30 @@ void test_ignore_path__subdirectory_gitignore(void)
 	assert_is_ignored(false, "dir/file3");
 }
 
+void test_ignore_path__nested_negation_reincludes_parent_rule(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "**/vendor/\n");
+	cl_must_pass(p_mkdir("attr/nested", 0777));
+	cl_must_pass(p_mkdir("attr/nested/vendor", 0777));
+	cl_git_mkfile("attr/nested/.gitignore", "!vendor\n");
+	cl_git_mkfile("attr/nested/vendor/file", "content\n");
+
+	assert_is_ignored(false, "nested/vendor");
+	assert_is_ignored(false, "nested/vendor/file");
+}
+
+void test_ignore_path__nested_negation_cannot_reinclude_ignored_parent(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "blocked/\n");
+	cl_must_pass(p_mkdir("attr/blocked", 0777));
+	cl_must_pass(p_mkdir("attr/blocked/vendor", 0777));
+	cl_git_mkfile("attr/blocked/.gitignore", "!vendor\n");
+	cl_git_mkfile("attr/blocked/vendor/file", "content\n");
+
+	assert_is_ignored(true, "blocked/vendor");
+	assert_is_ignored(true, "blocked/vendor/file");
+}
+
 void test_ignore_path__expand_tilde_to_homedir(void)
 {
 	git_str homefile = GIT_STR_INIT;
