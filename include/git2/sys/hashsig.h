@@ -61,7 +61,7 @@ typedef enum {
  * whitespace will be removed from the buffer while it is being processed,
  * modifying the buffer in place. Sorry about that!
  *
- * @param out The computed similarity signature.
+ * @param[out] out The computed similarity signature.
  * @param buf The input buffer.
  * @param buflen The input buffer size.
  * @param opts The signature computation options (see above).
@@ -81,7 +81,7 @@ GIT_EXTERN(int) git_hashsig_create(
  * This walks through the file, only loading a maximum of 4K of file data at
  * a time. Otherwise, it acts just like `git_hashsig_create`.
  *
- * @param out The computed similarity signature.
+ * @param[out] out The computed similarity signature.
  * @param path The path to the input file.
  * @param opts The signature computation options (see above).
  * @return 0 on success, GIT_EBUFS if the buffer doesn't contain enough data to

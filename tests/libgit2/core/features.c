@@ -10,6 +10,12 @@ void test_core_features__basic(void)
 	cl_assert((caps & GIT_FEATURE_THREADS) == 0);
 #endif
 
+#ifdef GIT_HTTP
+	cl_assert((caps & GIT_FEATURE_HTTP) != 0);
+#else
+	cl_assert((caps & GIT_FEATURE_HTTP) == 0);
+#endif
+
 #ifdef GIT_HTTPS
 	cl_assert((caps & GIT_FEATURE_HTTPS) != 0);
 #endif
@@ -42,10 +48,7 @@ void test_core_features__basic(void)
 
 	cl_assert((caps & GIT_FEATURE_COMPRESSION) != 0);
 	cl_assert((caps & GIT_FEATURE_SHA1) != 0);
-
-#if defined(GIT_EXPERIMENTAL_SHA256)
 	cl_assert((caps & GIT_FEATURE_SHA256) != 0);
-#endif
 
 	/*
 	 * Ensure that our tests understand all the features;
@@ -53,6 +56,7 @@ void test_core_features__basic(void)
 	 * added that the backends test (below) is updated as well.
 	 */
 	cl_assert((caps & ~(GIT_FEATURE_THREADS |
+	                    GIT_FEATURE_HTTP |
 	                    GIT_FEATURE_HTTPS |
 	                    GIT_FEATURE_SSH |
 	                    GIT_FEATURE_NSEC |
@@ -70,6 +74,7 @@ void test_core_features__basic(void)
 void test_core_features__backends(void)
 {
 	const char *threads = git_libgit2_feature_backend(GIT_FEATURE_THREADS);
+	const char *http = git_libgit2_feature_backend(GIT_FEATURE_HTTP);
 	const char *https = git_libgit2_feature_backend(GIT_FEATURE_HTTPS);
 	const char *ssh = git_libgit2_feature_backend(GIT_FEATURE_SSH);
 	const char *nsec = git_libgit2_feature_backend(GIT_FEATURE_NSEC);
@@ -91,6 +96,9 @@ void test_core_features__backends(void)
 #else
 	cl_assert(threads == NULL);
 #endif
+
+	/* HTTP has no backend selection */
+	cl_assert(http == NULL);
 
 #if defined(GIT_HTTPS_OPENSSL)
 	cl_assert_equal_s("openssl", https);
@@ -214,23 +222,21 @@ void test_core_features__backends(void)
 	cl_assert(0);
 #endif
 
-#if defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_BUILTIN)
+#if defined(GIT_SHA256_BUILTIN)
 	cl_assert_equal_s("builtin", sha256);
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_OPENSSL)
+#elif defined(GIT_SHA256_OPENSSL)
 	cl_assert_equal_s("openssl", sha256);
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_OPENSSL_FIPS)
+#elif defined(GIT_SHA256_OPENSSL_FIPS)
 	cl_assert_equal_s("openssl-fips", sha256);
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_OPENSSL_DYNAMIC)
+#elif defined(GIT_SHA256_OPENSSL_DYNAMIC)
 	cl_assert_equal_s("openssl-dynamic", sha256);
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_MBEDTLS)
+#elif defined(GIT_SHA256_MBEDTLS)
 	cl_assert_equal_s("mbedtls", sha256);
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_COMMON_CRYPTO)
+#elif defined(GIT_SHA256_COMMON_CRYPTO)
 	cl_assert_equal_s("commoncrypto", sha256);
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_WIN32)
+#elif defined(GIT_SHA256_WIN32)
 	cl_assert_equal_s("win32", sha256);
-#elif defined(GIT_EXPERIMENTAL_SHA256)
-	cl_assert(0);
 #else
-	cl_assert(sha256 == NULL);
+	cl_assert(0);
 #endif
 }

@@ -77,6 +77,7 @@ static void submodule_get_index_status(unsigned int *, git_submodule *);
 static void submodule_get_wd_status(unsigned int *, git_submodule *, git_repository *, git_submodule_ignore_t);
 static void submodule_update_from_index_entry(git_submodule *sm, const git_index_entry *ie);
 static void submodule_update_from_head_data(git_submodule *sm, mode_t mode, const git_oid *id);
+static int path_is_valid(git_repository *repo, const char *path);
 
 static int submodule_cmp(const void *a, const void *b)
 {
@@ -221,6 +222,7 @@ static int load_submodule_names(git_submodule_namemap **out, git_repository *rep
 
 	while ((error = git_config_next(&entry, iter)) == 0) {
 		const char *fdot, *ldot;
+
 		fdot = strchr(entry->name, '.');
 		ldot = strrchr(entry->name, '.');
 
@@ -233,7 +235,16 @@ static int load_submodule_names(git_submodule_namemap **out, git_repository *rep
 
 		git_str_clear(&buf);
 		git_str_put(&buf, fdot + 1, ldot - fdot - 1);
+
 		isvalid = git_submodule_name_is_valid(repo, buf.ptr, 0);
+		if (isvalid < 0) {
+			error = isvalid;
+			goto out;
+		}
+		if (!isvalid)
+			continue;
+
+		isvalid = path_is_valid(repo, entry->value);
 		if (isvalid < 0) {
 			error = isvalid;
 			goto out;
@@ -319,9 +330,10 @@ int git_submodule__lookup_with_cache(
 	const char *name,    /* trailing slash is allowed */
 	git_submodule_cache *cache)
 {
-	int error;
-	unsigned int location;
 	git_submodule *sm;
+	unsigned int location;
+	bool valid_name = false;
+	int error;
 
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(name);
@@ -344,7 +356,18 @@ int git_submodule__lookup_with_cache(
 	if ((error = submodule_alloc(&sm, repo, name)) < 0)
 		return error;
 
-	if ((error = git_submodule_reload(sm, false)) < 0) {
+	/*
+	 * Only try to reload if they gave us a valid _name_; if this is a
+	 * path, we'll do some lookups then try to reload to populate.
+	 */
+	if (git_submodule_name_is_valid(sm->repo, name, 0) <= 0) {
+		error = GIT_ENOTFOUND;
+	} else {
+		valid_name = true;
+		error = git_submodule_reload(sm, false);
+	}
+
+	if (error < 0 && error != GIT_ENOTFOUND) {
 		git_submodule_free(sm);
 		return error;
 	}
@@ -403,7 +426,8 @@ int git_submodule__lookup_with_cache(
 	/* If we still haven't found it, do the WD check */
 	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_submodule_free(sm);
-		error = GIT_ENOTFOUND;
+		git_error_set(GIT_ERROR_SUBMODULE, "invalid submodule name: '%s'", name);
+		error = valid_name ? GIT_ENOTFOUND : GIT_EINVALIDSPEC;
 
 		/* If it's not configured, we still check if there's a repo at the path */
 		if (git_repository_workdir(repo)) {
@@ -446,6 +470,27 @@ int git_submodule_name_is_valid(git_repository *repo, const char *name, int flag
 			return error;
 	} else {
 		git_str_attach_notowned(&buf, name, strlen(name));
+	}
+
+	isvalid = git_path_is_valid(repo, buf.ptr, 0, flags);
+	git_str_dispose(&buf);
+
+	return isvalid;
+}
+
+static int path_is_valid(git_repository *repo, const char *path)
+{
+	git_str buf = GIT_STR_INIT;
+	int flags = GIT_FS_PATH_REJECT_FILESYSTEM_DEFAULTS &
+	            ~GIT_FS_PATH_REJECT_EMPTY_COMPONENT;
+	int error, isvalid;
+
+	/* Avoid allocating a new string if we can avoid it */
+	if (strchr(path, '\\') != NULL) {
+		if ((error = git_fs_path_normalize_slashes(&buf, path)) < 0)
+			return error;
+	} else {
+		git_str_attach_notowned(&buf, path, strlen(path));
 	}
 
 	isvalid = git_path_is_valid(repo, buf.ptr, 0, flags);
@@ -1074,15 +1119,22 @@ int git_submodule_add_to_index(git_submodule *sm, int write_index)
 	git_commit_free(head);
 
 	/* add it */
-	error = git_index_add(index, &entry);
+	if ((error = git_index_add(index, &entry)) < 0)
+		goto cleanup;
+
+	/* Adding implies conflict was resolved, move conflict entries to REUC */
+	if ((error = git_index__conflict_to_reuc(index, entry.path)) < 0 && error != GIT_ENOTFOUND)
+		goto cleanup;
 
 	/* write it, if requested */
-	if (!error && write_index) {
-		error = git_index_write(index);
+	if (write_index) {
+		if ((error = git_index_write(index)) < 0)
+			goto cleanup;
 
-		if (!error)
-			git_oid_cpy(&sm->index_oid, &sm->wd_oid);
+		git_oid_cpy(&sm->index_oid, &sm->wd_oid);
 	}
+
+	error = 0;
 
 cleanup:
 	git_repository_free(sm_repo);
@@ -1610,7 +1662,7 @@ static int git_submodule__open(
 		sm->flags |= GIT_SUBMODULE_STATUS_IN_WD |
 			GIT_SUBMODULE_STATUS__WD_SCANNED;
 
-		if (!git_reference_name_to_id(&sm->wd_oid, *subrepo, GIT_HEAD_FILE))
+		if (!git_reference_name_to_id(&sm->wd_oid, *subrepo, GIT_HEAD_REF))
 			sm->flags |= GIT_SUBMODULE_STATUS__WD_OID_VALID;
 		else
 			git_error_clear();
@@ -1712,18 +1764,34 @@ static int submodule_update_head(git_submodule *submodule)
 	return 0;
 }
 
+static int submodule_name_error(const char *name)
+{
+	git_error_set(GIT_ERROR_SUBMODULE,
+		"invalid value for submodule name: '%s'", name);
+	return GIT_EINVALID;
+}
+
+static int submodule_config_error(const char *property, const char *value)
+{
+	git_error_set(GIT_ERROR_SUBMODULE,
+		"invalid value for submodule '%s' property: '%s'", property, value);
+	return GIT_EINVALID;
+}
+
 int git_submodule_reload(git_submodule *sm, int force)
 {
 	git_config *mods = NULL;
-	int error;
+	int valid, error = 0;
 
 	GIT_UNUSED(force);
 
 	GIT_ASSERT_ARG(sm);
 
-	if ((error = git_submodule_name_is_valid(sm->repo, sm->name, 0)) <= 0)
+	if ((valid = git_submodule_name_is_valid(sm->repo, sm->name, 0)) <= 0) {
 		/* This should come with a warning, but we've no API for that */
+		error = valid ? valid : submodule_name_error(sm->name);
 		goto out;
+	}
 
 	if (git_repository_is_bare(sm->repo))
 		goto out;
@@ -1745,6 +1813,12 @@ int git_submodule_reload(git_submodule *sm, int force)
 	    (error = submodule_update_index(sm)) < 0 ||
 	    (error = submodule_update_head(sm)) < 0)
 		goto out;
+
+	if ((valid = path_is_valid(sm->repo, sm->path)) <= 0) {
+		/* This should come with a warning, but we've no API for that */
+		error = valid ? valid : submodule_config_error("path", sm->path);
+		goto out;
+	}
 
 out:
 	git_config_free(mods);
@@ -1927,13 +2001,6 @@ void git_submodule_free(git_submodule *sm)
 	if (!sm)
 		return;
 	GIT_REFCOUNT_DEC(sm, submodule_release);
-}
-
-static int submodule_config_error(const char *property, const char *value)
-{
-	git_error_set(GIT_ERROR_INVALID,
-		"invalid value for submodule '%s' property: '%s'", property, value);
-	return -1;
 }
 
 int git_submodule_parse_ignore(git_submodule_ignore_t *out, const char *value)
@@ -2131,6 +2198,13 @@ static int submodule_load_each(const git_config_entry *entry, void *payload)
 
 	if ((error = submodule_read_config(sm, data->mods)) < 0) {
 		git_submodule_free(sm);
+		goto done;
+	}
+
+	isvalid = path_is_valid(data->repo, sm->path);
+	if (isvalid <= 0) {
+		git_submodule_free(sm);
+		error = isvalid;
 		goto done;
 	}
 

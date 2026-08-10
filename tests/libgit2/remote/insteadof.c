@@ -152,3 +152,69 @@ void test_remote_insteadof__anonymous_remote_both(void)
 	    git_remote_pushurl(g_remote),
 	    "git@github.com:url/both/libgit2");
 }
+
+void test_remote_insteadof__detached_remote_fetch_insteadof(void)
+{
+	git_config *cfg;
+
+	cl_fake_globalconfig(NULL);
+
+	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_set_string(cfg, "url.http://github.com/url/fetch.insteadOf",
+	    "http://example.com/url/fetch"));
+	git_config_free(cfg);
+
+	cl_git_pass(git_remote_create_detached(&g_remote,
+	    "http://example.com/url/fetch/libgit2"));
+
+	cl_assert_equal_s(
+	    git_remote_url(g_remote),
+	    "http://github.com/url/fetch/libgit2");
+	cl_assert_equal_p(git_remote_pushurl(g_remote), NULL);
+}
+
+void test_remote_insteadof__detached_remote_push_insteadof(void)
+{
+	git_config *cfg;
+
+	cl_fake_globalconfig(NULL);
+
+	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_set_string(cfg, "url.git@github.com:url/push.pushInsteadOf",
+	    "http://example.com/url/push"));
+	git_config_free(cfg);
+
+	cl_git_pass(git_remote_create_detached(&g_remote,
+	    "http://example.com/url/push/libgit2"));
+
+	cl_assert_equal_s(
+	    git_remote_url(g_remote),
+	    "http://example.com/url/push/libgit2");
+	cl_assert_equal_s(
+	    git_remote_pushurl(g_remote),
+	    "git@github.com:url/push/libgit2");
+}
+
+void test_remote_insteadof__detached_remote_both_insteadof(void)
+{
+	git_config *cfg;
+
+	cl_fake_globalconfig(NULL);
+
+	cl_git_pass(git_config_open_default(&cfg));
+	cl_git_pass(git_config_set_string(cfg, "url.http://github.com/url/both.insteadOf",
+	    "http://example.com/url/both"));
+	cl_git_pass(git_config_set_string(cfg, "url.git@github.com:url/both.pushInsteadOf",
+	    "http://example.com/url/both"));
+	git_config_free(cfg);
+
+	cl_git_pass(git_remote_create_detached(&g_remote,
+	    "http://example.com/url/both/libgit2"));
+
+	cl_assert_equal_s(
+	    git_remote_url(g_remote),
+	    "http://github.com/url/both/libgit2");
+	cl_assert_equal_s(
+	    git_remote_pushurl(g_remote),
+	    "git@github.com:url/both/libgit2");
+}

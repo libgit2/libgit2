@@ -1,9 +1,8 @@
 set(CLI_INCLUDES
-	"${libgit2_BINARY_DIR}/src/util"
-	"${libgit2_BINARY_DIR}/include"
 	"${libgit2_SOURCE_DIR}/src/util"
 	"${libgit2_SOURCE_DIR}/src/cli"
 	"${libgit2_SOURCE_DIR}/include"
+	"${libgit2_BINARY_DIR}/gen_headers"
 	"${LIBGIT2_DEPENDENCY_INCLUDES}"
 	"${LIBGIT2_SYSTEM_INCLUDES}")
 

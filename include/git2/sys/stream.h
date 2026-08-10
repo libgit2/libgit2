@@ -20,6 +20,80 @@
  */
 GIT_BEGIN_DECL
 
+/** A git I/O stream. */
+typedef struct git_stream git_stream;
+
+/**
+ * Connect the stream
+ *
+ * @param stream the stream to connect
+ * @return 0 on success, or an error code
+ */
+typedef int GIT_CALLBACK(git_stream_connect_cb)(git_stream *stream);
+
+/**
+ * Certificate lookup for the stream
+ *
+ * @param[out] out the certificate
+ * @param stream the stream to get the certificate for
+ * @return 0 on success, or an error code
+ */
+typedef int GIT_CALLBACK(git_stream_certificate_cb)(
+	git_cert **out,
+	git_stream *stream);
+
+/**
+ * Set the proxy for the stream
+ *
+ * @param stream the stream to set the proxy for
+ * @param proxy_opts the proxy options
+ * @return 0 on success, or an error code
+ */
+typedef int GIT_CALLBACK(git_stream_set_proxy_cb)(
+	git_stream *stream,
+	const git_proxy_options *proxy_opts);
+
+/**
+ * Read from the stream.
+ *
+ * @param stream the stream to read from
+ * @param buf the buffer to write to
+ * @param size the size of the buffer
+ * @return the number of bytes read, or an error code
+ */
+typedef ssize_t GIT_CALLBACK(git_stream_read_cb)(
+	git_stream *stream, void *buf, size_t size);
+
+/**
+ * Write to the stream
+ *
+ * @param stream the stream to write to
+ * @param data the data to write
+ * @param len the length of the data to write
+ * @param flags the write flags
+ * @return the number of bytes written, or an error code
+ */
+typedef ssize_t GIT_CALLBACK(git_stream_write_cb)(
+	git_stream *stream,
+	const char *data,
+	size_t len,
+	int flags);
+
+/**
+ * Close the stream
+ *
+ * @param stream the stream to close
+ * @return 0 on succes, or an error code
+ */
+typedef int GIT_CALLBACK(git_stream_close_cb)(git_stream *stream);
+
+/**
+ * Free the stream
+ *
+ * @param stream the stream to free
+ */
+typedef void GIT_CALLBACK(git_stream_free_cb)(git_stream *stream);
+
 /** Current version for the `git_stream` structures */
 #define GIT_STREAM_VERSION 1
 
@@ -34,7 +108,7 @@ GIT_BEGIN_DECL
  *
  * and fill the functions
  */
-typedef struct git_stream {
+struct git_stream {
 	int version;
 
 	unsigned int encrypted : 1,
@@ -53,14 +127,27 @@ typedef struct git_stream {
 	 */
 	int connect_timeout;
 
-	int GIT_CALLBACK(connect)(struct git_stream *);
-	int GIT_CALLBACK(certificate)(git_cert **, struct git_stream *);
-	int GIT_CALLBACK(set_proxy)(struct git_stream *, const git_proxy_options *proxy_opts);
-	ssize_t GIT_CALLBACK(read)(struct git_stream *, void *, size_t);
-	ssize_t GIT_CALLBACK(write)(struct git_stream *, const char *, size_t, int);
-	int GIT_CALLBACK(close)(struct git_stream *);
-	void GIT_CALLBACK(free)(struct git_stream *);
-} git_stream;
+	/** Callback to connect the stream. */
+	git_stream_connect_cb connect;
+
+	/** Certificate lookup. */
+	git_stream_certificate_cb certificate;
+
+	/** Set the proxy for the stream. */
+	git_stream_set_proxy_cb set_proxy;
+
+	/** Read from the stream. */
+	git_stream_read_cb read;
+
+	/** Write to the stream. */
+	git_stream_write_cb write;
+
+	/** Close the stream. */
+	git_stream_close_cb close;
+
+	/** Free the stream. */
+	git_stream_free_cb free;
+};
 
 typedef struct {
 	/** The `version` field should be set to `GIT_STREAM_VERSION`. */

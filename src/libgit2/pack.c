@@ -941,6 +941,9 @@ static int packfile_unpack_compressed(
 		goto out;
 	}
 
+	/* zlib may have garbled the trailing buffer */
+	data[size] = '\0';
+
 	obj->type = type;
 	obj->len = size;
 	obj->data = data;

@@ -166,7 +166,7 @@ int git_annotated_commit_from_head(
 
 	*out = NULL;
 
-	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&head, repo, GIT_HEAD_REF)) < 0)
 		return -1;
 
 	error = git_annotated_commit_from_ref(out, repo, head);

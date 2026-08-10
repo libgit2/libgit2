@@ -306,7 +306,27 @@ typedef int (*git_commit_signing_cb)(
 /** @deprecated use git_cvar_map */
 typedef git_configmap git_cvar_map;
 
+/**
+ * This was used for system-wide configuration for compatibility with
+ * "Portable Git", however this setting was removed.
+ *
+ * @deprecated this option is ignored
+ */
+#define GIT_CONFIG_LEVEL_PROGRAMDATA 1
+
 /**@}*/
+
+/**
+ * Locate the path to the configuration file in ProgramData
+ *
+ * Look for the file in `%PROGRAMDATA%\Git\config` used by portable git.
+ *
+ * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @return 0 if a ProgramData configuration file has been
+ *	found. Its path will be stored in `out`.
+ * @deprecated Don't use this any more as this is not supported by Git >= 2.24
+ */
+GIT_EXTERN(int) git_config_find_programdata(git_buf *out);
 
 /** @name Deprecated Diff Functions and Constants
  *
@@ -334,6 +354,10 @@ typedef enum {
  * Options for controlling the formatting of the generated e-mail.
  *
  * @deprecated use `git_email_create_options`
+ *
+ * @options[version] GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION
+ * @options[init_macro] GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT
+ * @options[init_function] git_diff_format_email_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -503,7 +527,7 @@ GIT_EXTERN(int) git_diff_format_email_options_init(
 GIT_EXTERN(const git_error *) giterr_last(void);
 
 /**
- * Clear the last error.  This is an alias of `git_error_last` and is
+ * Clear the last error.  This is an alias of `git_error_clear` and is
  * preserved for backward compatibility.
  *
  * This function is deprecated, but there is no plan to remove this
@@ -674,6 +698,56 @@ GIT_EXTERN(size_t) git_object__size(git_object_t type);
  * @return 1 if the type represents a valid object type, 0 otherwise
  */
 GIT_EXTERN(int) git_object_typeisloose(git_object_t type);
+
+/**@}*/
+
+/** @name Deprecated Object Database Functions
+ *
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these functions should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility functions at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Generate the SHA1 object ID for a given data buffer.
+ *
+ * @deprecated use `git_object_id_from_buffer`
+ *
+ * @param[out] oid the resulting object ID.
+ * @param data data to hash
+ * @param len size of the data
+ * @param object_type of the data to hash
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_hash(
+	git_oid *oid,
+	const void *data,
+	size_t len,
+	git_object_t object_type);
+
+/**
+ * Read a file from disk and fill a git_oid with the object id
+ * that the file would have if it were written to the Object
+ * Database as an object of the given type (w/o applying filters).
+ * Similar functionality to git.git's `git hash-object` without
+ * the `-w` flag, however, with the --no-filters flag.
+ * If you need filters, see `git_repository_hashfile` or
+ * `git_object_id_from_file.
+ *
+ * @deprecated use `git_object_id_from_file`
+ *
+ * @param[out] oid oid structure the result is written into.
+ * @param path file to read and determine object id for
+ * @param object_type of the data to hash
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_hashfile(
+	git_oid *oid,
+	const char *path,
+	git_object_t object_type);
 
 /**@}*/
 
@@ -907,14 +981,12 @@ typedef git_trace_cb git_trace_callback;
  */
 /**@{*/
 
-#ifndef GIT_EXPERIMENTAL_SHA256
 /** Deprecated OID "raw size" definition */
-# define GIT_OID_RAWSZ    GIT_OID_SHA1_SIZE
+#define GIT_OID_RAWSZ    GIT_OID_SHA1_SIZE
 /** Deprecated OID "hex size" definition */
-# define GIT_OID_HEXSZ    GIT_OID_SHA1_HEXSIZE
+#define GIT_OID_HEXSZ    GIT_OID_SHA1_HEXSIZE
 /** Deprecated OID "hex zero" definition */
-# define GIT_OID_HEX_ZERO GIT_OID_SHA1_HEXZERO
-#endif
+#define GIT_OID_HEX_ZERO GIT_OID_SHA1_HEXZERO
 
 GIT_EXTERN(int) git_oid_iszero(const git_oid *id);
 

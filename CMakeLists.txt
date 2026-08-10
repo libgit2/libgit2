@@ -15,12 +15,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${PROJECT_SOURCE_DIR}/cmake")
 # Build options
 #
 
-# Experimental features
-option(EXPERIMENTAL_SHA256     "Enable experimental SHA256 support (for R&D/testing)"  OFF)
-
 # Optional subsystems
 option(BUILD_SHARED_LIBS       "Build Shared Library (OFF for Static)"                  ON)
-option(BUILD_TESTS             "Build Tests using the Clar suite"                       ON)
+option(BUILD_TESTS             "Build the test suite"                                   ON)
+option(BUILD_BENCHMARKS        "Build the benchmark suite"                             OFF)
 option(BUILD_CLI               "Build the command-line interface"                       ON)
 option(BUILD_EXAMPLES          "Build library usage example apps"                      OFF)
 option(BUILD_FUZZERS           "Build the fuzz targets"                                OFF)
@@ -28,6 +26,7 @@ option(BUILD_FUZZERS           "Build the fuzz targets"                         
 # Feature enablement and backend selection
    set(USE_THREADS             "" CACHE STRING "Use threads for parallel processing when possible. One of ON, OFF, or a specific provider: pthreads or win32. (Defaults to ON.)")
    set(USE_SSH                 "" CACHE STRING "Enables SSH support and optionally selects provider. One of ON, OFF, or a specific provider: libssh2 or exec. (Defaults to OFF.)")
+   set(USE_HTTP                "" CACHE STRING "Enable HTTP transport support (covers both http:// and https:// remotes). One of ON or OFF. When OFF, HTTPS is also disabled. (Defaults to ON.)")
    set(USE_HTTPS               "" CACHE STRING "Enable HTTPS support and optionally selects the provider. One of ON, OFF, or a specific provider: OpenSSL, OpenSSL-FIPS, OpenSSL-Dynamic, mbedTLS, SecureTransport, Schannel, or WinHTTP. (Defaults to ON.)")
    set(USE_SHA1                "" CACHE STRING "Selects SHA1 provider. One of builtin, HTTPS, or a specific provider. (Defaults to builtin.)")
    set(USE_SHA256              "" CACHE STRING "Selects SHA256 provider. One of Builtin, HTTPS, or a specific provider. (Defaults to HTTPS.)")
@@ -77,7 +76,19 @@ if(MSVC)
 endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
-	set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+	set(CMAKE_BUILD_TYPE "RelWithDebInfo" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+endif()
+
+
+# Common settings across all projects, dependencies, etc. Always support
+# 64 bit file operations, even on 32 bit platforms.
+
+if(NOT WIN32)
+	add_definitions(-D_FILE_OFFSET_BITS=64)
+endif()
+
+if(NOT BUILD_SHARED_LIBS)
+	add_definitions(-DGIT_STATIC_BUILD=1)
 endif()
 
 
@@ -110,6 +121,10 @@ add_subdirectory(src)
 if(BUILD_TESTS)
 	enable_testing()
 	add_subdirectory(tests)
+endif()
+
+if(BUILD_BENCHMARKS)
+	add_subdirectory(benchmarks)
 endif()
 
 if(BUILD_EXAMPLES)

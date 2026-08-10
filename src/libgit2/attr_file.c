@@ -811,7 +811,7 @@ int git_attr_fnmatch__parse(
 	}
 
 	if (context) {
-		char *slash = strrchr(context, '/');
+		const char *slash = strrchr(context, '/');
 		size_t len;
 		if (slash) {
 			/* include the slash for easier matching */

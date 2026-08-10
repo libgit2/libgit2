@@ -25,11 +25,13 @@ GIT_BEGIN_DECL
  * This does not lock anything, but sets up the transaction object to
  * know from which repository to lock.
  *
- * @param out the resulting transaction
+ * @param[out] out the resulting transaction
  * @param repo the repository in which to lock
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_transaction_new(git_transaction **out, git_repository *repo);
+GIT_EXTERN(int) git_transaction_new(
+	git_transaction **out,
+	git_repository *repo);
 
 /**
  * Lock a reference

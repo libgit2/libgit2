@@ -199,6 +199,7 @@ static int config_memory_get(git_config_backend *backend, const char *key, git_c
 	if ((error = git_config_list_get(&entry, memory_backend->config_list, key)) != 0)
 		return error;
 
+	git_config_list_incref(memory_backend->config_list);
 	*out = &entry->base;
 	return 0;
 }
@@ -282,6 +283,18 @@ static void config_memory_free(git_config_backend *_backend)
 	git_strlist_free(backend->values, backend->values_len);
 	git_str_dispose(&backend->cfg);
 	git__free(backend);
+}
+
+int git_config_backend_memory_options_init(
+	git_config_backend_memory_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_config_backend_memory_options,
+		GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT);
+	return 0;
 }
 
 static config_memory_backend *config_backend_new(

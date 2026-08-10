@@ -52,6 +52,7 @@ struct git_index {
 
 	git_vector names;
 	git_vector reuc;
+	git_vector extensions;
 
 	git_vector_cmp entries_cmp_path;
 	git_vector_cmp entries_search;
@@ -147,6 +148,9 @@ GIT_INLINE(unsigned char *) git_index__checksum(git_index *index)
 	return index->checksum;
 }
 
+/* If the path is conflicted, move it from the index to reuc. */
+int git_index__conflict_to_reuc(git_index *index, const char *path);
+
 /* Copy the current entries vector *and* increment the index refcount.
  * Call `git_index__release_snapshot` when done.
  */
@@ -196,20 +200,5 @@ extern int git_indexwriter_commit(git_indexwriter *writer);
  * locked and freeing any data structures.
  */
 extern void git_indexwriter_cleanup(git_indexwriter *writer);
-
-/* SHA256 support */
-
-#ifndef GIT_EXPERIMENTAL_SHA256
-
-int git_index_open_ext(
-	git_index **index_out,
-	const char *index_path,
-	const git_index_options *opts);
-
-GIT_EXTERN(int) git_index_new_ext(
-	git_index **index_out,
-	const git_index_options *opts);
-
-#endif
 
 #endif

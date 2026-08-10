@@ -379,6 +379,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 	struct in6_addr addr6;
 	struct in_addr addr4;
 	void *addr = NULL;
+	size_t addrlen = 0;
 	int i = -1, j, error = 0;
 
 	if (SSL_get_verify_result(ssl) != X509_V_OK) {
@@ -390,10 +391,12 @@ static int verify_server_cert(SSL *ssl, const char *host)
 	if (p_inet_pton(AF_INET, host, &addr4)) {
 		type = GEN_IPADD;
 		addr = &addr4;
+		addrlen = sizeof(addr4);
 	} else {
 		if (p_inet_pton(AF_INET6, host, &addr6)) {
 			type = GEN_IPADD;
 			addr = &addr6;
+			addrlen = sizeof(addr6);
 		}
 	}
 
@@ -428,7 +431,7 @@ static int verify_server_cert(SSL *ssl, const char *host)
 				matched = !!check_host_name(host, name);
 			} else if (type == GEN_IPADD) {
 				/* Here name isn't so much a name but a binary representation of the IP */
-				matched = addr && !!memcmp(name, addr, namelen);
+				matched = (addr && namelen == addrlen && memcmp(name, addr, namelen) == 0);
 			}
 		}
 	}

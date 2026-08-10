@@ -22,9 +22,12 @@ static worktree_fixture fixture =
 
 static const char *merge_files[] = {
 	GIT_MERGE_HEAD_FILE,
-	GIT_ORIG_HEAD_FILE,
 	GIT_MERGE_MODE_FILE,
 	GIT_MERGE_MSG_FILE,
+};
+
+static const char *merge_refs[] = {
+	GIT_ORIG_HEAD_REF,
 };
 
 void test_worktree_merge__initialize(void)
@@ -74,6 +77,12 @@ void test_worktree_merge__merge_setup(void)
 		            fixture.worktree->gitdir,
 		            merge_files[i]));
 		cl_assert(git_fs_path_exists(path.ptr));
+	}
+
+	for (i = 0; i < ARRAY_SIZE(merge_refs); i++) {
+		git_reference *ref;
+		cl_git_pass(git_reference_lookup(&ref, fixture.worktree, merge_refs[i]));
+		git_reference_free(ref);
 	}
 
 	git_str_dispose(&path);

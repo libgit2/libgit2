@@ -28,14 +28,19 @@ GIT_BEGIN_DECL
  * the other as its upstream, the `ahead` and `behind` values will be
  * what git would report for the branches.
  *
- * @param ahead number of unique from commits in `upstream`
- * @param behind number of unique from commits in `local`
+ * @param[out] ahead number of unique from commits in `upstream`
+ * @param[out] behind number of unique from commits in `local`
  * @param repo the repository where the commits exist
  * @param local the commit for local
  * @param upstream the commit for upstream
  * @return 0 or an error code.
  */
-GIT_EXTERN(int) git_graph_ahead_behind(size_t *ahead, size_t *behind, git_repository *repo, const git_oid *local, const git_oid *upstream);
+GIT_EXTERN(int) git_graph_ahead_behind(
+	size_t *ahead,
+	size_t *behind,
+	git_repository *repo,
+	const git_oid *local,
+	const git_oid *upstream);
 
 
 /**

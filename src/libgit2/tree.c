@@ -87,11 +87,7 @@ static git_tree_entry *alloc_entry(const char *filename, size_t filename_len, co
 	char *filename_ptr;
 	size_t tree_len;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	size_t oid_size = git_oid_size(id->type);
-#else
-	size_t oid_size = GIT_OID_SHA1_SIZE;
-#endif
 
 	TREE_ENTRY_CHECK_NAMELEN(filename_len);
 

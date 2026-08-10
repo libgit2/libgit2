@@ -59,6 +59,32 @@ typedef struct git_commit_graph_file {
 	/* The number of entries in the Extra Edge List table. Each entry is 4 bytes wide. */
 	size_t num_extra_edge_list;
 
+	/*
+	 * Bloom filter index data storing offsets in the filter data.
+	 * The ith entry stores the number of bytes from commit 0 to i.
+	 * The filter for the ith element are the bytes indexes[i-1] to indexes[i] in
+	 * the bloom filter data. indexes[-1] is defined as 0.
+	 * 
+	 * NOTE: The implication of the above is that the bloom filter fields are 
+	 * only valid if both indexes and data pointers are non-NULL
+	 */
+	const uint32_t *bloom_filter_indexes;
+
+	/* Concatenated computed bloom filters */
+	const unsigned char *bloom_filter_data;
+
+	/* 
+	 * Hash version used in the bloom filter
+	 * Valid values are 1 and 2, both corresponding to murmur3
+	 */
+	uint32_t bloom_filter_hash_version;
+
+	/* Number of times a path is hashed */
+	uint32_t bloom_filter_num_hashes;
+
+	/* Minimum number of bits per entry */
+	uint32_t bloom_filter_bits;
+
 	/* The trailer of the file. Contains the SHA1-checksum of the whole file. */
 	unsigned char checksum[GIT_HASH_SHA1_SIZE];
 } git_commit_graph_file;

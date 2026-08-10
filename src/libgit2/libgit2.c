@@ -16,6 +16,7 @@
 #include "mwindow.h"
 #include "oid.h"
 #include "rand.h"
+#include "refdb_reftable.h"
 #include "runtime.h"
 #include "settings.h"
 #include "sysdir.h"
@@ -53,7 +54,8 @@ int git_libgit2_init(void)
 		git_mbedtls_stream_global_init,
 		git_mwindow_global_init,
 		git_pool_global_init,
-		git_settings_global_init
+		git_settings_global_init,
+		git_reftable_global_init
 	};
 
 	return git_runtime_init(init_fns, ARRAY_SIZE(init_fns));
@@ -84,6 +86,9 @@ int git_libgit2_features(void)
 #ifdef GIT_THREADS
 		| GIT_FEATURE_THREADS
 #endif
+#ifdef GIT_HTTP
+		| GIT_FEATURE_HTTP
+#endif
 #ifdef GIT_HTTPS
 		| GIT_FEATURE_HTTPS
 #endif
@@ -106,9 +111,7 @@ int git_libgit2_features(void)
 #endif
 		| GIT_FEATURE_COMPRESSION
 		| GIT_FEATURE_SHA1
-#ifdef GIT_EXPERIMENTAL_SHA256
 		| GIT_FEATURE_SHA256
-#endif
 	;
 }
 
@@ -123,6 +126,10 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 #elif defined(GIT_THREADS)
 		GIT_ASSERT_WITH_RETVAL(!"Unknown threads backend", NULL);
 #endif
+		break;
+
+	case GIT_FEATURE_HTTP:
+		/* HTTP has no backend selection; presence is reported via git_libgit2_features() */
 		break;
 
 	case GIT_FEATURE_HTTPS:
@@ -254,21 +261,21 @@ const char *git_libgit2_feature_backend(git_feature_t feature)
 		break;
 
 	case GIT_FEATURE_SHA256:
-#if defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_BUILTIN)
+#if defined(GIT_SHA256_BUILTIN)
 		return "builtin";
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_OPENSSL)
+#elif defined(GIT_SHA256_OPENSSL)
 		return "openssl";
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_OPENSSL_FIPS)
+#elif defined(GIT_SHA256_OPENSSL_FIPS)
 		return "openssl-fips";
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_OPENSSL_DYNAMIC)
+#elif defined(GIT_SHA256_OPENSSL_DYNAMIC)
 		return "openssl-dynamic";
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_MBEDTLS)
+#elif defined(GIT_SHA256_MBEDTLS)
 		return "mbedtls";
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_COMMON_CRYPTO)
+#elif defined(GIT_SHA256_COMMON_CRYPTO)
 		return "commoncrypto";
-#elif defined(GIT_EXPERIMENTAL_SHA256) && defined(GIT_SHA256_WIN32)
+#elif defined(GIT_SHA256_WIN32)
 		return "win32";
-#elif defined(GIT_EXPERIMENTAL_SHA256)
+#else
 		GIT_ASSERT_WITH_RETVAL(!"Unknown SHA256 backend", NULL);
 #endif
 		break;

@@ -44,6 +44,7 @@ extern size_t git_mwindow__window_size;
 extern size_t git_mwindow__mapped_limit;
 extern size_t git_mwindow__file_limit;
 extern size_t git_indexer__max_objects;
+extern size_t git_indexer__max_object_size;
 extern bool git_disable_pack_keep_file_checks;
 extern int git_odb__packed_priority;
 extern int git_odb__loose_priority;
@@ -79,9 +80,6 @@ static int config_level_to_sysdir(int *out, int config_level)
 		return 0;
 	case GIT_CONFIG_LEVEL_GLOBAL:
 		*out = GIT_SYSDIR_GLOBAL;
-		return 0;
-	case GIT_CONFIG_LEVEL_PROGRAMDATA:
-		*out = GIT_SYSDIR_PROGRAMDATA;
 		return 0;
 	default:
 		break;
@@ -358,6 +356,14 @@ int git_libgit2_opts(int key, ...)
 
 	case GIT_OPT_GET_PACK_MAX_OBJECTS:
 		*(va_arg(ap, size_t *)) = git_indexer__max_objects;
+		break;
+
+	case GIT_OPT_SET_PACK_MAX_OBJECT_SIZE:
+		git_indexer__max_object_size = va_arg(ap, size_t);
+		break;
+
+	case GIT_OPT_GET_PACK_MAX_OBJECT_SIZE:
+		*(va_arg(ap, size_t *)) = git_indexer__max_object_size;
 		break;
 
 	case GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS:

@@ -45,6 +45,9 @@ void test_refs_list__do_not_retrieve_references_which_name_end_with_a_lock_exten
 {
 	git_strarray ref_list;
 
+	if (!cl_repo_has_ref_format(g_repo, "files"))
+		cl_skip();
+
 	/* Create a fake locked reference */
 	cl_git_mkfile(
 		"./testrepo/.git/refs/heads/hanwen.lock",

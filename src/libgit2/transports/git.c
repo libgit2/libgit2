@@ -39,7 +39,7 @@ typedef struct {
  */
 static int gen_proto(git_str *request, const char *cmd, const char *url)
 {
-	char *delim, *repo;
+	const char *delim, *repo;
 	char host[] = "host=";
 	size_t len;
 

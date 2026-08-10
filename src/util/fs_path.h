@@ -205,6 +205,12 @@ extern bool git_fs_path_isdir(const char *path);
 extern bool git_fs_path_isfile(const char *path);
 
 /**
+ * Check if the given path points to an executable.
+ * @return true or false
+ */
+extern bool git_fs_path_isexecutable(const char *path);
+
+/**
  * Check if the given path points to a symbolic link.
  * @return true or false
  */
@@ -516,7 +522,11 @@ struct git_fs_path_diriter
 #endif
 };
 
+#ifdef GIT_I18N_ICONV
+#define GIT_FS_PATH_DIRITER_INIT { GIT_STR_INIT, 0, 0, NULL, GIT_PATH_ICONV_INIT }
+#else
 #define GIT_FS_PATH_DIRITER_INIT { GIT_STR_INIT }
+#endif
 
 #endif
 
@@ -632,18 +642,18 @@ extern int git_fs_path_from_url_or_path(git_str *local_path_out, const char *url
  */
 #ifdef GIT_WIN32
 # define GIT_FS_PATH_REJECT_FILESYSTEM_DEFAULTS \
-	GIT_FS_PATH_REJECT_EMPTY_COMPONENT | \
-	GIT_FS_PATH_REJECT_TRAVERSAL | \
-	GIT_FS_PATH_REJECT_BACKSLASH | \
-	GIT_FS_PATH_REJECT_TRAILING_DOT | \
-	GIT_FS_PATH_REJECT_TRAILING_SPACE | \
-	GIT_FS_PATH_REJECT_TRAILING_COLON | \
-	GIT_FS_PATH_REJECT_DOS_PATHS | \
-	GIT_FS_PATH_REJECT_NT_CHARS
+	(GIT_FS_PATH_REJECT_EMPTY_COMPONENT | \
+	 GIT_FS_PATH_REJECT_TRAVERSAL | \
+	 GIT_FS_PATH_REJECT_BACKSLASH | \
+	 GIT_FS_PATH_REJECT_TRAILING_DOT | \
+	 GIT_FS_PATH_REJECT_TRAILING_SPACE | \
+	 GIT_FS_PATH_REJECT_TRAILING_COLON | \
+	 GIT_FS_PATH_REJECT_DOS_PATHS | \
+	 GIT_FS_PATH_REJECT_NT_CHARS)
 #else
 # define GIT_FS_PATH_REJECT_FILESYSTEM_DEFAULTS \
-	GIT_FS_PATH_REJECT_EMPTY_COMPONENT | \
-	GIT_FS_PATH_REJECT_TRAVERSAL
+	(GIT_FS_PATH_REJECT_EMPTY_COMPONENT | \
+	 GIT_FS_PATH_REJECT_TRAVERSAL)
 #endif
 
 /**

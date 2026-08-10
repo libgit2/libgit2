@@ -18,11 +18,16 @@ inputs:
     type: string
     required: true
     default: 'bash'
+  cmake-global-options:
+    description: CMAKE_GLOBAL_OPTIONS to pass
+    type: string
 
 runs:
   using: 'composite'
   steps:
   - run: |
+      export CMAKE_GLOBAL_OPTIONS="${{ inputs.cmake-global-options }}"
+
       if [ -n "${{ inputs.container }}" ]; then
         docker run \
           --rm \
@@ -35,8 +40,8 @@ runs:
           -e CFLAGS \
           -e CMAKE_GENERATOR \
           -e CMAKE_OPTIONS \
+          -e CMAKE_GLOBAL_OPTIONS \
           -e GITTEST_NEGOTIATE_PASSWORD \
-          -e GITTEST_FLAKY_STAT \
           -e PKG_CONFIG_PATH \
           -e SKIP_NEGOTIATE_TESTS \
           -e SKIP_SSH_TESTS \

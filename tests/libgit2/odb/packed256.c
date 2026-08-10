@@ -2,13 +2,10 @@
 #include "odb.h"
 #include "pack_data_256.h"
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 static git_odb *_odb;
-#endif
 
 void test_odb_packed256__initialize(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_odb_options opts = GIT_ODB_OPTIONS_INIT;
 
 	opts.oid_type = GIT_OID_SHA256;
@@ -17,20 +14,16 @@ void test_odb_packed256__initialize(void)
 		&_odb,
 		cl_fixture("testrepo_256.git/objects"),
 		&opts));
-#endif
 }
 
 void test_odb_packed256__cleanup(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_odb_free(_odb);
 	_odb = NULL;
-#endif
 }
 
 void test_odb_packed256__mass_read(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	unsigned int i;
 
 	for (i = 0; i < ARRAY_SIZE(packed_objects_256); ++i) {
@@ -43,12 +36,10 @@ void test_odb_packed256__mass_read(void)
 
 		git_odb_object_free(obj);
 	}
-#endif
 }
 
 void test_odb_packed256__read_header_0(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	unsigned int i;
 
 	for (i = 0; i < ARRAY_SIZE(packed_objects_256); ++i) {
@@ -67,12 +58,10 @@ void test_odb_packed256__read_header_0(void)
 
 		git_odb_object_free(obj);
 	}
-#endif
 }
 
 void test_odb_packed256__read_header_1(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	unsigned int i;
 
 	for (i = 0; i < ARRAY_SIZE(loose_objects_256); ++i) {
@@ -93,6 +82,5 @@ void test_odb_packed256__read_header_1(void)
 
 		git_odb_object_free(obj);
 	}
-#endif
 }
 

@@ -611,6 +611,37 @@ bool git_fs_path_isfile(const char *path)
 	return S_ISREG(st.st_mode) != 0;
 }
 
+#ifdef GIT_WIN32
+
+bool git_fs_path_isexecutable(const char *path)
+{
+	struct stat st;
+
+	GIT_ASSERT_ARG_WITH_RETVAL(path, false);
+
+	if (git__suffixcmp_icase(path, ".exe") != 0 &&
+	    git__suffixcmp_icase(path, ".cmd") != 0)
+		return false;
+
+	return (p_stat(path, &st) == 0);
+}
+
+#else
+
+bool git_fs_path_isexecutable(const char *path)
+{
+	struct stat st;
+
+	GIT_ASSERT_ARG_WITH_RETVAL(path, false);
+	if (p_stat(path, &st) < 0)
+		return false;
+
+	return S_ISREG(st.st_mode) != 0 &&
+	       ((st.st_mode & S_IXUSR) != 0);
+}
+
+#endif
+
 bool git_fs_path_islink(const char *path)
 {
 	struct stat st;
@@ -1378,6 +1409,10 @@ int git_fs_path_diriter_init(
 
 	memset(diriter, 0, sizeof(git_fs_path_diriter));
 
+#ifdef GIT_I18N_ICONV
+	diriter->ic.map = (iconv_t)-1;
+#endif
+
 	if (git_str_puts(&diriter->path, path) < 0)
 		return -1;
 
@@ -1822,12 +1857,14 @@ static PSID *sid_dup(PSID sid)
 	return dup;
 }
 
-static int current_user_sid(PSID *out)
+static int current_user_sid(PSID *sid, HANDLE *linked_token)
 {
 	TOKEN_USER *info = NULL;
 	HANDLE token = NULL;
 	DWORD len = 0;
 	int error = -1;
+	TOKEN_ELEVATION_TYPE elevation_type;
+	DWORD size;
 
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
 		git_error_set(GIT_ERROR_OS, "could not lookup process information");
@@ -1848,7 +1885,19 @@ static int current_user_sid(PSID *out)
 		goto done;
 	}
 
-	if ((*out = sid_dup(info->User.Sid)))
+	if (GetTokenInformation(token, TokenElevationType, &elevation_type, sizeof(elevation_type), &size) &&
+	    elevation_type == TokenElevationTypeLimited) {
+		/*
+		 * The current process is run by a member of the Administrators group
+		 * but is not running elevated.
+		 */
+		if (!GetTokenInformation(token, TokenLinkedToken, linked_token, sizeof(HANDLE), &size)) {
+			CloseHandle(*linked_token);
+			*linked_token = NULL;
+		}
+	}
+
+	if ((*sid = sid_dup(info->User.Sid)))
 		error = 0;
 
 done:
@@ -1895,6 +1944,7 @@ int git_fs_path_owner_is(
 	git_fs_path_owner_t owner_type)
 {
 	PSID owner_sid = NULL, user_sid = NULL;
+	HANDLE linked_token = NULL;
 	BOOL is_admin, admin_owned;
 	int error;
 
@@ -1903,17 +1953,14 @@ int git_fs_path_owner_is(
 		return 0;
 	}
 
-	if ((error = file_owner_sid(&owner_sid, path)) < 0)
+	if ((error = file_owner_sid(&owner_sid, path)) < 0 ||
+	    (error = current_user_sid(&user_sid, &linked_token)) < 0)
 		goto done;
 
-	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0) {
-		if ((error = current_user_sid(&user_sid)) < 0)
-			goto done;
-
-		if (EqualSid(owner_sid, user_sid)) {
-			*out = true;
-			goto done;
-		}
+	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0 &&
+	    EqualSid(owner_sid, user_sid)) {
+		*out = true;
+		goto done;
 	}
 
 	admin_owned =
@@ -1929,6 +1976,7 @@ int git_fs_path_owner_is(
 	if (admin_owned &&
 	    (owner_type & GIT_FS_PATH_USER_IS_ADMINISTRATOR) != 0 &&
 	    CheckTokenMembership(NULL, owner_sid, &is_admin) &&
+	    CheckTokenMembership(linked_token, owner_sid, &is_admin) &&
 	    is_admin) {
 		*out = true;
 		goto done;
@@ -1937,6 +1985,9 @@ int git_fs_path_owner_is(
 	*out = false;
 
 done:
+	if (linked_token)
+	    CloseHandle(linked_token);
+
 	git__free(owner_sid);
 	git__free(user_sid);
 	return error;
@@ -2020,9 +2071,10 @@ int git_fs_path_owner_is_system(bool *out, const char *path)
 	return git_fs_path_owner_is(out, path, GIT_FS_PATH_OWNER_ADMINISTRATOR);
 }
 
-int git_fs_path_find_executable(git_str *fullpath, const char *executable)
-{
 #ifdef GIT_WIN32
+
+static int find_executable(git_str *fullpath, const char *executable)
+{
 	git_win32_path fullpath_w, executable_w;
 	int error;
 
@@ -2035,9 +2087,15 @@ int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 		error = git_str_put_w(fullpath, fullpath_w, wcslen(fullpath_w));
 
 	return error;
+}
+
 #else
+
+static int find_executable(git_str *fullpath, const char *executable)
+{
 	git_str path = GIT_STR_INIT;
 	const char *current_dir, *term;
+	size_t current_dirlen;
 	bool found = false;
 
 	if (git__getenv(&path, "PATH") < 0)
@@ -2049,20 +2107,28 @@ int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 		if (! (term = strchr(current_dir, GIT_PATH_LIST_SEPARATOR)))
 			term = strchr(current_dir, '\0');
 
+		current_dirlen = term - current_dir;
 		git_str_clear(fullpath);
-		if (git_str_put(fullpath, current_dir, (term - current_dir)) < 0 ||
-		    git_str_putc(fullpath, '/') < 0 ||
+
+		/* An empty path segment is treated as '.' */
+		if (current_dirlen == 0 && git_str_putc(fullpath, '.'))
+			return -1;
+		else if (current_dirlen != 0 &&
+		         git_str_put(fullpath, current_dir, current_dirlen) < 0)
+			return -1;
+
+		if (git_str_putc(fullpath, '/') < 0 ||
 		    git_str_puts(fullpath, executable) < 0)
 			return -1;
 
-		if (git_fs_path_isfile(fullpath->ptr)) {
+		if (git_fs_path_isexecutable(fullpath->ptr)) {
 			found = true;
 			break;
 		}
 
 		current_dir = term;
 
-		while (*current_dir == GIT_PATH_LIST_SEPARATOR)
+		if (*current_dir == GIT_PATH_LIST_SEPARATOR)
 			current_dir++;
 	}
 
@@ -2073,5 +2139,19 @@ int git_fs_path_find_executable(git_str *fullpath, const char *executable)
 
 	git_str_clear(fullpath);
 	return GIT_ENOTFOUND;
+}
+
 #endif
+
+int git_fs_path_find_executable(git_str *fullpath, const char *executable)
+{
+	/* For qualified paths we do not look in PATH */
+	if (strchr(executable, '/') != NULL) {
+		if (!git_fs_path_isexecutable(executable))
+			return GIT_ENOTFOUND;
+
+		return git_str_puts(fullpath, executable);
+	}
+
+	return find_executable(fullpath, executable);
 }

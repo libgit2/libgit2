@@ -18,7 +18,7 @@ void test_diff_drivers__cleanup(void)
 static void overwrite_filemode(const char *expected, git_buf *actual)
 {
 	size_t offset;
-	char *found;
+	const char *found;
 
 	found = strstr(expected, "100644");
 	if (!found)

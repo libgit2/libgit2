@@ -11,6 +11,7 @@
 #include "git2_util.h"
 #include "process.h"
 #include "strlist.h"
+#include "fs_path.h"
 
 #ifndef DWORD_MAX
 # define DWORD_MAX INT32_MAX
@@ -19,7 +20,8 @@
 #define ENV_MAX 32767
 
 struct git_process {
-	wchar_t *appname;
+	char *app_name;
+	wchar_t *app_path;
 	wchar_t *cmdline;
 	wchar_t *env;
 
@@ -178,8 +180,7 @@ static int process_new(
 	process = git__calloc(1, sizeof(git_process));
 	GIT_ERROR_CHECK_ALLOC(process);
 
-	if (appname &&
-	    git_utf8_to_16_alloc(&process->appname, appname) < 0) {
+	if (appname && (process->app_name = git__strdup(appname)) == NULL) {
 		error = -1;
 		goto done;
 	}
@@ -233,7 +234,7 @@ int git_process_new(
 	size_t env_len,
 	git_process_options *opts)
 {
-	git_str cmdline = GIT_STR_INIT;
+	git_str cmd_path = GIT_STR_INIT, cmdline = GIT_STR_INIT;
 	int error;
 
 	GIT_ASSERT_ARG(out && args && args_len > 0);
@@ -244,6 +245,7 @@ int git_process_new(
 	error = process_new(out, args[0], cmdline.ptr, env, env_len, opts);
 
 done:
+	git_str_dispose(&cmd_path);
 	git_str_dispose(&cmdline);
 	return error;
 }
@@ -258,6 +260,19 @@ int git_process_start(git_process *process)
 	HANDLE in[2]  = { NULL, NULL },
 	       out[2] = { NULL, NULL },
 	       err[2] = { NULL, NULL };
+
+	if (process->app_name) {
+		git_str cmd_path = GIT_STR_INIT;
+		int error;
+
+		if ((error = git_fs_path_find_executable(&cmd_path, process->app_name)) == 0)
+			error = git_utf8_to_16_alloc(&process->app_path, cmd_path.ptr);
+
+		git_str_dispose(&cmd_path);
+
+		if (error < 0)
+			goto on_error;
+	}
 
 	memset(&security_attrs, 0, sizeof(SECURITY_ATTRIBUTES));
 	security_attrs.bInheritHandle = TRUE;
@@ -303,7 +318,7 @@ int git_process_start(git_process *process)
 
 	memset(&process->process_info, 0, sizeof(PROCESS_INFORMATION));
 
-	if (!CreateProcessW(process->appname, process->cmdline,
+	if (!CreateProcessW(process->app_path, process->cmdline,
 	                    NULL, NULL, TRUE, flags, process->env,
 	                    process->cwd,
 	                    &startup_info,
@@ -501,6 +516,7 @@ void git_process_free(git_process *process)
 	git__free(process->env);
 	git__free(process->cwd);
 	git__free(process->cmdline);
-	git__free(process->appname);
+	git__free(process->app_path);
+	git__free(process->app_name);
 	git__free(process);
 }

@@ -2,29 +2,20 @@
 
 #include "repository.h"
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 static git_repository *g_repo;
-#endif
 
 void test_object_lookup256__initialize(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	g_repo = cl_git_sandbox_init("testrepo_256.git");
-#endif
 }
 
 void test_object_lookup256__cleanup(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_git_sandbox_cleanup();
-#endif
 }
 
 void test_object_lookup256__lookup_wrong_type_returns_enotfound(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit = "4d46d9719e425ef2dfb5bfba098d0b62e21b2b92d0731892eef70db0870e3744";
 	git_oid oid;
 	git_object *object;
@@ -32,14 +23,10 @@ void test_object_lookup256__lookup_wrong_type_returns_enotfound(void)
 	cl_git_pass(git_oid_from_string(&oid, commit, GIT_OID_SHA256));
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJECT_TAG));
-#endif
 }
 
 void test_object_lookup256__lookup_nonexisting_returns_enotfound(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *unknown = "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef";
 	git_oid oid;
 	git_object *object;
@@ -47,14 +34,10 @@ void test_object_lookup256__lookup_nonexisting_returns_enotfound(void)
 	cl_git_pass(git_oid_from_string(&oid, unknown, GIT_OID_SHA256));
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJECT_ANY));
-#endif
 }
 
 void test_object_lookup256__lookup_wrong_type_by_abbreviated_id_returns_enotfound(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit = "4d46d97";
 	git_oid oid;
 	git_object *object;
@@ -62,14 +45,10 @@ void test_object_lookup256__lookup_wrong_type_by_abbreviated_id_returns_enotfoun
 	cl_git_pass(git_oid_from_prefix(&oid, commit, strlen(commit), GIT_OID_SHA256));
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_object_lookup_prefix(&object, g_repo, &oid, strlen(commit), GIT_OBJECT_TAG));
-#endif
 }
 
 void test_object_lookup256__lookup_wrong_type_eventually_returns_enotfound(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit = "4d46d9719e425ef2dfb5bfba098d0b62e21b2b92d0731892eef70db0870e3744";
 	git_oid oid;
 	git_object *object;
@@ -81,14 +60,10 @@ void test_object_lookup256__lookup_wrong_type_eventually_returns_enotfound(void)
 
 	cl_assert_equal_i(
 		GIT_ENOTFOUND, git_object_lookup(&object, g_repo, &oid, GIT_OBJECT_TAG));
-#endif
 }
 
 void test_object_lookup256__lookup_corrupt_object_returns_error(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *commit = "5ca8959deb2b8327458e0344523eb1ddeeef4bce03e35864640b452f84d26848",
 	      *file = "objects/5c/a8959deb2b8327458e0344523eb1ddeeef4bce03e35864640b452f84d26848";
 	git_str path = GIT_STR_INIT, contents = GIT_STR_INIT;
@@ -115,14 +90,10 @@ void test_object_lookup256__lookup_corrupt_object_returns_error(void)
 	git_object_free(object);
 	git_str_dispose(&path);
 	git_str_dispose(&contents);
-#endif
 }
 
 void test_object_lookup256__lookup_object_with_wrong_hash_returns_error(void)
 {
-#ifndef GIT_EXPERIMENTAL_SHA256
-	cl_skip();
-#else
 	const char *oldloose = "objects/5c/a8959deb2b8327458e0344523eb1ddeeef4bce03e35864640b452f84d26848",
 	      *newloose = "objects/5c/a8959deb2b8327458e0344523eb1ddeeef4bce03e35864640b452f84d26840",
 	      *commit = "5ca8959deb2b8327458e0344523eb1ddeeef4bce03e35864640b452f84d26840";
@@ -149,5 +120,4 @@ void test_object_lookup256__lookup_object_with_wrong_hash_returns_error(void)
 	git_object_free(object);
 	git_str_dispose(&oldpath);
 	git_str_dispose(&newpath);
-#endif
 }

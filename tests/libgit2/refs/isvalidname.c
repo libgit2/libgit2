@@ -21,6 +21,7 @@ void test_refs_isvalidname__can_detect_invalid_formats(void)
 	cl_assert_equal_i(false, is_valid_name("/"));
 	cl_assert_equal_i(false, is_valid_name("//"));
 	cl_assert_equal_i(false, is_valid_name(""));
+	cl_assert_equal_i(false, is_valid_name("refs/heads/\177"));
 	cl_assert_equal_i(false, is_valid_name("refs/heads/sub.lock/webmatrix"));
 }
 

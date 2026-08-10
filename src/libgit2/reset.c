@@ -156,7 +156,7 @@ static int reset(
 	}
 
 	/* move HEAD to the new target */
-	if ((error = git_reference__update_terminal(repo, GIT_HEAD_FILE,
+	if ((error = git_reference__update_terminal(repo, GIT_HEAD_REF,
 		git_object_id(commit), NULL, git_str_cstr(&log_message))) < 0)
 		goto cleanup;
 

@@ -46,6 +46,10 @@ typedef enum {
  *
  * Note that not all types may be supported, depending on the platform
  * and compilation options.
+ *
+ * @options[version] GIT_PROXY_OPTIONS_VERSION
+ * @options[init_macro] GIT_PROXY_OPTIONS_INIT
+ * @options[init_function] git_proxy_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -70,9 +74,8 @@ typedef struct {
 	git_credential_acquire_cb credentials;
 
 	/**
-	 * If cert verification fails, this will be called to let the
-	 * user make the final decision of whether to allow the
-	 * connection to proceed. Returns 0 to allow the connection
+	 * This will be called to let the user make the final decision of whether
+	 * to allow the connection to proceed. Returns 0 to allow the connection
 	 * or a negative value to indicate an error.
 	 */
 	git_transport_certificate_check_cb certificate_check;

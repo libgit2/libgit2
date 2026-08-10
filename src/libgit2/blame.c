@@ -108,7 +108,12 @@ static git_blame_hunk *dup_hunk(git_blame_hunk *hunk, git_blame *blame)
 	if (git_signature_dup(&newhunk->final_signature, hunk->final_signature) < 0 ||
 	    git_signature_dup(&newhunk->final_committer, hunk->final_committer) < 0 ||
 	    git_signature_dup(&newhunk->orig_signature, hunk->orig_signature) < 0 ||
-	    git_signature_dup(&newhunk->orig_committer, hunk->orig_committer) < 0 ||
+	    git_signature_dup(&newhunk->orig_committer, hunk->orig_committer) < 0) {
+		free_hunk(newhunk);
+		return NULL;
+	}
+
+	if (hunk->summary &&
 	    (newhunk->summary = git__strdup(hunk->summary)) == NULL) {
 		free_hunk(newhunk);
 		return NULL;
@@ -461,6 +466,12 @@ static int blame_internal(git_blame *blame)
 
 	for (ent = blame->ent; ent; ent = ent->next) {
 		git_blame_hunk *h = hunk_from_entry(ent, blame);
+
+		if (!h) {
+			error = -1;
+			goto on_error;
+		}
+
 		git_vector_insert(&blame->hunks, h);
 	}
 

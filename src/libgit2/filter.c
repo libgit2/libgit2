@@ -493,6 +493,17 @@ static int filter_list_check_attributes(
 	return error;
 }
 
+int git_filter_options_init(
+	git_filter_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_filter_options, GIT_FILTER_OPTIONS_INIT);
+	return 0;
+}
+
 int git_filter_list_new(
 	git_filter_list **out,
 	git_repository *repo,

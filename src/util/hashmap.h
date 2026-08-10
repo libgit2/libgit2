@@ -107,6 +107,7 @@ typedef uint32_t git_hashmap_iter_t;
 	} \
 	GIT_INLINE(int) name##__idx(uint32_t *out, name *h, key_t key) \
 	{ \
+		*out = UINT32_MAX; \
 		if (h->n_buckets) { \
 			uint32_t k, i, last, mask, step = 0; \
 			GIT_ASSERT((h)->flags); \

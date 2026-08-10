@@ -193,7 +193,7 @@ static int update_remote_head(
 		"%s%s/%s",
 		GIT_REFS_REMOTES_DIR,
 		git_remote_name(remote),
-		GIT_HEAD_FILE)) < 0)
+		GIT_HEAD_REF)) < 0)
 		goto cleanup;
 
 	error = git_reference_symbolic_create(
@@ -226,7 +226,7 @@ static int update_head_to_remote(
 		return error;
 
 	/* We cloned an empty repository or one with an unborn HEAD */
-	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_FILE))
+	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_REF))
 		return update_head_to_default(repo);
 
 	/* We know we have HEAD, let's see where it points */
@@ -518,6 +518,12 @@ static int clone_local_into(
 		git_str_dispose(&src_path);
 		return error;
 	}
+
+	/* Propagate the source repository's object format to the target
+	 * so that it can read the copied object database. */
+	if ((error = git_repository__set_objectformat(
+			repo, git_repository_oid_type(src))) < 0)
+		goto cleanup;
 
 	if (git_repository__item_path(&src_odb, src, GIT_REPOSITORY_ITEM_OBJECTS) < 0 ||
 	    git_repository__item_path(&dst_odb, repo, GIT_REPOSITORY_ITEM_OBJECTS) < 0) {

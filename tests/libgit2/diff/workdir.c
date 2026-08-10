@@ -1291,8 +1291,7 @@ void test_diff_workdir__can_diff_empty_file(void)
 
 	cl_git_pass(git_fs_path_lstat("attr_index/README.txt", &st));
 
-	if (!cl_is_env_set("GITTEST_FLAKY_STAT"))
-		cl_assert_equal_sz(0, st.st_size);
+	cl_assert_equal_sz(0, st.st_size);
 
 	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, tree, &opts));
 	cl_assert_equal_i(3, (int)git_diff_num_deltas(diff));

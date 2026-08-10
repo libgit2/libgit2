@@ -555,10 +555,10 @@ static int update_reflog(
 	git_reference *stash;
 	int error;
 
-	if ((error = git_reference_ensure_log(repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reference_ensure_log(repo, GIT_STASH_REF)) < 0)
 		return error;
 
-	error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1, message);
+	error = git_reference_create(&stash, repo, GIT_STASH_REF, w_commit_oid, 1, message);
 
 	git_reference_free(stash);
 
@@ -779,10 +779,10 @@ static int retrieve_stash_commit(
 	size_t max;
 	const git_reflog_entry *entry;
 
-	if ((error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reference_lookup(&stash, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
-	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reflog_read(&reflog, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
 	max = git_reflog_entrycount(reflog);
@@ -1188,7 +1188,7 @@ int git_stash_foreach(
 	size_t i, max;
 	const git_reflog_entry *entry;
 
-	error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE);
+	error = git_reference_lookup(&stash, repo, GIT_STASH_REF);
 	if (error == GIT_ENOTFOUND) {
 		git_error_clear();
 		return 0;
@@ -1196,7 +1196,7 @@ int git_stash_foreach(
 	if (error < 0)
 		goto cleanup;
 
-	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reflog_read(&reflog, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
 	max = git_reflog_entrycount(reflog);
@@ -1233,13 +1233,13 @@ int git_stash_drop(
 	if ((error = git_transaction_new(&tx, repo)) < 0)
 		return error;
 
-	if ((error = git_transaction_lock_ref(tx, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_transaction_lock_ref(tx, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
-	if ((error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reference_lookup(&stash, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
-	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reflog_read(&reflog, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
 	max = git_reflog_entrycount(reflog);
@@ -1253,17 +1253,17 @@ int git_stash_drop(
 	if ((error = git_reflog_drop(reflog, index, true)) < 0)
 		goto cleanup;
 
-	if ((error = git_transaction_set_reflog(tx, GIT_REFS_STASH_FILE, reflog)) < 0)
+	if ((error = git_transaction_set_reflog(tx, GIT_STASH_REF, reflog)) < 0)
 		goto cleanup;
 
 	if (max == 1) {
-		if ((error = git_transaction_remove(tx, GIT_REFS_STASH_FILE)) < 0)
+		if ((error = git_transaction_remove(tx, GIT_STASH_REF)) < 0)
 			goto cleanup;
 	} else if (index == 0) {
 		const git_reflog_entry *entry;
 
 		entry = git_reflog_entry_byindex(reflog, 0);
-		if ((error = git_transaction_set_target(tx, GIT_REFS_STASH_FILE, &entry->oid_cur, NULL, NULL)) < 0)
+		if ((error = git_transaction_set_target(tx, GIT_STASH_REF, &entry->oid_cur, NULL, NULL)) < 0)
 			goto cleanup;
 	}
 

@@ -4,6 +4,7 @@
 #include "posix.h"
 #include "submodule_helpers.h"
 #include "git2/sys/repository.h"
+#include "submodule.h"
 
 /* rewrite gitmodules -> .gitmodules
  * rewrite the empty or relative urls inside each module

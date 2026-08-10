@@ -673,6 +673,8 @@ static int write_pack(git_packbuilder *pb,
 		pb->nr_remaining -= pb->nr_written;
 	} while (pb->nr_remaining && i < pb->nr_objects);
 
+	memset(&entry_oid, 0, sizeof(git_oid));
+
 	if ((error = git_hash_final(entry_oid.id, &pb->ctx)) < 0)
 		goto done;
 
@@ -1420,7 +1422,7 @@ int git_packbuilder_write(
 	git_str object_path = GIT_STR_INIT;
 	git_indexer_options opts = GIT_INDEXER_OPTIONS_INIT;
 	git_indexer *indexer = NULL;
-	git_indexer_progress stats;
+	git_indexer_progress stats = { 0 };
 	struct pack_write_context ctx;
 	int t;
 
@@ -1437,17 +1439,11 @@ int git_packbuilder_write(
 	opts.progress_cb = progress_cb;
 	opts.progress_cb_payload = progress_cb_payload;
 
-	/* TODO: SHA256 */
-
-#ifdef GIT_EXPERIMENTAL_SHA256
 	opts.mode = mode;
 	opts.odb = pb->odb;
-	opts.oid_type = GIT_OID_SHA1;
+	opts.oid_type = pb->oid_type;
 
 	error = git_indexer_new(&indexer, path, &opts);
-#else
-	error = git_indexer_new(&indexer, path, mode, pb->odb, &opts);
-#endif
 
 	if (error < 0)
 		goto cleanup;

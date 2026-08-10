@@ -1065,10 +1065,13 @@ int git_str_puts_escaped(
 	git_str *buf,
 	const char *string,
 	const char *esc_chars,
-	const char *esc_with)
+	const char *esc_prefix,
+	const char *esc_suffix)
 {
 	const char *scan;
-	size_t total = 0, esc_len = strlen(esc_with), count, alloclen;
+	size_t total = 0, count, alloclen;
+	size_t esc_prefix_len = esc_prefix ? strlen(esc_prefix) : 0;
+	size_t esc_suffix_len = esc_suffix ? strlen(esc_suffix) : 0;
 
 	if (!string)
 		return 0;
@@ -1080,7 +1083,7 @@ int git_str_puts_escaped(
 		scan += count;
 		/* count run of escaped characters */
 		count = strspn(scan, esc_chars);
-		total += count * (esc_len + 1);
+		total += count * (esc_prefix_len + esc_suffix_len + 1);
 		scan += count;
 	}
 
@@ -1096,13 +1099,22 @@ int git_str_puts_escaped(
 		buf->size += count;
 
 		for (count = strspn(scan, esc_chars); count > 0; --count) {
-			/* copy escape sequence */
-			memmove(buf->ptr + buf->size, esc_with, esc_len);
-			buf->size += esc_len;
+			/* copy escape prefix sequence */
+			if (esc_prefix) {
+				memmove(buf->ptr + buf->size, esc_prefix, esc_prefix_len);
+				buf->size += esc_prefix_len;
+			}
+
 			/* copy character to be escaped */
 			buf->ptr[buf->size] = *scan;
 			buf->size++;
 			scan++;
+
+			/* copy escape suffix sequence */
+			if (esc_suffix) {
+				memmove(buf->ptr + buf->size, esc_suffix, esc_suffix_len);
+				buf->size += esc_suffix_len;
+			}
 		}
 	}
 

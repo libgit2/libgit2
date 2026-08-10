@@ -66,7 +66,7 @@ void test_hashmap__inserted_strings_can_be_retrieved(void)
 void test_hashmap__deleted_entry_cannot_be_retrieved(void)
 {
 	const char *key;
-	char *str;
+	char *str = NULL;
 	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 	size_t idx = 0;
 
@@ -90,7 +90,7 @@ void test_hashmap__deleted_entry_cannot_be_retrieved(void)
 
 void test_hashmap__inserting_many_keys_succeeds(void)
 {
-	char *str;
+	char *str = NULL;
 	git_hashmap_iter_t iter = GIT_HASHMAP_ITER_INIT;
 	size_t idx = 0;
 
@@ -108,7 +108,7 @@ void test_hashmap__get_succeeds_with_existing_entries(void)
 {
 	const char *keys[] = { "foo", "bar", "gobble" };
 	char *values[] = { "oof", "rab", "elbbog" };
-	char *str;
+	char *str = NULL;
 	uint32_t i;
 
 	for (i = 0; i < ARRAY_SIZE(keys); i++)
@@ -128,7 +128,7 @@ void test_hashmap__get_returns_notfound_on_nonexisting_key(void)
 {
 	const char *keys[] = { "foo", "bar", "gobble" };
 	char *values[] = { "oof", "rab", "elbbog" };
-	char *str;
+	char *str = NULL;
 	uint32_t i;
 
 	for (i = 0; i < ARRAY_SIZE(keys); i++)
@@ -139,7 +139,7 @@ void test_hashmap__get_returns_notfound_on_nonexisting_key(void)
 
 void test_hashmap__put_persists_key(void)
 {
-	char *str;
+	char *str = NULL;
 
 	cl_git_pass(git_hashmap_test_put(&g_table, "foo", "oof"));
 
@@ -149,7 +149,7 @@ void test_hashmap__put_persists_key(void)
 
 void test_hashmap__put_persists_multpile_keys(void)
 {
-	char *str;
+	char *str = NULL;
 
 	cl_git_pass(git_hashmap_test_put(&g_table, "foo", "oof"));
 	cl_git_pass(git_hashmap_test_put(&g_table, "bar", "rab"));
@@ -163,7 +163,7 @@ void test_hashmap__put_persists_multpile_keys(void)
 
 void test_hashmap__put_updates_existing_key(void)
 {
-	char *str;
+	char *str = NULL;
 
 	cl_git_pass(git_hashmap_test_put(&g_table, "foo", "oof"));
 	cl_git_pass(git_hashmap_test_put(&g_table, "bar", "rab"));

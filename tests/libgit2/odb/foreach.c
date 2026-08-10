@@ -27,8 +27,8 @@ static int foreach_cb(const git_oid *oid, void *data)
 
 /*
  * $ git --git-dir tests/resources/testrepo.git count-objects --verbose
- * count: 60
- * size: 240
+ * count: 61
+ * size: 244
  * in-pack: 1640
  * packs: 3
  * size-pack: 425
@@ -43,7 +43,7 @@ void test_odb_foreach__foreach(void)
 	git_repository_odb(&_odb, _repo);
 
 	cl_git_pass(git_odb_foreach(_odb, foreach_cb, &nobj));
-	cl_assert_equal_i(60 + 1640, nobj); /* count + in-pack */
+	cl_assert_equal_i(61 + 1640, nobj); /* count + in-pack */
 }
 
 void test_odb_foreach__one_pack(void)
@@ -56,14 +56,9 @@ void test_odb_foreach__one_pack(void)
 
 	cl_git_pass(git_odb_new_ext(&_odb, &odb_opts));
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_git_pass(git_odb_backend_one_pack(&backend,
 		cl_fixture("testrepo.git/objects/pack/pack-a81e489679b7d3418f9ab594bda8ceb37dd4c695.idx"),
 		NULL));
-#else
-	cl_git_pass(git_odb_backend_one_pack(&backend,
-		cl_fixture("testrepo.git/objects/pack/pack-a81e489679b7d3418f9ab594bda8ceb37dd4c695.idx")));
-#endif
 
 	cl_git_pass(git_odb_add_backend(_odb, backend, 1));
 	_repo = NULL;
@@ -144,7 +139,7 @@ void test_odb_foreach__files_in_objects_dir(void)
 
 	cl_git_pass(git_repository_odb(&odb, repo));
 	cl_git_pass(git_odb_foreach(odb, foreach_cb, &nobj));
-	cl_assert_equal_i(60 + 1640, nobj); /* count + in-pack */
+	cl_assert_equal_i(61 + 1640, nobj); /* count + in-pack */
 
 	git_odb_free(odb);
 	git_repository_free(repo);

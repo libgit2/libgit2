@@ -26,6 +26,9 @@ void test_index_nsec__cleanup(void)
 
 static bool try_create_file_with_nsec_timestamp(const char *path)
 {
+#ifndef GIT_NSEC
+	GIT_UNUSED(path);
+#else
 	struct stat st;
 	int try;
 
@@ -38,6 +41,7 @@ static bool try_create_file_with_nsec_timestamp(const char *path)
 		if (st.st_ctime_nsec && st.st_mtime_nsec)
 			return true;
 	}
+#endif
 
 	return false;
 }

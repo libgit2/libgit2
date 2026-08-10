@@ -100,9 +100,9 @@ void test_stash_drop__dropping_an_entry_rewrites_reflog_history(void)
 
 	push_three_states();
 
-	cl_git_pass(git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE));
+	cl_git_pass(git_reference_lookup(&stash, repo, GIT_STASH_REF));
 
-	cl_git_pass(git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE));
+	cl_git_pass(git_reflog_read(&reflog, repo, GIT_STASH_REF));
 	entry = git_reflog_entry_byindex(reflog, 1);
 
 	git_oid_cpy(&oid, git_reflog_entry_id_old(entry));
@@ -112,7 +112,7 @@ void test_stash_drop__dropping_an_entry_rewrites_reflog_history(void)
 
 	cl_git_pass(git_stash_drop(repo, 1));
 
-	cl_git_pass(git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE));
+	cl_git_pass(git_reflog_read(&reflog, repo, GIT_STASH_REF));
 	entry = git_reflog_entry_byindex(reflog, 0);
 
 	cl_assert_equal_oid(&oid, git_reflog_entry_id_old(entry));
@@ -129,7 +129,7 @@ void test_stash_drop__dropping_the_last_entry_removes_the_stash(void)
 
 	push_three_states();
 
-	cl_git_pass(git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE));
+	cl_git_pass(git_reference_lookup(&stash, repo, GIT_STASH_REF));
 	git_reference_free(stash);
 
 	cl_git_pass(git_stash_drop(repo, 0));
@@ -137,7 +137,7 @@ void test_stash_drop__dropping_the_last_entry_removes_the_stash(void)
 	cl_git_pass(git_stash_drop(repo, 0));
 
 	cl_git_fail_with(
-		git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE), GIT_ENOTFOUND);
+		git_reference_lookup(&stash, repo, GIT_STASH_REF), GIT_ENOTFOUND);
 }
 
 static void retrieve_top_stash_id(git_oid *out)
@@ -145,7 +145,7 @@ static void retrieve_top_stash_id(git_oid *out)
 	git_object *top_stash;
 
 	cl_git_pass(git_revparse_single(&top_stash, repo, "stash@{0}"));
-	cl_git_pass(git_reference_name_to_id(out, repo, GIT_REFS_STASH_FILE));
+	cl_git_pass(git_reference_name_to_id(out, repo, GIT_STASH_REF));
 
 	cl_assert_equal_oid(out, git_object_id(top_stash));
 

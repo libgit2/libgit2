@@ -159,6 +159,7 @@ struct git_repository {
 	         is_bare:1,
 	         is_worktree:1;
 	git_oid_t oid_type;
+	git_refdb_t refdb_type;
 
 	unsigned int lru_counter;
 
@@ -178,7 +179,6 @@ GIT_INLINE(git_attr_cache *) git_repository_attr_cache(git_repository *repo)
 
 int git_repository_head_commit(git_commit **commit, git_repository *repo);
 int git_repository_head_tree(git_tree **tree, git_repository *repo);
-int git_repository_create_head(const char *git_dir, const char *ref_name);
 
 typedef int (*git_repository_foreach_worktree_cb)(git_repository *, void *);
 
@@ -281,15 +281,5 @@ void git_repository__free_extensions(void);
 int git_repository__set_objectformat(
 	git_repository *repo,
 	git_oid_t oid_type);
-
-/* SHA256 support */
-
-#ifndef GIT_EXPERIMENTAL_SHA256
-
-GIT_EXTERN(int) git_repository_new_ext(
-	git_repository **out,
-	git_repository_new_options *opts);
-
-#endif
 
 #endif

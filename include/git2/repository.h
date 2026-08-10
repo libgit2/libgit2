@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "odb.h"
+#include "refdb.h"
 #include "buffer.h"
 #include "commit.h"
 
@@ -47,11 +48,13 @@ GIT_EXTERN(int) git_repository_open(git_repository **out, const char *path);
  * Open the working directory of the working tree as a normal
  * repository that can then be worked on.
  *
- * @param out Output pointer containing opened repository
+ * @param[out] out Output pointer containing opened repository
  * @param wt Working tree to open
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_repository_open_from_worktree(git_repository **out, git_worktree *wt);
+GIT_EXTERN(int) git_repository_open_from_worktree(
+	git_repository **out,
+	git_worktree *wt);
 
 /**
  * Create a "fake" repository to wrap an object database
@@ -60,7 +63,7 @@ GIT_EXTERN(int) git_repository_open_from_worktree(git_repository **out, git_work
  * with the API when all you have is an object database. This doesn't
  * have any paths associated with it, so use with care.
  *
- * @param out pointer to the repo
+ * @param[out] out pointer to the repo
  * @param odb the object database to wrap
  * @return 0 or an error code
  */
@@ -317,6 +320,10 @@ typedef enum {
  *
  * This contains extra options for `git_repository_init_ext` that enable
  * additional initialization features.
+ *
+ * @options[version] GIT_REPOSITORY_INIT_OPTIONS_VERSION
+ * @options[init_macro] GIT_REPOSITORY_INIT_OPTIONS_INIT
+ * @options[init_function] git_repository_init_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -369,14 +376,18 @@ typedef struct {
 	 */
 	const char *origin_url;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	/**
 	 *
 	 * Type of object IDs to use for this repository, or 0 for
 	 * default (currently SHA1).
 	 */
 	git_oid_t oid_type;
-#endif
+
+	/**
+	 * Type of the reference database to use for this repository, or 0 for
+	 * default (currently "files").
+	 */
+	git_refdb_t refdb_type;
 } git_repository_init_options;
 
 /** Current version for the `git_repository_init_options` structure */
@@ -411,7 +422,7 @@ GIT_EXTERN(int) git_repository_init_options_init(
  * `git_libgit2_init` before any APIs can be called, including
  * this one.
  *
- * @param out Pointer to the repo which will be created or reinitialized.
+ * @param[out] out Pointer to the repo which will be created or reinitialized.
  * @param repo_path The path to the repository.
  * @param opts Pointer to git_repository_init_options struct.
  * @return 0 or an error code on failure.
@@ -439,12 +450,14 @@ GIT_EXTERN(int) git_repository_head(git_reference **out, git_repository *repo);
 /**
  * Retrieve the referenced HEAD for the worktree
  *
- * @param out pointer to the reference which will be retrieved
+ * @param[out] out pointer to the reference which will be retrieved
  * @param repo a repository object
  * @param name name of the worktree to retrieve HEAD for
  * @return 0 when successful, error-code otherwise
  */
-GIT_EXTERN(int) git_repository_head_for_worktree(git_reference **out, git_repository *repo,
+GIT_EXTERN(int) git_repository_head_for_worktree(
+	git_reference **out,
+	git_repository *repo,
 	const char *name);
 
 /**
@@ -617,11 +630,13 @@ GIT_EXTERN(int) git_repository_is_worktree(const git_repository *repo);
  * The configuration file must be freed once it's no longer
  * being used by the user.
  *
- * @param out Pointer to store the loaded configuration
+ * @param[out] out Pointer to store the loaded configuration
  * @param repo A repository object
  * @return 0, or an error code
  */
-GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
+GIT_EXTERN(int) git_repository_config(
+	git_config **out,
+	git_repository *repo);
 
 /**
  * Get a snapshot of the repository's configuration
@@ -633,11 +648,13 @@ GIT_EXTERN(int) git_repository_config(git_config **out, git_repository *repo);
  * The configuration file must be freed once it's no longer
  * being used by the user.
  *
- * @param out Pointer to store the loaded configuration
+ * @param[out] out Pointer to store the loaded configuration
  * @param repo the repository
  * @return 0, or an error code
  */
-GIT_EXTERN(int) git_repository_config_snapshot(git_config **out, git_repository *repo);
+GIT_EXTERN(int) git_repository_config_snapshot(
+	git_config **out,
+	git_repository *repo);
 
 /**
  * Get the Object Database for this repository.

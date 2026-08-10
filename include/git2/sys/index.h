@@ -101,12 +101,16 @@ GIT_EXTERN(size_t) git_index_reuc_entrycount(git_index *index);
  * Finds the resolve undo entry that points to the given path in the Git
  * index.
  *
- * @param at_pos the address to which the position of the reuc entry is written (optional)
+ * @param[out] at_pos the address to which the position of the
+ *             reuc entry is written (optional)
  * @param index an existing index object
  * @param path path to search
  * @return 0 if found, < 0 otherwise (GIT_ENOTFOUND)
  */
-GIT_EXTERN(int) git_index_reuc_find(size_t *at_pos, git_index *index, const char *path);
+GIT_EXTERN(int) git_index_reuc_find(
+	size_t *at_pos,
+	git_index *index,
+	const char *path);
 
 /**
  * Get a resolve undo entry from the index.

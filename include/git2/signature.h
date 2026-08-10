@@ -31,26 +31,34 @@ GIT_BEGIN_DECL
  * Note: angle brackets ('<' and '>') characters are not allowed
  * to be used in either the `name` or the `email` parameter.
  *
- * @param out new signature, in case of error NULL
+ * @param[out] out new signature, in case of error NULL
  * @param name name of the person
  * @param email email of the person
  * @param time time (in seconds from epoch) when the action happened
  * @param offset timezone offset (in minutes) for the time
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_signature_new(git_signature **out, const char *name, const char *email, git_time_t time, int offset);
+GIT_EXTERN(int) git_signature_new(
+	git_signature **out,
+	const char *name,
+	const char *email,
+	git_time_t time,
+	int offset);
 
 /**
  * Create a new action signature with a timestamp of 'now'.
  *
  * Call `git_signature_free()` to free the data.
  *
- * @param out new signature, in case of error NULL
+ * @param[out] out new signature, in case of error NULL
  * @param name name of the person
  * @param email email of the person
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const char *email);
+GIT_EXTERN(int) git_signature_now(
+	git_signature **out,
+	const char *name,
+	const char *email);
 
 /**
  * Create a new author and/or committer signatures with default
@@ -78,8 +86,8 @@ GIT_EXTERN(int) git_signature_now(git_signature **out, const char *name, const c
  * `user.email` are not set and there is no fallback from an environment
  * variable. One of `author_out` or `committer_out` must be set.
  *
- * @param author_out pointer to set the author signature, or NULL
- * @param committer_out pointer to set the committer signature, or NULL
+ * @param[out] author_out pointer to set the author signature, or NULL
+ * @param[out] committer_out pointer to set the committer signature, or NULL
  * @param repo repository pointer
  * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
  */
@@ -100,11 +108,13 @@ GIT_EXTERN(int) git_signature_default_from_env(
  * configuration files. Use `git_signature_default_from_env` to
  * consider the environment variables.
  *
- * @param out new signature
+ * @param[out] out new signature
  * @param repo repository pointer
  * @return 0 on success, GIT_ENOTFOUND if config is missing, or error code
  */
-GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo);
+GIT_EXTERN(int) git_signature_default(
+	git_signature **out,
+	git_repository *repo);
 
 /**
  * Create a new signature by parsing the given buffer, which is
@@ -113,11 +123,13 @@ GIT_EXTERN(int) git_signature_default(git_signature **out, git_repository *repo)
  * `tzoffset` is the timezone offset in `hhmm` format (note the lack
  * of a colon separator).
  *
- * @param out new signature
+ * @param[out] out new signature
  * @param buf signature string
  * @return 0 on success, GIT_EINVALID if the signature is not parseable, or an error code
  */
-GIT_EXTERN(int) git_signature_from_buffer(git_signature **out, const char *buf);
+GIT_EXTERN(int) git_signature_from_buffer(
+	git_signature **out,
+	const char *buf);
 
 /**
  * Create a copy of an existing signature.  All internal strings are also

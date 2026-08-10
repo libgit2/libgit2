@@ -39,7 +39,7 @@ GIT_BEGIN_DECL
  * Subsequent reads will also be served from the in-memory store
  * to ensure consistency, until the memory store is dumped.
  *
- * @param out Pointer where to store the ODB backend
+ * @param[out] out Pointer where to store the ODB backend
  * @return 0 on success; error code otherwise
  */
 GIT_EXTERN(int) git_mempack_new(git_odb_backend **out);
@@ -105,11 +105,13 @@ GIT_EXTERN(int) git_mempack_reset(git_odb_backend *backend);
 /**
  * Get the total number of objects in mempack
  *
- * @param count The count of objects in the mempack
+ * @param[out] count The count of objects in the mempack
  * @param backend The mempack backend
  * @return 0 on success, or -1 on error
  */
-GIT_EXTERN(int) git_mempack_object_count(size_t *count, git_odb_backend *backend);
+GIT_EXTERN(int) git_mempack_object_count(
+	size_t *count,
+	git_odb_backend *backend);
 
 /** @} */
 GIT_END_DECL

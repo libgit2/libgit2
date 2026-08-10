@@ -6,7 +6,7 @@ add_library(xdiff OBJECT ${SRC_XDIFF})
 target_include_directories(xdiff SYSTEM PRIVATE
 	"${PROJECT_SOURCE_DIR}/include"
 	"${PROJECT_SOURCE_DIR}/src/util"
-	"${PROJECT_BINARY_DIR}/src/util"
+	"${PROJECT_BINARY_DIR}/gen_headers"
 	${LIBGIT2_SYSTEM_INCLUDES}
 	${LIBGIT2_DEPENDENCY_INCLUDES})
 

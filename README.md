@@ -7,7 +7,7 @@ libgit2 - the Git linkable library
 | **main** branch builds | [![CI Build](https://github.com/libgit2/libgit2/actions/workflows/main.yml/badge.svg?branch=main&event=push)](https://github.com/libgit2/libgit2/actions/workflows/main.yml?query=event%3Apush+branch%3Amain) [![Experimental Features](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml/badge.svg?branch=main)](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml?query=event%3Apush+branch%3Amain) |
 | **v1.9 branch** builds | [![CI Build](https://github.com/libgit2/libgit2/actions/workflows/main.yml/badge.svg?branch=maint%2Fv1.9&event=push)](https://github.com/libgit2/libgit2/actions/workflows/main.yml?query=event%3Apush+branch%3Amaint%2Fv1.9) [![Experimental Features](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml/badge.svg?branch=maint%2Fv1.9)](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml?query=event%3Apush+branch%3Amaint%2Fv1.9) |
 | **v1.8 branch** builds | [![CI Build](https://github.com/libgit2/libgit2/actions/workflows/main.yml/badge.svg?branch=maint%2Fv1.8&event=push)](https://github.com/libgit2/libgit2/actions/workflows/main.yml?query=event%3Apush+branch%3Amaint%2Fv1.8) [![Experimental Features](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml/badge.svg?branch=maint%2Fv1.8)](https://github.com/libgit2/libgit2/actions/workflows/experimental.yml?query=event%3Apush+branch%3Amaint%2Fv1.8) |
-| **Nightly** builds | [![Nightly Build](https://github.com/libgit2/libgit2/actions/workflows/nightly.yml/badge.svg?branch=main&event=schedule)](https://github.com/libgit2/libgit2/actions/workflows/nightly.yml) [![Coverity Scan Status](https://scan.coverity.com/projects/639/badge.svg)](https://scan.coverity.com/projects/639) |
+| **Nightly** builds | [![Nightly Build](https://github.com/libgit2/libgit2/actions/workflows/nightly.yml/badge.svg?branch=main&event=schedule)](https://github.com/libgit2/libgit2/actions/workflows/nightly.yml) |
 
 `libgit2` is a portable, pure C implementation of the Git core methods
 provided as a linkable library with a solid API, allowing to build Git
@@ -243,18 +243,12 @@ Advanced Options
 
 You can specify a number of options to `cmake` that will change the
 way `libgit2` is built. To use this, specify `-Doption=value` during
-the initial `cmake` configuration. For example, to enable SHA256
-compatibility:
+the initial `cmake` configuration. For example, to build the fuzzer
+suite:
 
 	$ mkdir build && cd build
-	$ cmake -DEXPERIMENTAL_SHA256=ON ..
+	$ cmake -DBUILD_FUZZERS=ON ..
 	$ cmake --build .
-
-libgit2 options:
-
-* `EXPERIMENTAL_SHA256=ON`: turns on SHA256 compatibility; note that
-  this is an API-incompatible change, hence why it is labeled
-  "experimental"
 
 Build options:
 
@@ -491,6 +485,8 @@ Here are the bindings to libgit2 that are currently available:
     * chicken-git <https://wiki.call-cc.org/egg/git>
 * D
     * dlibgit <https://github.com/s-ludwig/dlibgit>
+* Dart
+    * git2dart <https://github.com/DartGit-dev/git2dart>
 * Delphi
     * GitForDelphi <https://github.com/libgit2/GitForDelphi>
     * libgit2-delphi <https://github.com/todaysoftware/libgit2-delphi>
@@ -540,6 +536,8 @@ Here are the bindings to libgit2 that are currently available:
     * git2-rs <https://github.com/rust-lang/git2-rs>
 * Swift
     * SwiftGit2 <https://github.com/SwiftGit2/SwiftGit2>
+    * SwiftGitX <https://github.com/ibrahimcetin/SwiftGitX>
+    * swift-libgit2 <https://github.com/swift-developer-tools/swift-libgit2>
 * Tcl
     * lg2 <https://github.com/apnadkarni/tcl-libgit2>
 * Vala

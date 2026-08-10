@@ -39,7 +39,7 @@ typedef struct {
  *
  * This is a public structure that represents a file entry in the index.
  * The meaning of the fields corresponds to core Git's documentation (in
- * "Documentation/technical/index-format.txt").
+ * "Documentation/gitformat-index.adoc").
  *
  * The `flags` field consists of a number of bit fields which can be
  * accessed via the first set of `GIT_INDEX_ENTRY_...` bitmasks below.
@@ -247,15 +247,13 @@ GIT_EXTERN(int) git_index_options_init(
  * @note This API only supports SHA1 indexes
  * @see git_index_open_ext
  *
- * @param index_out the pointer for the new index
+ * @param[out] index_out the pointer for the new index
  * @param index_path the path to the index file in disk
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_open(
 	git_index **index_out,
 	const char *index_path);
-
-#ifdef GIT_EXPERIMENTAL_SHA256
 
 /**
  * Creates a new bare Git index object, without a repository to back
@@ -271,8 +269,6 @@ GIT_EXTERN(int) git_index_open_ext(
 	const char *index_path,
 	const git_index_options *opts);
 
-#endif
-
 /**
  * Create an in-memory index object.
  *
@@ -284,12 +280,10 @@ GIT_EXTERN(int) git_index_open_ext(
  * @note This API only supports SHA1 indexes
  * @see git_index_new_ext
  *
- * @param index_out the pointer for the new index
+ * @param[out] index_out the pointer for the new index
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_index_new(git_index **index_out);
-
-#ifdef GIT_EXPERIMENTAL_SHA256
 
 /**
  * Create an in-memory index object.
@@ -301,8 +295,6 @@ GIT_EXTERN(int) git_index_new(git_index **index_out);
 GIT_EXTERN(int) git_index_new_ext(
 	git_index **index_out,
 	const git_index_options *opts);
-
-#endif
 
 /**
  * Free an existing index object.
@@ -597,7 +589,7 @@ GIT_EXTERN(int) git_index_entry_is_conflict(const git_index_entry *entry);
  * callers to modify the index while iterating without affecting the
  * iterator.
  *
- * @param iterator_out The newly created iterator
+ * @param[out] iterator_out The newly created iterator
  * @param index The index to iterate
  * @return 0 or an error code.
  */
@@ -608,7 +600,7 @@ GIT_EXTERN(int) git_index_iterator_new(
 /**
  * Return the next index entry in-order from the iterator.
  *
- * @param out Pointer to store the index entry in
+ * @param[out] out Pointer to store the index entry in
  * @param iterator The iterator
  * @return 0, GIT_ITEROVER on iteration completion or an error code
  */
@@ -808,23 +800,31 @@ GIT_EXTERN(int) git_index_update_all(
  * Find the first position of any entries which point to given
  * path in the Git index.
  *
- * @param at_pos the address to which the position of the index entry is written (optional)
+ * @param[out] at_pos the address to which the position of the
+ *             index entry is written (optional)
  * @param index an existing index object
  * @param path path to search
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_find(size_t *at_pos, git_index *index, const char *path);
+GIT_EXTERN(int) git_index_find(
+	size_t *at_pos,
+	git_index *index,
+	const char *path);
 
 /**
  * Find the first position of any entries matching a prefix. To find the first position
  * of a path inside a given folder, suffix the prefix with a '/'.
  *
- * @param at_pos the address to which the position of the index entry is written (optional)
+ * @param[out] at_pos the address to which the position of the
+ *             index entry is written (optional)
  * @param index an existing index object
  * @param prefix the prefix to search for
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_index_find_prefix(size_t *at_pos, git_index *index, const char *prefix);
+GIT_EXTERN(int) git_index_find_prefix(
+	size_t *at_pos,
+	git_index *index,
+	const char *prefix);
 
 /**@}*/
 
@@ -862,9 +862,9 @@ GIT_EXTERN(int) git_index_conflict_add(
  * `git_index_entry` struct is a publicly defined struct, you should
  * be able to make your own permanent copy of the data if necessary.
  *
- * @param ancestor_out Pointer to store the ancestor entry
- * @param our_out Pointer to store the our entry
- * @param their_out Pointer to store the their entry
+ * @param[out] ancestor_out Pointer to store the ancestor entry
+ * @param[out] our_out Pointer to store the our entry
+ * @param[out] their_out Pointer to store the their entry
  * @param index an existing index object
  * @param path path to search
  * @return 0 or an error code
@@ -906,7 +906,7 @@ GIT_EXTERN(int) git_index_has_conflicts(const git_index *index);
  *
  * The index must not be modified while iterating; the results are undefined.
  *
- * @param iterator_out The newly created conflict iterator
+ * @param[out] iterator_out The newly created conflict iterator
  * @param index The index to scan
  * @return 0 or an error code
  */
@@ -918,9 +918,9 @@ GIT_EXTERN(int) git_index_conflict_iterator_new(
  * Returns the current conflict (ancestor, ours and theirs entry) and
  * advance the iterator internally to the next value.
  *
- * @param ancestor_out Pointer to store the ancestor side of the conflict
- * @param our_out Pointer to store our side of the conflict
- * @param their_out Pointer to store their side of the conflict
+ * @param[out] ancestor_out Pointer to store the ancestor side of the conflict
+ * @param[out] our_out Pointer to store our side of the conflict
+ * @param[out] their_out Pointer to store their side of the conflict
  * @param iterator The conflict iterator.
  * @return 0 (no error), GIT_ITEROVER (iteration is done) or an error code
  *         (negative value)
@@ -938,6 +938,48 @@ GIT_EXTERN(int) git_index_conflict_next(
  */
 GIT_EXTERN(void) git_index_conflict_iterator_free(
 	git_index_conflict_iterator *iterator);
+
+/**
+ * Look up an index extension by its signature
+ *
+ * @param out the extension's data (not including the header)
+ * @param index an existing index object
+ * @param signature the 4 character signature of the desired extension
+ * @return 0 (no error), GIT_ENOTFOUND (extension not present),
+ *         or an error code
+ */
+GIT_EXTERN(int) git_index_extension_lookup(
+	git_buf *out,
+	git_index *index,
+	const char *signature);
+
+/**
+ * Add an extension to the index
+ *
+ * @param index an existing index object
+ * @param signature the 4 character signature of the desired extension
+ * @param data the contents of the extension (not including the header)
+ * @param data_len the length of the data
+ * @return 0 (no error), GIT_EEXISTS (extension already present),
+ *         or an error code
+ */
+GIT_EXTERN(int) git_index_extension_add(
+	git_index *index,
+	const char *signature,
+	const char *data,
+	size_t data_len);
+
+/**
+ * Remove an index extension by its signature
+ *
+ * @param index an existing index object
+ * @param signature the 4 character signature of the desired extension
+ * @return 0 (no error), GIT_ENOTFOUND (extension not present),
+ *         or an error code
+ */
+GIT_EXTERN(int) git_index_extension_remove(
+	git_index *index,
+	const char *signature);
 
 /** @} */
 GIT_END_DECL

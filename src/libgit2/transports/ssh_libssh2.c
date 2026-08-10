@@ -366,7 +366,7 @@ static int _git_ssh_authenticate_session(
 		default:
 			rc = LIBSSH2_ERROR_AUTHENTICATION_FAILED;
 		}
-	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	} while (LIBSSH2_ERROR_EAGAIN == rc);
 
 	if (rc == LIBSSH2_ERROR_PASSWORD_EXPIRED ||
 		rc == LIBSSH2_ERROR_AUTHENTICATION_FAILED ||
@@ -439,15 +439,21 @@ static int load_known_hosts(LIBSSH2_KNOWNHOSTS **hosts, LIBSSH2_SESSION *session
 
 	GIT_ASSERT_ARG(hosts);
 
-	if ((error = git_sysdir_expand_homedir_file(&sshdir, SSH_DIR)) < 0 ||
-	    (error = git_str_joinpath(&path, git_str_cstr(&sshdir), KNOWN_HOSTS_FILE)) < 0)
-		goto out;
-
 	if ((known_hosts = libssh2_knownhost_init(session)) == NULL) {
 		ssh_error(session, "error initializing known hosts");
 		error = -1;
 		goto out;
 	}
+
+	if ((error = git_sysdir_expand_homedir_file(&sshdir, SSH_DIR)) < 0) {
+		if (error == GIT_ENOTFOUND)
+			error = 0;
+
+		goto out;
+	}
+
+	if ((error = git_str_joinpath(&path, git_str_cstr(&sshdir), KNOWN_HOSTS_FILE)) < 0)
+		goto out;
 
 	/*
 	 * Try to read the file and consider not finding it as not trusting the
@@ -556,7 +562,7 @@ static int _git_ssh_session_create(
 	if (git_str_len(&prefs) > 0) {
 		do {
 			rc = libssh2_session_method_pref(s, LIBSSH2_METHOD_HOSTKEY, git_str_cstr(&prefs));
-		} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+		} while (LIBSSH2_ERROR_EAGAIN == rc);
 		if (rc != LIBSSH2_ERROR_NONE) {
 			ssh_error(s, "failed to set hostkey preference");
 			goto on_error;
@@ -566,7 +572,7 @@ static int _git_ssh_session_create(
 
 	do {
 		rc = libssh2_session_handshake(s, socket->s);
-	} while (LIBSSH2_ERROR_EAGAIN == rc || LIBSSH2_ERROR_TIMEOUT == rc);
+	} while (LIBSSH2_ERROR_EAGAIN == rc);
 
 	if (rc != LIBSSH2_ERROR_NONE) {
 		ssh_error(s, "failed to start SSH session");

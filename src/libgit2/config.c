@@ -1235,40 +1235,13 @@ int git_config__find_system(git_str *path)
 	return git_sysdir_find_system_file(path, GIT_CONFIG_FILENAME_SYSTEM);
 }
 
+#ifndef GIT_DEPRECATE_HARD
 int git_config_find_programdata(git_buf *path)
 {
-	git_str str = GIT_STR_INIT;
-	int error;
-
-	if ((error = git_buf_tostr(&str, path)) == 0 &&
-	    (error = git_config__find_programdata(&str)) == 0)
-		error = git_buf_fromstr(path, &str);
-
-	git_str_dispose(&str);
-	return error;
+	GIT_UNUSED(path);
+	return GIT_ENOTFOUND;
 }
-
-int git_config__find_programdata(git_str *path)
-{
-	git_fs_path_owner_t owner_level =
-		GIT_FS_PATH_OWNER_CURRENT_USER |
-		GIT_FS_PATH_OWNER_ADMINISTRATOR;
-	bool is_safe;
-	int error;
-
-	if ((error = git_sysdir_find_programdata_file(path, GIT_CONFIG_FILENAME_PROGRAMDATA)) < 0)
-		return error;
-
-	if (git_fs_path_owner_is(&is_safe, path->ptr, owner_level) < 0)
-		return -1;
-
-	if (!is_safe) {
-		git_error_set(GIT_ERROR_CONFIG, "programdata path has invalid ownership");
-		return -1;
-	}
-
-	return 0;
-}
+#endif
 
 int git_config__global_location(git_str *buf)
 {
@@ -1317,10 +1290,6 @@ int git_config_open_default(git_config **out)
 	if (!error && !git_config__find_system(&buf))
 		error = git_config_add_file_ondisk(config, buf.ptr,
 			GIT_CONFIG_LEVEL_SYSTEM, NULL, 0);
-
-	if (!error && !git_config__find_programdata(&buf))
-		error = git_config_add_file_ondisk(config, buf.ptr,
-			GIT_CONFIG_LEVEL_PROGRAMDATA, NULL, 0);
 
 	git_str_dispose(&buf);
 
@@ -1447,7 +1416,7 @@ int git_config_parse_bool(int *out, const char *value)
 		return 0;
 	}
 
-	git_error_set(GIT_ERROR_CONFIG, "failed to parse '%s' as a boolean value", value);
+	git_error_set(GIT_ERROR_CONFIG, "failed to parse '%s' as a boolean", value ? value : "(null)");
 	return -1;
 }
 

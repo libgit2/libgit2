@@ -16,6 +16,17 @@ static git_strarray push_array = {
 	1,
 };
 
+static int push_transfer_progress_cb(unsigned int current, unsigned int total, size_t bytes, void* payload)
+{
+	GIT_UNUSED(current);
+	GIT_UNUSED(total);
+	GIT_UNUSED(payload);
+
+	cl_assert(bytes == 0);
+
+	return 0;
+}
+
 void test_network_remote_local__initialize(void)
 {
 	cl_git_pass(git_repository_init(&repo, "remotelocal/", 0));
@@ -201,6 +212,7 @@ void test_network_remote_local__push_to_bare_remote(void)
 
 	/* Should be able to push to a bare remote */
 	git_remote *localremote;
+	git_push_options opts = GIT_PUSH_OPTIONS_INIT;
 
 	/* Get some commits */
 	connect_to_local_repository(cl_fixture("testrepo.git"));
@@ -218,7 +230,8 @@ void test_network_remote_local__push_to_bare_remote(void)
 	cl_git_pass(git_remote_connect(localremote, GIT_DIRECTION_PUSH, NULL, NULL, NULL));
 
 	/* Try to push */
-	cl_git_pass(git_remote_upload(localremote, &push_array, NULL));
+	opts.callbacks.push_transfer_progress = push_transfer_progress_cb;
+	cl_git_pass(git_remote_upload(localremote, &push_array, &opts));
 
 	/* Clean up */
 	git_remote_free(localremote);
@@ -465,6 +478,22 @@ void test_network_remote_local__push_delete(void)
 	git_repository_free(dst_repo);
 	cl_fixture_cleanup("target.git");
 	cl_git_sandbox_cleanup();
+}
+
+void test_network_remote_local__sha256_oid_type(void)
+{
+	git_oid_t oid_type;
+
+	connect_to_local_repository(cl_fixture("testrepo_256.git"));
+
+	cl_git_pass(git_remote_oid_type(&oid_type, remote));
+	cl_assert_equal_i(GIT_OID_SHA256, oid_type);
+
+	git_remote_disconnect(remote);
+
+	/* oid_type remains available after disconnect */
+	cl_git_pass(git_remote_oid_type(&oid_type, remote));
+	cl_assert_equal_i(GIT_OID_SHA256, oid_type);
 }
 
 void test_network_remote_local__anonymous_remote_inmemory_repo(void)

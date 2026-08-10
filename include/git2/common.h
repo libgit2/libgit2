@@ -36,15 +36,22 @@
 typedef size_t size_t;
 #endif
 
+/** External API / visibility controls */
+#ifndef GIT_EXTERN_DECL
+# if defined(_WIN32) && !defined(GIT_STATIC)
+#  define GIT_EXTERN_DECL __declspec(dllimport)
+# elif __GNUC__ >= 4 && !defined(GIT_STATIC)
+#  define GIT_EXTERN_DECL extern __attribute__((visibility("default")))
+# else
+#  define GIT_EXTERN_DECL extern
+# endif
+#endif
+
 /** Declare a public function exported for application use. */
-#if __GNUC__ >= 4
-# define GIT_EXTERN(type) extern \
-			 __attribute__((visibility("default"))) \
-			 type
-#elif defined(_MSC_VER)
-# define GIT_EXTERN(type) __declspec(dllexport) type __cdecl
+#if defined(_MSC_VER)
+# define GIT_EXTERN(type) GIT_EXTERN_DECL type __cdecl
 #else
-# define GIT_EXTERN(type) extern type
+# define GIT_EXTERN(type) GIT_EXTERN_DECL type
 #endif
 
 /** Declare a callback function for application use. */
@@ -173,13 +180,16 @@ typedef enum {
 	GIT_FEATURE_SHA1           = (1 << 10),
 
 	/** SHA256 object support */
-	GIT_FEATURE_SHA256         = (1 << 11)
+	GIT_FEATURE_SHA256         = (1 << 11),
+
+	/** HTTP remotes */
+	GIT_FEATURE_HTTP           = (1 << 12)
 } git_feature_t;
 
 /**
  * Query compile time options for libgit2.
  *
- * @return A combination of GIT_FEATURE_* values.
+ * @return @type[flags] git_feature_t A combination of GIT_FEATURE_* values.
  */
 GIT_EXTERN(int) git_libgit2_features(void);
 
@@ -257,7 +267,9 @@ typedef enum {
 	GIT_OPT_GET_SERVER_TIMEOUT,
 	GIT_OPT_SET_USER_AGENT_PRODUCT,
 	GIT_OPT_GET_USER_AGENT_PRODUCT,
-	GIT_OPT_ADD_SSL_X509_CERT
+	GIT_OPT_ADD_SSL_X509_CERT,
+	GIT_OPT_GET_PACK_MAX_OBJECT_SIZE,
+	GIT_OPT_SET_PACK_MAX_OBJECT_SIZE
 } git_libgit2_opt_t;
 
 /**
@@ -296,7 +308,7 @@ typedef enum {
  *
  *		> Get the search path for a given level of config data.  "level" must
  *		> be one of `GIT_CONFIG_LEVEL_SYSTEM`, `GIT_CONFIG_LEVEL_GLOBAL`,
- *		> `GIT_CONFIG_LEVEL_XDG`, or `GIT_CONFIG_LEVEL_PROGRAMDATA`.
+ *		> `GIT_CONFIG_LEVEL_XDG`.
  *		> The search path is written to the `out` buffer.
  *
  *	* opts(GIT_OPT_SET_SEARCH_PATH, int level, const char *path)
@@ -310,8 +322,7 @@ typedef enum {
  *		>   of the path (if you want to prepend or append, for instance).
  *		>
  *		> - `level` must be `GIT_CONFIG_LEVEL_SYSTEM`,
- *		>   `GIT_CONFIG_LEVEL_GLOBAL`, `GIT_CONFIG_LEVEL_XDG`, or
- *		>   `GIT_CONFIG_LEVEL_PROGRAMDATA`.
+ *		>   `GIT_CONFIG_LEVEL_GLOBAL`, `GIT_CONFIG_LEVEL_XDG`.
  *
  *	* opts(GIT_OPT_SET_CACHE_OBJECT_LIMIT, git_object_t type, size_t size)
  *
@@ -562,6 +573,16 @@ typedef enum {
  *   opts(GIT_OPT_SET_SERVER_TIMEOUT, int timeout)
  *      > Sets the timeout (in milliseconds) for reading from and writing
  *      > to a remote server. Set to 0 to use the system default.
+ *
+ *   opts(GIT_OPT_GET_PACK_MAX_OBJECT_SIZE, size_t *out)
+ *      > Gets the maximum size of a declared packfile object. This can
+ *      > be used to limit maximum memory usage when fetching from a
+ *      > remote.
+ *
+ *   opts(GIT_OPT_SET_PACK_MAX_OBJECT_SIZE, size_t object_size)
+ *      > Set the maximum size of an object that libgit2 will allow in
+ *      > a pack file when downloading a pack file from a remote.
+ *      > The default is 2 GiB.
  *
  * @param option Option key
  * @return 0 on success, <0 on failure

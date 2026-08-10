@@ -160,7 +160,7 @@ static int branch_is_checked_out(git_repository *worktree, void *payload)
 	if (git_repository_is_bare(worktree))
 		return 0;
 
-	if ((error = git_reference_lookup(&head, worktree, GIT_HEAD_FILE)) < 0) {
+	if ((error = git_reference_lookup(&head, worktree, GIT_HEAD_REF)) < 0) {
 		if (error == GIT_ENOTFOUND)
 			error = 0;
 		goto out;

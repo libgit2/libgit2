@@ -8,11 +8,19 @@
 
 static void hash_object_pass(git_oid *oid, git_rawobj *obj)
 {
-	cl_git_pass(git_odb__hash(oid, obj->data, obj->len, obj->type, GIT_OID_SHA1));
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
+
+	id_opts.object_type = obj->type;
+
+	cl_git_pass(git_object_id_from_buffer(oid, obj->data, obj->len, &id_opts));
 }
 static void hash_object_fail(git_oid *oid, git_rawobj *obj)
 {
-	cl_git_fail(git_odb__hash(oid, obj->data, obj->len, obj->type, GIT_OID_SHA1));
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
+
+	id_opts.object_type = obj->type;
+
+	cl_git_fail(git_object_id_from_buffer(oid, obj->data, obj->len, &id_opts));
 }
 
 static char *hello_id = "22596363b3de40b06f981fb85d82312e8c0ed511";
@@ -85,9 +93,6 @@ void test_object_raw_hash__hash_junk_data(void)
 
 	/* invalid types: */
 	junk_obj.data = some_data;
-	hash_object_fail(&id, &junk_obj);
-
-	junk_obj.type = 0; /* unused */
 	hash_object_fail(&id, &junk_obj);
 
 	junk_obj.type = 5; /* unused */

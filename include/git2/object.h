@@ -11,6 +11,7 @@
 #include "types.h"
 #include "oid.h"
 #include "buffer.h"
+#include "filter.h"
 
 /**
  * @file git2/object.h
@@ -36,7 +37,7 @@ GIT_BEGIN_DECL
  * The special value 'GIT_OBJECT_ANY' may be passed to let
  * the method guess the object's type.
  *
- * @param object pointer to the looked-up object
+ * @param[out] object pointer to the looked-up object
  * @param repo the repository to look up the object
  * @param id the unique identifier for the object
  * @param type the type of the object
@@ -68,7 +69,7 @@ GIT_EXTERN(int) git_object_lookup(
  * The special value `GIT_OBJECT_ANY` may be passed to let
  * the method guess the object's type.
  *
- * @param object_out pointer where to store the looked-up object
+ * @param[out] object_out pointer where to store the looked-up object
  * @param repo the repository to look up the object
  * @param id a short identifier for the object
  * @param len the length of the short identifier
@@ -86,8 +87,8 @@ GIT_EXTERN(int) git_object_lookup_prefix(
 /**
  * Lookup an object that represents a tree entry.
  *
- * @param out buffer that receives a pointer to the object (which must be freed
- *            by the caller)
+ * @param[out] out buffer that receives a pointer to the object
+ *             (which must be freed by the caller)
  * @param treeish root object that can be peeled to a tree
  * @param path relative path from the root object to the desired object
  * @param type type of object desired
@@ -219,13 +220,101 @@ GIT_EXTERN(int) git_object_peel(
  * Create an in-memory copy of a Git object. The copy must be
  * explicitly free'd or it will leak.
  *
- * @param dest Pointer to store the copy of the object
+ * @param[out] dest Pointer to store the copy of the object
  * @param source Original object to copy
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_object_dup(git_object **dest, git_object *source);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
+/**
+ * Options for calculating object IDs from raw content.
+ *
+ * Initialize with `GIT_OBJECT_ID_OPTIONS_INIT`. Alternatively, you can
+ * use `git_object_id_options_init`.
+ *
+ * @options[version] GIT_OBJECT_ID_OPTIONS_VERSION
+ * @options[init_macro] GIT_OBJECT_ID_OPTIONS_INIT
+ * @options[init_function] git_object_id_options_init
+ */
+typedef struct {
+	unsigned int version; /**< version for the struct */
+
+	/**
+	 * Object type of the raw content; if not specified, this
+	 * defaults to `GIT_OBJECT_BLOB`.
+	 */
+	git_object_t object_type;
+
+	/**
+	 * Object ID type to generate; if not specified, this defaults
+	 * to `GIT_OID_DEFAULT`.
+	 */
+	git_oid_t oid_type;
+
+	/**
+	 * Filters to mutate the raw data with; these are ignored
+	 * unless the given raw object data is a blob.
+	 */
+	git_filter_list *filters;
+} git_object_id_options;
+
+/** Current version for the `git_object_id_options` structure */
+#define GIT_OBJECT_ID_OPTIONS_VERSION 1
+
+/** Static constructor for `object_id_options` */
+#define GIT_OBJECT_ID_OPTIONS_INIT {GIT_OBJECT_ID_OPTIONS_VERSION}
+
+/**
+ * Initialize `git_object_id_options` structure with default values.
+ * Equivalent to creating an instance with `GIT_WORKTREE_ADD_OPTIONS_INIT`.
+ *
+ * @param opts The `git_object_id_options` struct to initialize.
+ * @param version The struct version; pass `GIT_OBJECT_ID_OPTIONS_INIT`.
+ * @return 0 on success; -1 on failure.
+ */
+GIT_EXTERN(int) git_object_id_options_init(git_object_id_options *opts,
+	unsigned int version);
+
+/**
+ * Given the raw content of an object, determine the object ID.
+ * This prepends the object header to the given data, and hashes
+ * the results with the hash corresponding to the given oid_type.
+ *
+ * @param[out] oid_out the resulting object id
+ * @param buf the raw object content
+ * @param len the length of the given buffer
+ * @param opts the options for id calculation
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_object_id_from_buffer(
+	git_oid *oid_out,
+	const void *buf,
+	size_t len,
+	const git_object_id_options *opts);
+
+/**
+ * Given an on-disk file that contains the raw content of an object,
+ * determine the object ID. This prepends the object header to the given
+ * data, and hashes the results with the hash corresponding to the given
+ * oid_type.
+ *
+ * Note that this does not look at attributes or do any on-disk filtering
+ * (like line ending translation), so when used with blobs, it may not
+ * match the results for adding to the repository. To compute the object
+ * ID for a blob with filters, use `git_repository_hashfile`.
+ *
+ * @see git_repository_hashfile
+ *
+ * @param[out] oid_out the resulting object id
+ * @param path the on-disk path to the raw object content
+ * @param opts the options for id calculation
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_object_id_from_file(
+	git_oid *oid_out,
+	const char *path,
+	const git_object_id_options *opts);
+
 /**
  * Analyzes a buffer of raw object content and determines its validity.
  * Tree, commit, and tag objects will be parsed and ensured that they
@@ -249,29 +338,6 @@ GIT_EXTERN(int) git_object_rawcontent_is_valid(
 	size_t len,
 	git_object_t object_type,
 	git_oid_t oid_type);
-#else
-/**
- * Analyzes a buffer of raw object content and determines its validity.
- * Tree, commit, and tag objects will be parsed and ensured that they
- * are valid, parseable content.  (Blobs are always valid by definition.)
- * An error message will be set with an informative message if the object
- * is not valid.
- *
- * @warning This function is experimental and its signature may change in
- * the future.
- *
- * @param[out] valid Output pointer to set with validity of the object content
- * @param buf The contents to validate
- * @param len The length of the buffer
- * @param object_type The type of the object in the buffer
- * @return 0 on success or an error code
- */
-GIT_EXTERN(int) git_object_rawcontent_is_valid(
-	int *valid,
-	const char *buf,
-	size_t len,
-	git_object_t object_type);
-#endif
 
 /** @} */
 GIT_END_DECL

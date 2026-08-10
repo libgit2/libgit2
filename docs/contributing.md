@@ -152,7 +152,7 @@ exception.  Any code brought in must be compatible with those terms.
 The most common case is porting code from core Git.  Git is a pure GPL
 project, which means that in order to port code to this project, we need the
 explicit permission of the author.  Check the
-[`git.git-authors`](https://github.com/libgit2/libgit2/blob/development/git.git-authors)
+[`git.git-authors`](https://github.com/libgit2/libgit2/blob/main/git.git-authors)
 file for authors who have already consented.
 
 Other licenses have other requirements; check the license of the library

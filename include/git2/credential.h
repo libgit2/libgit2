@@ -168,7 +168,7 @@ GIT_EXTERN(const char *) git_credential_get_username(git_credential *cred);
  * Create a new plain-text username and password credential object.
  * The supplied credential parameter will be internally duplicated.
  *
- * @param out The newly created credential object.
+ * @param[out] out The newly created credential object.
  * @param username The username of the credential.
  * @param password The password of the credential.
  * @return 0 for success or an error code for failure
@@ -182,7 +182,7 @@ GIT_EXTERN(int) git_credential_userpass_plaintext_new(
  * Create a "default" credential usable for Negotiate mechanisms like NTLM
  * or Kerberos authentication.
  *
- * @param out The newly created credential object.
+ * @param[out] out The newly created credential object.
  * @return 0 for success or an error code for failure
  */
 GIT_EXTERN(int) git_credential_default_new(git_credential **out);
@@ -193,7 +193,7 @@ GIT_EXTERN(int) git_credential_default_new(git_credential **out);
  * This is used with ssh authentication to query for the username if
  * none is specified in the url.
  *
- * @param out The newly created credential object.
+ * @param[out] out The newly created credential object.
  * @param username The username to authenticate with
  * @return 0 for success or an error code for failure
  */
@@ -203,7 +203,7 @@ GIT_EXTERN(int) git_credential_username_new(git_credential **out, const char *us
  * Create a new passphrase-protected ssh key credential object.
  * The supplied credential parameter will be internally duplicated.
  *
- * @param out The newly created credential object.
+ * @param[out] out The newly created credential object.
  * @param username username to use to authenticate
  * @param publickey The path to the public key of the credential.
  * @param privatekey The path to the private key of the credential.
@@ -220,7 +220,7 @@ GIT_EXTERN(int) git_credential_ssh_key_new(
 /**
  * Create a new ssh key credential object reading the keys from memory.
  *
- * @param out The newly created credential object.
+ * @param[out] out The newly created credential object.
  * @param username username to use to authenticate.
  * @param publickey The public key of the credential.
  * @param privatekey The private key of the credential.
@@ -269,7 +269,7 @@ typedef void GIT_CALLBACK(git_credential_ssh_interactive_cb)(
  * Create a new ssh keyboard-interactive based credential object.
  * The supplied credential parameter will be internally duplicated.
  *
- * @param out The newly created credential object.
+ * @param[out] out The newly created credential object.
  * @param username Username to use to authenticate.
  * @param prompt_callback The callback method used for prompts.
  * @param payload Additional data to pass to the callback.
@@ -285,7 +285,7 @@ GIT_EXTERN(int) git_credential_ssh_interactive_new(
  * Create a new ssh key credential object used for querying an ssh-agent.
  * The supplied credential parameter will be internally duplicated.
  *
- * @param out The newly created credential object.
+ * @param[out] out The newly created credential object.
  * @param username username to use to authenticate
  * @return 0 for success or an error code for failure
  */
@@ -297,8 +297,8 @@ GIT_EXTERN(int) git_credential_ssh_key_from_agent(
  * Callback for credential signing.
  *
  * @param session the libssh2 session
- * @param sig the signature
- * @param sig_len the length of the signature
+ * @param[out] sig the signature
+ * @param[out] sig_len the length of the signature
  * @param data the data
  * @param data_len the length of the data
  * @param abstract the abstract
@@ -321,7 +321,7 @@ typedef int GIT_CALLBACK(git_credential_sign_cb)(
  *
  * The supplied credential parameter will be internally duplicated.
  *
- * @param out The newly created credential object.
+ * @param[out] out The newly created credential object.
  * @param username username to use to authenticate
  * @param publickey The bytes of the public key.
  * @param publickey_len The length of the public key in bytes.

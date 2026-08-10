@@ -77,13 +77,9 @@ int cmd_index_pack(int argc, char **argv)
 		goto done;
 	}
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	idx_opts.oid_type = GIT_OID_SHA1;
 
 	ret = git_indexer_new(&idx, ".", &idx_opts);
-#else
-	ret = git_indexer_new(&idx, ".", 0, NULL, &idx_opts);
-#endif
 
 	if (ret < 0) {
 		ret = cli_error_git();

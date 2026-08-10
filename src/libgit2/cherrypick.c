@@ -23,23 +23,9 @@
 
 static int write_cherrypick_head(
 	git_repository *repo,
-	const char *commit_oidstr)
+	const git_oid *commit)
 {
-	git_filebuf file = GIT_FILEBUF_INIT;
-	git_str file_path = GIT_STR_INIT;
-	int error = 0;
-
-	if ((error = git_str_joinpath(&file_path, repo->gitdir, GIT_CHERRYPICK_HEAD_FILE)) >= 0 &&
-		(error = git_filebuf_open(&file, file_path.ptr, GIT_FILEBUF_CREATE_LEADING_DIRS, GIT_CHERRYPICK_FILE_MODE)) >= 0 &&
-		(error = git_filebuf_printf(&file, "%s\n", commit_oidstr)) >= 0)
-		error = git_filebuf_commit(&file);
-
-	if (error < 0)
-		git_filebuf_cleanup(&file);
-
-	git_str_dispose(&file_path);
-
-	return error;
+	return git_reference_create(NULL, repo, GIT_CHERRYPICK_HEAD_REF, commit, 1, NULL);
 }
 
 static int write_merge_msg(
@@ -98,9 +84,21 @@ static int cherrypick_normalize_opts(
 
 static int cherrypick_state_cleanup(git_repository *repo)
 {
-	const char *state_files[] = { GIT_CHERRYPICK_HEAD_FILE, GIT_MERGE_MSG_FILE };
+	const char *state_files[] = { GIT_MERGE_MSG_FILE };
+	int error;
 
-	return git_repository__cleanup_files(repo, state_files, ARRAY_SIZE(state_files));
+	if ((error = git_repository__cleanup_files(repo, state_files,
+						   ARRAY_SIZE(state_files))) < 0)
+		goto out;
+
+	if ((error = git_reference_remove(repo, GIT_CHERRYPICK_HEAD_REF)) < 0) {
+		if (error != GIT_ENOTFOUND)
+			goto out;
+		error = 0;
+	}
+
+out:
+	return error;
 }
 
 static int cherrypick_seterr(git_commit *commit, const char *fmt)
@@ -199,7 +197,7 @@ int git_cherrypick(
 		(error = git_str_printf(&their_label, "%.7s... %s", commit_oidstr, commit_summary)) < 0 ||
 		(error = cherrypick_normalize_opts(repo, &opts, given_opts, git_str_cstr(&their_label))) < 0 ||
 		(error = git_indexwriter_init_for_operation(&indexwriter, repo, &opts.checkout_opts.checkout_strategy)) < 0 ||
-		(error = write_cherrypick_head(repo, commit_oidstr)) < 0 ||
+		(error = write_cherrypick_head(repo, git_commit_id(commit))) < 0 ||
 		(error = git_repository_head(&our_ref, repo)) < 0 ||
 		(error = git_reference_peel((git_object **)&our_commit, our_ref, GIT_OBJECT_COMMIT)) < 0 ||
 		(error = git_cherrypick_commit(&index, repo, commit, our_commit, opts.mainline, &opts.merge_opts)) < 0 ||

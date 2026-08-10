@@ -80,7 +80,7 @@ int lg2_remote(git_repository *repo, int argc, char *argv[])
 static int cmd_add(git_repository *repo, struct remote_opts *o)
 {
 	char *name, *url;
-	git_remote *remote = {0};
+	git_remote *remote = NULL;
 
 	if (o->argc != 2)
 		usage("you need to specify a name and URL", NULL);
@@ -126,7 +126,7 @@ static int cmd_rename(git_repository *repo, struct remote_opts *o)
 		return 0;
 
 	for (i = 0; i < (int) problems.count; i++) {
-		puts(problems.strings[0]);
+		puts(problems.strings[i]);
 	}
 
 	git_strarray_dispose(&problems);
@@ -172,7 +172,7 @@ static int cmd_show(git_repository *repo, struct remote_opts *o)
 	const char *arg, *name, *fetch, *push;
 	int verbose = 0;
 	git_strarray remotes = {0};
-	git_remote *remote = {0};
+	git_remote *remote = NULL;
 
 	for (i = 0; i < o->argc; i++) {
 		arg = o->argv[i];

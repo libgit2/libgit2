@@ -50,7 +50,7 @@ GIT_INLINE(const cli_opt_spec *) spec_for_long(
 	const char *arg)
 {
 	const cli_opt_spec *spec;
-	char *eql;
+	const char *eql;
 	size_t eql_pos;
 
 	eql = strchr(arg, '=');
@@ -270,7 +270,9 @@ static cli_opt_status_t parse_short(cli_opt *opt, cli_opt_parser *parser)
 	}
 
 	/* Required argument was not provided */
-	if (spec->type == CLI_OPT_TYPE_VALUE && !opt->value)
+	if (spec->type == CLI_OPT_TYPE_VALUE &&
+	    !opt->value &&
+	    !(spec->usage & CLI_OPT_USAGE_VALUE_OPTIONAL))
 		opt->status = CLI_OPT_STATUS_MISSING_VALUE;
 	else
 		opt->status = CLI_OPT_STATUS_OK;
@@ -359,7 +361,7 @@ GIT_INLINE(const cli_opt_spec *) spec_for_sort(
 	const char *arg)
 {
 	int is_negated, has_value = 0;
-	const char *value;
+	const char *value = NULL;
 	const cli_opt_spec *spec = NULL;
 	size_t idx = 0;
 

@@ -165,6 +165,10 @@ GIT_INLINE(const char *) git_merge_file__best_path(
 	if (!ancestor) {
 		if (ours && theirs && strcmp(ours, theirs) == 0)
 			return ours;
+		if (ours && !theirs)
+			return ours;
+		if (theirs && !ours)
+			return theirs;
 
 		return NULL;
 	}

@@ -126,7 +126,9 @@ static void setup_race(void)
 
 	/* force a race */
 	entry->mtime.seconds = (int32_t)st.st_mtime;
+#ifdef GIT_NSEC
 	entry->mtime.nanoseconds = (int32_t)st.st_mtime_nsec;
+#endif
 
 	git_str_dispose(&path);
 }

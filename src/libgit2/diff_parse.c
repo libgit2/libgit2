@@ -96,6 +96,8 @@ int git_diff_from_buffer_ext(
 	diff = diff_parsed_alloc(oid_type);
 	GIT_ERROR_CHECK_ALLOC(diff);
 
+	diff->base.opts.flags |= GIT_DIFF_SHOW_BINARY;
+
 	ctx = git_patch_parse_ctx_init(content, content_len, &patch_opts);
 	GIT_ERROR_CHECK_ALLOC(ctx);
 

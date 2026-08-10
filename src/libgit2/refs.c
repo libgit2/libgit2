@@ -85,11 +85,7 @@ git_reference *git_reference__alloc(
 	ref->type = GIT_REFERENCE_DIRECT;
 	git_oid_cpy(&ref->target.oid, oid);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	oid_type = oid->type;
-#else
-	oid_type = GIT_OID_SHA1;
-#endif
 
 	if (peel != NULL)
 		git_oid_cpy(&ref->peel, peel);
@@ -231,6 +227,27 @@ int git_reference_lookup_resolved(
 	GIT_ASSERT_ARG(repo);
 	GIT_ASSERT_ARG(name);
 
+	/*
+	 * Pseudorefs are not stored in the reference backend, as they may
+	 * contain additional data that doesn't even follow the normal ref
+	 * format. So we look these up as "loose" refs directly.
+	 */
+	if (git_reference__is_pseudoref(name)) {
+		if ((error = git_reference__lookup_loose(ref_out, repo->gitdir, name, repo->oid_type)) < 0)
+			return error;
+
+		if ((error = git_repository_refdb__weakptr(&refdb, repo)) < 0) {
+			git_reference_free(*ref_out);
+			*ref_out = NULL;
+			return error;
+		}
+
+		GIT_REFCOUNT_INC(refdb);
+		(*ref_out)->db = refdb;
+
+		return 0;
+	}
+
 	if ((error = reference_normalize_for_repo(normalized, repo, name, true)) < 0 ||
 	    (error = git_repository_refdb__weakptr(&refdb, repo)) < 0 ||
 	    (error = git_refdb_resolve(ref_out, refdb, normalized, max_nesting)) < 0)
@@ -264,14 +281,14 @@ int git_reference_dwim(git_reference **out, git_repository *repo, const char *re
 		GIT_REFS_TAGS_DIR "%s",
 		GIT_REFS_HEADS_DIR "%s",
 		GIT_REFS_REMOTES_DIR "%s",
-		GIT_REFS_REMOTES_DIR "%s/" GIT_HEAD_FILE,
+		GIT_REFS_REMOTES_DIR "%s/" GIT_HEAD_REF,
 		NULL
 	};
 
 	if (*refname)
 		git_str_puts(&name, refname);
 	else {
-		git_str_puts(&name, GIT_HEAD_FILE);
+		git_str_puts(&name, GIT_HEAD_REF);
 		fallbackmode = false;
 	}
 
@@ -599,7 +616,7 @@ static int refs_update_head(git_repository *worktree, void *_payload)
 	git_reference *head = NULL, *updated = NULL;
 	int error;
 
-	if ((error = git_reference_lookup(&head, worktree, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_lookup(&head, worktree, GIT_HEAD_REF)) < 0)
 		goto out;
 
 	if (git_reference_type(head) != GIT_REFERENCE_SYMBOLIC ||
@@ -819,7 +836,7 @@ int git_reference_list(
 
 static int is_valid_ref_char(char ch)
 {
-	if ((unsigned) ch <= ' ')
+	if ((unsigned) ch <= ' ' || ch == '\177') /* ASCII control characters */
 		return 0;
 
 	switch (ch) {
@@ -894,6 +911,9 @@ static bool is_valid_normalized_name(const char *name, size_t len)
 		if (i == 0 && c == '^')
 			continue; /* The first character is allowed to be "^" for negative refspecs */
 
+		if (len == 1 && c == '@')
+			return true; /* Abbreviation for HEAD */
+
 		if ((c < 'A' || c > 'Z') && c != '_')
 			return false;
 	}
@@ -965,11 +985,16 @@ int git_reference__normalize_name(
 				process_flags &= ~GIT_REFERENCE_FORMAT_REFSPEC_PATTERN;
 
 			if (normalize) {
-				size_t cur_len = git_str_len(buf);
+				/* `<empty>@` (i.e. just `@`) is an alias for `HEAD` */
+				if (segments_count == 0 && segment_len == 1 && current[0] == '@') {
+					git_str_sets(buf, GIT_HEAD_FILE);
+				} else {
+					size_t cur_len = git_str_len(buf);
 
-				git_str_joinpath(buf, git_str_cstr(buf), current);
-				git_str_truncate(buf,
-					cur_len + segment_len + (segments_count ? 1 : 0));
+					git_str_joinpath(buf, git_str_cstr(buf), current);
+					git_str_truncate(buf,
+						cur_len + segment_len + (segments_count ? 1 : 0));
+				}
 
 				if (git_str_oom(buf)) {
 					error = -1;
@@ -1018,6 +1043,7 @@ int git_reference__normalize_name(
 			goto cleanup;
 
 	if ((segments_count > 1)
+		&& !(flags & GIT_REFERENCE_FORMAT_REFSPEC_SHORTHAND)
 		&& (is_valid_normalized_name(name, strchr(name, '/') - name)))
 			goto cleanup;
 
@@ -1278,6 +1304,40 @@ int git_reference_is_note(const git_reference *ref)
 	return git_reference__is_note(ref->name);
 }
 
+int git_reference__is_pseudoref(const char *ref_name)
+{
+	const char * const pseudorefs[] = {
+		"MERGE_HEAD",
+		"FETCH_HEAD",
+	};
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(pseudorefs); i++)
+		if (git__strcmp(ref_name, pseudorefs[i]) == 0)
+			return 1;
+
+	return 0;
+}
+
+int git_reference__is_per_worktree_ref(const char *ref_name)
+{
+	const char * const worktree_refs[] = {
+		"refs/bisect/",
+		"refs/worktree/",
+		"refs/rewritten/",
+	};
+	size_t i;
+
+	if (git__prefixcmp(ref_name, "refs/") != 0)
+		return 1;
+
+	for (i = 0; i < ARRAY_SIZE(worktree_refs); i++)
+	       if (git__prefixcmp(ref_name, worktree_refs[i]) == 0)
+		       return 1;
+
+	return 0;
+}
+
 static int peel_error(int error, const git_reference *ref, const char *msg)
 {
 	git_error_set(
@@ -1403,7 +1463,7 @@ int git_reference__is_unborn_head(bool *unborn, const git_reference *ref, git_re
 
 	if (error != 0 && error != GIT_ENOTFOUND)
 		return error;
-	else if (error == GIT_ENOTFOUND && git__strcmp(ref->name, GIT_HEAD_FILE) == 0)
+	else if (error == GIT_ENOTFOUND && git__strcmp(ref->name, GIT_HEAD_REF) == 0)
 		*unborn = true;
 	else
 		*unborn = false;

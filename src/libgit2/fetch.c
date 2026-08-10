@@ -101,8 +101,6 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 	int error = 0;
 	size_t i, heads_len;
 	unsigned int remote_caps;
-	unsigned int oid_mask = GIT_REMOTE_CAPABILITY_TIP_OID |
-	                        GIT_REMOTE_CAPABILITY_REACHABLE_OID;
 	git_remote_autotag_option_t tagopt = remote->download_tags;
 
 	if (opts && opts->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED)
@@ -144,11 +142,6 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 		if (!git_oid__is_hexstr(spec->src, remote->repo->oid_type))
 			continue;
 
-		if (!(remote_caps & oid_mask)) {
-			git_error_set(GIT_ERROR_INVALID, "cannot fetch a specific object from the remote repository");
-			error = -1;
-			goto cleanup;
-		}
 
 		if ((error = maybe_want_oid(remote, spec)) < 0)
 			goto cleanup;

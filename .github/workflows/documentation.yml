@@ -20,6 +20,9 @@ permissions:
 
 jobs:
   documentation:
+    # Only publish documentation updates on the main repository.
+    if: github.repository == 'libgit2/libgit2'
+
     name: "Generate documentation"
     runs-on: "ubuntu-latest"
     steps:

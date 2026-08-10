@@ -25,6 +25,18 @@
  */
 #define EMAIL_TIMESTAMP "Mon Sep 17 00:00:00 2001"
 
+int git_email_create_options_init(
+	git_email_create_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_email_create_options,
+		GIT_EMAIL_CREATE_OPTIONS_INIT);
+	return 0;
+}
+
 GIT_INLINE(int) include_prefix(
 	size_t patch_count,
 	git_email_create_options *opts)

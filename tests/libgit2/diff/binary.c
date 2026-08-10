@@ -5,6 +5,7 @@
 #include "delta.h"
 #include "filebuf.h"
 #include "repository.h"
+#include "../patch/patch_common.h"
 
 static git_repository *repo;
 
@@ -405,6 +406,21 @@ void test_diff_binary__print_patch_from_diff(void)
 	git_str_dispose(&actual);
 	git_diff_free(diff);
 	git_index_free(index);
+}
+
+void test_diff_binary__print_patch_from_diff_from_buffer(void)
+{
+	git_diff *diff;
+	git_str actual = GIT_STR_INIT;
+
+	cl_git_pass(git_diff_from_buffer(&diff, PATCH_BINARY_LITERAL, strlen(PATCH_BINARY_LITERAL)));
+
+	cl_git_pass(git_diff_print(diff, GIT_DIFF_FORMAT_PATCH, print_cb, &actual));
+
+	cl_assert_equal_s(PATCH_BINARY_LITERAL, actual.ptr);
+
+	git_str_dispose(&actual);
+	git_diff_free(diff);
 }
 
 struct diff_data {

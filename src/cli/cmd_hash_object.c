@@ -52,33 +52,24 @@ static int hash_buf(
 	git_object_t object_type,
 	git_oid_t oid_type)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 	git_oid oid;
 
 	if (!literally) {
 		int valid = 0;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 		if (git_object_rawcontent_is_valid(&valid, buf->ptr, buf->size, object_type, oid_type) < 0 || !valid)
 			return cli_error_git();
-#else
-		GIT_UNUSED(oid_type);
-
-		if (git_object_rawcontent_is_valid(&valid, buf->ptr, buf->size, object_type) < 0 || !valid)
-			return cli_error_git();
-#endif
 	}
 
 	if (write_object) {
 		if (git_odb_write(&oid, odb, buf->ptr, buf->size, object_type) < 0)
 			return cli_error_git();
 	} else {
-#ifdef GIT_EXPERIMENTAL_SHA256
-		if (git_odb_hash(&oid, buf->ptr, buf->size, object_type, GIT_OID_SHA1) < 0)
+		id_opts.object_type = object_type;
+
+		if (git_object_id_from_buffer(&oid, buf->ptr, buf->size, &id_opts) < 0)
 			return cli_error_git();
-#else
-		if (git_odb_hash(&oid, buf->ptr, buf->size, object_type) < 0)
-			return cli_error_git();
-#endif
 	}
 
 	if (printf("%s\n", git_oid_tostr_s(&oid)) < 0)

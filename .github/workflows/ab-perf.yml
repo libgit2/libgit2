@@ -1,0 +1,231 @@
+# A/B testing with benchmarks to compare a control branch (main) to a
+# candidate branch (a pull request).
+name: A/B Performance Test
+
+on:
+  workflow_dispatch:
+
+env:
+  docker-registry: ghcr.io
+  docker-config-path: ci/docker
+
+jobs:
+  # Run our CI/CD builds.  We build a matrix with the various build targets
+  # and their details.  Then we build either in a docker container (Linux)
+  # or on the actual hosts (macOS, Windows).
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        platform:
+        # All builds: core platforms
+        - name: "Linux (Noble, GCC, OpenSSL, libssh2)"
+          id: noble-gcc-openssl
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+        - name: "Linux (Noble, Clang, mbedTLS, OpenSSH)"
+          id: noble-clang-mbedtls
+          os: ubuntu-latest
+          container:
+            name: noble
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DREGEX_BACKEND=pcre -DUSE_GSSAPI=ON -DUSE_SSH=exec -DUSE_HTTP_PARSER=http-parser
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            CMAKE_GENERATOR: Ninja
+        - name: "Linux (Xenial, GCC, OpenSSL, OpenSSH)"
+          id: xenial-gcc-openssl
+          os: ubuntu-latest
+          container:
+            name: xenial
+          env:
+            CC: gcc
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=OpenSSL -DREGEX_BACKEND=builtin -DUSE_GSSAPI=ON -DUSE_SSH=exec
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+        - name: "Linux (Xenial, Clang, mbedTLS, libssh2)"
+          id: xenial-gcc-mbedtls
+          os: ubuntu-latest
+          container:
+            name: xenial
+          env:
+            CC: clang
+            CMAKE_GENERATOR: Ninja
+            CMAKE_OPTIONS: -DUSE_HTTPS=mbedTLS -DUSE_SHA1=HTTPS -DUSE_GSSAPI=ON -DUSE_SSH=libssh2
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+        - name: "macOS"
+          id: macos
+          os: macos-14
+          setup-script: osx
+          env:
+            CC: clang
+            CMAKE_OPTIONS: -DREGEX_BACKEND=regcomp_l -DUSE_GSSAPI=ON
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            CMAKE_GENERATOR: Ninja
+            PKG_CONFIG_PATH: /usr/local/opt/openssl/lib/pkgconfig
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (amd64, Visual Studio, Schannel)"
+          id: windows-amd64-vs
+          os: windows-2022
+          setup-script: win32
+          build_prefix: RelWithDebInfo
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: Visual Studio 17 2022
+            CMAKE_OPTIONS: -A x64 -DUSE_HTTPS=Schannel -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
+            BUILD_TEMP: D:\Temp
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (x86, Visual Studio, WinHTTP)"
+          id: windows-x86-vs
+          os: windows-2022
+          setup-script: win32
+          build_prefix: RelWithDebInfo
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: Visual Studio 17 2022
+            CMAKE_OPTIONS: -A Win32 -DUSE_SHA1=HTTPS -DUSE_BUNDLED_ZLIB=ON -DUSE_SSH=ON -DCMAKE_PREFIX_PATH=D:\Temp\libssh2
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            BUILD_PATH: C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin;D:\Temp\libssh2\bin
+            BUILD_TEMP: D:\Temp
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (amd64, mingw, WinHTTP)"
+          id: windows-amd64-mingw
+          os: windows-2022
+          setup-script: mingw
+          env:
+            ARCH: amd64
+            CMAKE_GENERATOR: MinGW Makefiles
+            CMAKE_OPTIONS:
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            BUILD_TEMP: D:\Temp
+            BUILD_PATH: D:\Temp\mingw64\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+        - name: "Windows (x86, mingw, Schannel)"
+          id: windows-x86-mingw
+          os: windows-2022
+          setup-script: mingw
+          env:
+            ARCH: x86
+            CMAKE_GENERATOR: MinGW Makefiles
+            CMAKE_OPTIONS: -DUSE_HTTPS=Schannel
+            CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
+            BUILD_TEMP: D:\Temp
+            BUILD_PATH: D:\Temp\mingw32\bin;C:\Windows\system32;C:\Windows;C:\Windows\System32\Wbem;C:\Program Files (x86)\CMake\bin
+            SKIP_SSH_TESTS: true
+            SKIP_NEGOTIATE_TESTS: true
+    env: ${{ matrix.platform.env }}
+    runs-on: ${{ matrix.platform.os }}
+    name: "A/B: ${{ matrix.platform.name }}"
+    steps:
+    - name: Check out control
+      uses: actions/checkout@v4
+      with:
+        path: source/control
+        ref: main
+    - name: Check out candidate
+      uses: actions/checkout@v4
+      with:
+        path: source/candidate
+    - name: Set up build environment
+      run: source/candidate/ci/setup-${{ matrix.platform.setup-script }}-build.sh
+      shell: bash
+      if: matrix.platform.setup-script != ''
+    - name: Setup QEMU
+      run: docker run --rm --privileged multiarch/qemu-user-static:register --reset
+      if: matrix.platform.container.qemu == true
+    - name: Set up container
+      uses: ./source/candidate/.github/actions/download-or-build-container
+      with:
+        registry: ${{ env.docker-registry }}
+        config-path: ${{ env.docker-config-path }}
+        container: ${{ matrix.platform.container.name }}
+        github_token: ${{ secrets.github_token }}
+        dockerfile: ${{ matrix.platform.container.dockerfile }}
+      if: matrix.platform.container.name != ''
+    - name: Prepare builds
+      run: |
+        mkdir build
+        mkdir build/control
+        mkdir build/candidate
+    - name: Build control
+      uses: ./source/control/.github/actions/run-build
+      with:
+        command: cd ${BUILD_WORKSPACE:-.}/build/control && ../../source/control/ci/build.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
+        cmake-global-options: -DDEPRECATE_HARD=ON -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_FUZZERS=ON -DUSE_STANDALONE_FUZZERS=ON -DBUILD_BENCHMARKS=ON
+    - name: Build candidate
+      uses: ./source/candidate/.github/actions/run-build
+      with:
+        command: cd ${BUILD_WORKSPACE:-.}/build/candidate && ../../source/candidate/ci/build.sh
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
+        cmake-global-options: -DDEPRECATE_HARD=ON -DENABLE_WERROR=ON -DBUILD_EXAMPLES=ON -DBUILD_BENCHMARKS=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo
+    - name: Run control benchmarks
+      uses: ./source/control/.github/actions/run-build
+      with:
+        command: cd ${BUILD_WORKSPACE:-.}/build/control && ( ./benchmarks/libgit2/${{ matrix.platform.build_prefix }}/libgit2_benchmarks -rresults.json )
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
+    - name: Run candidate benchmarks
+      uses: ./source/candidate/.github/actions/run-build
+      with:
+        command: cd ${BUILD_WORKSPACE:-.}/build/candidate && ( ./benchmarks/libgit2/${{ matrix.platform.build_prefix }}/libgit2_benchmarks -rresults.json )
+        container: ${{ matrix.platform.container.name }}
+        container-version: ${{ env.docker-registry-container-sha }}
+        shell: ${{ matrix.platform.shell }}
+    - name: Organize results
+      run: |
+        mkdir results
+        mv ${BUILD_WORKSPACE:-.}/build/control/results.json ./results/control.json
+        mv ${BUILD_WORKSPACE:-.}/build/candidate/results.json ./results/candidate.json
+    - name: Upload results
+      uses: actions/upload-artifact@v4
+      with:
+        name: results-${{ matrix.platform.id }}
+        path: results
+      if: always()
+
+  # Publish the results
+  publish:
+    name: Publish results
+    needs: [ build ]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check out repository
+      uses: actions/checkout@v4
+    - name: Download test results
+      uses: actions/download-artifact@v4
+      with:
+        path: results
+    - name: Generate markdown
+      run: node ci/compare-benchmarks.js results results.md
+    - name: Update pull request
+      uses: actions/github-script@v7
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        script: |
+          const fs = require('fs');
+          const markdown = fs.readFileSync('results.md');
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: markdown
+          });

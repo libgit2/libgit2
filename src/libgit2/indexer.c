@@ -24,9 +24,10 @@
 #include "object.h"
 #include "hashmap_oid.h"
 
-size_t git_indexer__max_objects = UINT32_MAX;
-
 #define UINT31_MAX (0x7FFFFFFF)
+
+size_t git_indexer__max_objects = UINT32_MAX;
+size_t git_indexer__max_object_size = UINT31_MAX;
 
 GIT_HASHMAP_OID_SETUP(git_indexer_oidmap, git_oid *);
 
@@ -97,7 +98,7 @@ static int parse_header(struct git_pack_header *hdr, struct git_pack_file *pack)
 	int error;
 	git_map map;
 
-	if ((error = p_mmap(&map, sizeof(*hdr), GIT_PROT_READ, GIT_MAP_SHARED, pack->mwf.fd, 0)) < 0)
+	if ((error = p_mmap(&map, sizeof(*hdr), GIT_PROT_READ, GIT_MAP_PRIVATE, pack->mwf.fd, 0)) < 0)
 		return error;
 
 	memcpy(hdr, map.data, sizeof(*hdr));
@@ -144,10 +145,8 @@ GIT_INLINE(git_hash_algorithm_t) indexer_hash_algorithm(git_indexer *idx)
 	switch (idx->oid_type) {
 		case GIT_OID_SHA1:
 			return GIT_HASH_ALGORITHM_SHA1;
-#ifdef GIT_EXPERIMENTAL_SHA256
 		case GIT_OID_SHA256:
 			return GIT_HASH_ALGORITHM_SHA256;
-#endif
 	}
 
 	return GIT_HASH_ALGORITHM_NONE;
@@ -232,7 +231,6 @@ cleanup:
 	return -1;
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 int git_indexer_new(
 	git_indexer **out,
 	const char *prefix,
@@ -246,17 +244,6 @@ int git_indexer_new(
 		opts ? opts->odb : NULL,
 		opts);
 }
-#else
-int git_indexer_new(
-	git_indexer **out,
-	const char *prefix,
-	unsigned int mode,
-	git_odb *odb,
-	git_indexer_options *opts)
-{
-	return indexer_new(out, prefix, GIT_OID_SHA1, mode, odb, opts);
-}
-#endif
 
 void git_indexer__set_fsync(git_indexer *idx, int do_fsync)
 {
@@ -490,14 +477,14 @@ static int store_object(git_indexer *idx)
 	pentry = git__calloc(1, sizeof(struct git_pack_entry));
 	GIT_ERROR_CHECK_ALLOC(pentry);
 
+	memset(&oid, 0, sizeof(git_oid));
+
 	if (git_hash_final(oid.id, &idx->hash_ctx)) {
 		git__free(pentry);
 		goto on_error;
 	}
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	oid.type = idx->oid_type;
-#endif
 
 	entry_size = idx->off - entry_start;
 	if (entry_start > UINT31_MAX) {
@@ -597,6 +584,7 @@ static int save_entry(git_indexer *idx, struct entry *entry, struct git_pack_ent
 
 static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 	git_oid oid;
 	size_t entry_size;
 	struct entry *entry;
@@ -605,7 +593,10 @@ static int hash_and_save(git_indexer *idx, git_rawobj *obj, off64_t entry_start)
 	entry = git__calloc(1, sizeof(*entry));
 	GIT_ERROR_CHECK_ALLOC(entry);
 
-	if (git_odb__hashobj(&oid, obj, idx->oid_type) < 0) {
+	id_opts.object_type = obj->type;
+	id_opts.oid_type = idx->oid_type;
+
+	if (git_object_id_from_buffer(&oid, obj->data, obj->len, &id_opts) < 0) {
 		git_error_set(GIT_ERROR_INDEXER, "failed to hash object");
 		goto on_error;
 	}
@@ -921,12 +912,12 @@ int git_indexer_append(git_indexer *idx, const void *data, size_t size, git_inde
 		if (git_vector_init(&idx->deltas, total_objects / 2, NULL) < 0)
 			return -1;
 
+		stats->total_objects = total_objects;
+		stats->indexed_objects = 0;
 		stats->received_objects = 0;
 		stats->local_objects = 0;
 		stats->total_deltas = 0;
 		stats->indexed_deltas = 0;
-		stats->indexed_objects = 0;
-		stats->total_objects = total_objects;
 
 		if ((error = do_progress_callback(idx, stats)) != 0)
 			return error;

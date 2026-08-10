@@ -43,6 +43,9 @@ typedef enum {
  * Initialize with `GIT_DESCRIBE_OPTIONS_INIT`. Alternatively, you can
  * use `git_describe_options_init`.
  *
+ * @options[version] GIT_DESCRIBE_OPTIONS_VERSION
+ * @options[init_macro] GIT_DESCRIBE_OPTIONS_INIT
+ * @options[init_function] git_describe_options_init
  */
 typedef struct git_describe_options {
 	unsigned int version;
@@ -96,6 +99,9 @@ GIT_EXTERN(int) git_describe_options_init(git_describe_options *opts, unsigned i
  * Initialize with `GIT_DESCRIBE_FORMAT_OPTIONS_INIT`. Alternatively, you can
  * use `git_describe_format_options_init`.
  *
+ * @options[version] GIT_DESCRIBE_FORMAT_OPTIONS_VERSION
+ * @options[init_macro] GIT_DESCRIBE_FORMAT_OPTIONS_INIT
+ * @options[init_function] git_describe_format_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -150,7 +156,7 @@ typedef struct git_describe_result git_describe_result;
  *
  * Perform the describe operation on the given committish object.
  *
- * @param result pointer to store the result. You must free this once
+ * @param[out] result pointer to store the result. You must free this once
  * you're done with it.
  * @param committish a committish to describe
  * @param opts the lookup options (or NULL for defaults)
@@ -168,7 +174,7 @@ GIT_EXTERN(int) git_describe_commit(
  * worktree. After performing describe on HEAD, a status is run and the
  * description is considered to be dirty if there are.
  *
- * @param out pointer to store the result. You must free this once
+ * @param[out] out pointer to store the result. You must free this once
  * you're done with it.
  * @param repo the repository in which to perform the describe
  * @param opts the lookup options (or NULL for defaults)

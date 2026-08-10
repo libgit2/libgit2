@@ -276,8 +276,8 @@ done:
 static int read_loose_standard(git_rawobj *out, git_str *obj)
 {
 	git_zstream zstream = GIT_ZSTREAM_INIT;
-	unsigned char head[MAX_HEADER_LEN], *body = NULL;
-	size_t decompressed, head_len, body_len, alloc_size;
+	unsigned char head[MAX_HEADER_LEN], *body = NULL, *body_out;
+	size_t decompressed, head_len, body_remain, alloc_size;
 	obj_hdr hdr;
 	int error;
 
@@ -285,16 +285,16 @@ static int read_loose_standard(git_rawobj *out, git_str *obj)
 		(error = git_zstream_set_input(&zstream, git_str_cstr(obj), git_str_len(obj))) < 0)
 		goto done;
 
-	decompressed = sizeof(head);
-
 	/*
 	 * inflate the initial part of the compressed buffer in order to
-	 * parse the header; read the largest header possible, then push the
-	 * remainder into the body buffer.
+	 * parse the header and read the largest header possible. later, we'll
+	 * push the remainder into the body buffer.
 	 */
+	decompressed = sizeof(head);
 	if ((error = git_zstream_get_output(head, &decompressed, &zstream)) < 0 ||
 		(error = parse_header(&hdr, &head_len, head, decompressed)) < 0)
 		goto done;
+	GIT_ASSERT(head_len <= decompressed);
 
 	if (!git_object_type_is_valid(hdr.type)) {
 		git_error_set(GIT_ERROR_ODB, "failed to inflate disk object");
@@ -311,16 +311,24 @@ static int read_loose_standard(git_rawobj *out, git_str *obj)
 		error = -1;
 		goto done;
 	}
+	body_out = body;
+	body_remain = hdr.size;
 
-	GIT_ASSERT(decompressed >= head_len);
-	body_len = decompressed - head_len;
-
-	if (body_len)
-		memcpy(body, head + head_len, body_len);
-
-	decompressed = hdr.size - body_len;
-	if ((error = git_zstream_get_output(body + body_len, &decompressed, &zstream)) < 0)
+	decompressed -= head_len;
+	if (decompressed > body_remain) {
+		git_error_set(GIT_ERROR_ODB, "malformed object: body was longer than specified in header");
+		error = -1;
 		goto done;
+	}
+	if (decompressed)
+		memcpy(body_out, head + head_len, decompressed);
+	body_out += decompressed;
+	body_remain -= decompressed;
+
+	decompressed = body_remain;
+	if ((error = git_zstream_get_output(body_out, &decompressed, &zstream)) < 0)
+		goto done;
+	body_out += decompressed;
 
 	if (!git_zstream_done(&zstream)) {
 		git_error_set(GIT_ERROR_ZLIB, "failed to finish zlib inflation: stream aborted prematurely");
@@ -328,7 +336,9 @@ static int read_loose_standard(git_rawobj *out, git_str *obj)
 		goto done;
 	}
 
-	body[hdr.size] = '\0';
+	/* object bodies that are too short are silently zero-padded */
+	GIT_ASSERT(body_out <= body + hdr.size);
+	*body_out = '\0';
 
 	out->data = body;
 	out->len = hdr.size;
@@ -729,6 +739,7 @@ GIT_INLINE(int) filename_to_oid(struct loose_backend *backend, git_oid *oid, con
 	if (v < 0)
 		return -1;
 
+	memset(oid, 0, sizeof(git_oid));
 	oid->id[0] = (unsigned char) v;
 
 	ptr += 3;
@@ -740,9 +751,7 @@ GIT_INLINE(int) filename_to_oid(struct loose_backend *backend, git_oid *oid, con
 		oid->id[1 + i/2] = (unsigned char) v;
 	}
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	oid->type = backend->options.oid_type;
-#endif
 
 	return 0;
 }
@@ -1140,6 +1149,19 @@ static void loose_backend__free(git_odb_backend *_backend)
 	git__free(_backend);
 }
 
+
+int git_odb_backend_loose_options_init(
+	git_odb_backend_loose_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_odb_backend_loose_options,
+		GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT);
+	return 0;
+}
+
 static void normalize_options(
 	git_odb_backend_loose_options *opts,
 	const git_odb_backend_loose_options *given_opts)
@@ -1209,7 +1231,6 @@ int git_odb__backend_loose(
 }
 
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 int git_odb_backend_loose(
 	git_odb_backend **backend_out,
 	const char *objects_dir,
@@ -1217,27 +1238,3 @@ int git_odb_backend_loose(
 {
 	return git_odb__backend_loose(backend_out, objects_dir, opts);
 }
-#else
-int git_odb_backend_loose(
-	git_odb_backend **backend_out,
-	const char *objects_dir,
-	int compression_level,
-	int do_fsync,
-	unsigned int dir_mode,
-	unsigned int file_mode)
-{
-	git_odb_backend_loose_flag_t flags = 0;
-	git_odb_backend_loose_options opts = GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT;
-
-	if (do_fsync)
-		flags |= GIT_ODB_BACKEND_LOOSE_FSYNC;
-
-	opts.flags = flags;
-	opts.compression_level = compression_level;
-	opts.dir_mode = dir_mode;
-	opts.file_mode = file_mode;
-	opts.oid_type = GIT_OID_DEFAULT;
-
-	return git_odb__backend_loose(backend_out, objects_dir, &opts);
-}
-#endif

@@ -22,7 +22,7 @@ void test_status_single__hash_single_file(void)
 	cl_git_mkfile(file_name, file_contents);
 	cl_set_cleanup(&cleanup__remove_file, (void *)file_name);
 
-	cl_git_pass(git_odb__hashfile(&actual_id, file_name, GIT_OBJECT_BLOB, GIT_OID_SHA1));
+	cl_git_pass(git_object_id_from_file(&actual_id, file_name, NULL));
 	cl_assert_equal_oid(&expected_id, &actual_id);
 }
 
@@ -40,7 +40,7 @@ void test_status_single__hash_single_empty_file(void)
 	cl_git_mkfile(file_name, file_contents);
 	cl_set_cleanup(&cleanup__remove_file, (void *)file_name);
 
-	cl_git_pass(git_odb__hashfile(&actual_id, file_name, GIT_OBJECT_BLOB, GIT_OID_SHA1));
+	cl_git_pass(git_object_id_from_file(&actual_id, file_name, NULL));
 	cl_assert_equal_oid(&expected_id, &actual_id);
 }
 
