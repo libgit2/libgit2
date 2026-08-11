@@ -37,6 +37,7 @@ runs:
           -w /home/libgit2 \
           -e ASAN_SYMBOLIZER_PATH \
           -e CC \
+          -e CLAR_REF_FORMAT \
           -e CFLAGS \
           -e CMAKE_GENERATOR \
           -e CMAKE_OPTIONS \
