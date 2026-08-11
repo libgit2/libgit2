@@ -142,6 +142,9 @@ maintainers of bindings or FFI users, may want to be aware of.
 
 ### Bug fixes
 
+* `git_diff_file_cb` now reports a meaningful progress value (going from 0
+  to 1 over the diff) instead of always reporting 0. Reported by @atom2ueki
+  in https://github.com/libgit2/libgit2/issues/5671
 * Fix constness issue introduced in #6716 by @ethomson in
   https://github.com/libgit2/libgit2/pull/6829
 * odb: conditional `git_hash_ctx_cleanup` in `git_odb_stream` by
