@@ -77,7 +77,7 @@ void test_diff_diffiter__iterate_files_progress(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
 	git_diff *diff;
-	size_t d, num_d;
+	size_t num_d;
 	diff_expects exp = { 0 };
 
 	cl_git_pass(git_diff_index_to_workdir(&diff, repo, NULL, NULL));
