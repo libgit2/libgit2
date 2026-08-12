@@ -1431,17 +1431,20 @@ int git_config_parse_int64(int64_t *out, const char *value)
 	switch (*num_end) {
 	case 'g':
 	case 'G':
-		num *= 1024;
+		if (git__multiply_int64_overflow(&num, num, 1024))
+			goto fail_parse;
 		/* fallthrough */
 
 	case 'm':
 	case 'M':
-		num *= 1024;
+		if (git__multiply_int64_overflow(&num, num, 1024))
+			goto fail_parse;
 		/* fallthrough */
 
 	case 'k':
 	case 'K':
-		num *= 1024;
+		if (git__multiply_int64_overflow(&num, num, 1024))
+			goto fail_parse;
 
 		/* check that that there are no more characters after the
 		 * given modifier suffix */
