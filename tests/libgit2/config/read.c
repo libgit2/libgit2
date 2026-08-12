@@ -1035,3 +1035,21 @@ void test_config_read__get_mapped(void)
 
 	git_config_free(cfg);
 }
+
+void test_config_read__number_suffix_overflow(void)
+{
+	int64_t i;
+
+	cl_must_fail(git_config_parse_int64(&i, "51539607552G"));
+	cl_must_fail(git_config_parse_int64(&i, "51539607552g"));
+
+	cl_must_fail(git_config_parse_int64(&i, "9007199254740992k"));
+
+	cl_must_fail(git_config_parse_int64(&i, "9000000000000000m"));
+
+	cl_git_pass(git_config_parse_int64(&i, "8589934591G"));
+	cl_assert_equal_i(i, INT64_C(8589934591) * 1024 * 1024 * 1024);
+
+	cl_git_pass(git_config_parse_int64(&i, "1g"));
+	cl_assert_equal_i(i, 1024 * 1024 * 1024);
+}
