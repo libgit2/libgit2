@@ -270,7 +270,7 @@ static int git_mwindow_close_lru_window_locked(void)
 		}
 	}
 
-	if (!lru_window) {
+	if (!lru_window || !list) {
 		git_error_set(GIT_ERROR_OS, "failed to close memory window; couldn't find LRU");
 		return -1;
 	}
