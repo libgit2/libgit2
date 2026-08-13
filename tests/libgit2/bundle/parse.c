@@ -30,31 +30,21 @@ void test_bundle_parse__cleanup(void)
 }
 
 static int parse_memory(
-	git_bundle_header *header, const char *data, size_t len)
+	git_bundle_parser *parser, const char *data, size_t len)
 {
-	git_bundle_reader reader;
-	int error;
-
-	git_bundle_reader_frommemory(&reader, data, len);
-	error = git_bundle_header_parse(header, &reader);
-	git_bundle_reader_dispose(&reader);
-
-	return error;
+	return git_bundle_parser_parse_memory(parser, data, len);
 }
 
 static int parse_file(
-	git_bundle_header *header, const char *data, size_t len, git_off_t *out_pos)
+	git_bundle_parser *parser, const char *data, size_t len, git_off_t *out_pos)
 {
-	git_bundle_reader reader;
 	int fd, error;
 
 	cl_must_pass(fd = p_open(TMP_BUNDLE, O_RDWR | O_CREAT | O_TRUNC, 0666));
 	cl_must_pass(p_write(fd, data, len));
 	cl_must_pass(p_lseek(fd, 0, SEEK_SET));
 
-	git_bundle_reader_fromfd(&reader, fd);
-	error = git_bundle_header_parse(header, &reader);
-	git_bundle_reader_dispose(&reader);
+	error = git_bundle_parser_parse_fd(parser, fd);
 
 	if (out_pos)
 		cl_must_pass(*out_pos = p_lseek(fd, 0, SEEK_CUR));
@@ -62,6 +52,22 @@ static int parse_file(
 	p_close(fd);
 
 	return error;
+}
+
+/* the parser must not hold on to anything it was only lent */
+static void assert_source_released(git_bundle_parser *parser)
+{
+	cl_assert(parser->read == NULL);
+	cl_assert(parser->seek == NULL);
+	cl_assert(parser->payload == NULL);
+	cl_assert_equal_i(0, parser->fd);
+	cl_assert(parser->data == NULL);
+	cl_assert_equal_i(0, (int)parser->data_len);
+	cl_assert_equal_i(0, (int)parser->data_pos);
+	cl_assert_equal_i(0, (int)parser->offset);
+	cl_assert_equal_i(0, (int)parser->eof);
+	cl_assert_equal_i(0, (int)parser->buf.size);
+	cl_assert_equal_i(0, (int)parser->buf.asize);
 }
 
 static void assert_headers_equal(
@@ -93,104 +99,108 @@ static void assert_headers_equal(
  * in-memory result back to the caller.
  */
 static int parse_both(
-	git_bundle_header *header, const char *data, size_t len)
+	git_bundle_parser *parser, const char *data, size_t len)
 {
-	git_bundle_header from_file = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser from_file = GIT_BUNDLE_PARSER_INIT;
 	git_off_t pos = 0;
 	int mem_error, file_error;
 
-	mem_error = parse_memory(header, data, len);
+	mem_error = parse_memory(parser, data, len);
 	file_error = parse_file(&from_file, data, len, &pos);
 
 	cl_assert_equal_i(mem_error, file_error);
 
+	assert_source_released(parser);
+	assert_source_released(&from_file);
+
 	if (mem_error == 0) {
-		assert_headers_equal(header, &from_file);
+		assert_headers_equal(&parser->header, &from_file.header);
 
 		/* the descriptor is left at the first byte of the pack */
-		cl_assert_equal_i((int)header->pack_offset, (int)pos);
+		cl_assert_equal_i((int)parser->header.pack_offset, (int)pos);
 	}
 
-	git_bundle_header_dispose(&from_file);
+	git_bundle_parser_dispose(&from_file);
 
 	return mem_error;
 }
 
 static void assert_invalid(const char *data)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 
-	cl_assert_equal_i(GIT_EINVALID, parse_both(&header, data, strlen(data)));
+	cl_assert_equal_i(GIT_EINVALID, parse_both(&parser, data, strlen(data)));
 	cl_assert_equal_i(GIT_ERROR_INVALID, git_error_last()->klass);
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 static void assert_unsupported(const char *data)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 
 	cl_assert_equal_i(GIT_ENOTSUPPORTED,
-		parse_both(&header, data, strlen(data)));
+		parse_both(&parser, data, strlen(data)));
 	cl_assert_equal_i(GIT_ERROR_INVALID, git_error_last()->klass);
+	cl_assert_equal_i(3, parser.header.version);
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 void test_bundle_parse__v2_sha1(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	const char *data = V2_HEADER PACK_BYTES;
 	git_remote_head *head;
 	git_oid expected;
 
-	cl_git_pass(parse_both(&header, data, strlen(V2_HEADER) + 12));
+	cl_git_pass(parse_both(&parser, data, strlen(V2_HEADER) + 12));
 
-	cl_assert_equal_i(2, header.version);
-	cl_assert_equal_i(GIT_OID_SHA1, header.oid_type);
-	cl_assert_equal_i((int)strlen(V2_HEADER), (int)header.pack_offset);
+	cl_assert_equal_i(2, parser.header.version);
+	cl_assert_equal_i(GIT_OID_SHA1, parser.header.oid_type);
+	cl_assert_equal_i((int)strlen(V2_HEADER), (int)parser.header.pack_offset);
 
 	/* prerequisites are preserved; their comments are not */
-	cl_assert_equal_i(1, (int)header.prerequisites.size);
+	cl_assert_equal_i(1, (int)parser.header.prerequisites.size);
 	cl_git_pass(git_oid_from_string(&expected, SHA1_A, GIT_OID_SHA1));
-	cl_assert(git_oid_equal(&expected, &header.prerequisites.ptr[0]));
+	cl_assert(git_oid_equal(&expected, &parser.header.prerequisites.ptr[0]));
 
 	/* references keep their names, ids, and input order */
-	cl_assert_equal_i(2, (int)header.refs.length);
+	cl_assert_equal_i(2, (int)parser.header.refs.length);
 
-	head = git_vector_get(&header.refs, 0);
+	head = git_vector_get(&parser.header.refs, 0);
 	cl_assert_equal_s("refs/heads/br2", head->name);
 	cl_git_pass(git_oid_from_string(&expected, SHA1_B, GIT_OID_SHA1));
 	cl_assert(git_oid_equal(&expected, &head->oid));
 
-	head = git_vector_get(&header.refs, 1);
+	head = git_vector_get(&parser.header.refs, 1);
 	cl_assert_equal_s("HEAD", head->name);
 	cl_assert(head->symref_target == NULL);
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 void test_bundle_parse__v3_sha1(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	const char *data =
 		"# v3 git bundle\n"
 		"@object-format=sha1\n"
 		SHA1_A " refs/heads/master\n"
 		"\n";
 
-	cl_git_pass(parse_both(&header, data, strlen(data)));
+	cl_git_pass(parse_both(&parser, data, strlen(data)));
 
-	cl_assert_equal_i(3, header.version);
-	cl_assert_equal_i(GIT_OID_SHA1, header.oid_type);
-	cl_assert_equal_i(1, (int)header.refs.length);
+	cl_assert_equal_i(3, parser.header.version);
+	cl_assert_equal_i(GIT_OID_SHA1, parser.header.oid_type);
+	cl_assert_equal_i(1, (int)parser.header.refs.length);
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 void test_bundle_parse__v3_sha256(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	git_remote_head *head;
 	git_oid expected;
 	const char *data =
@@ -200,69 +210,69 @@ void test_bundle_parse__v3_sha256(void)
 		SHA256_A " refs/heads/master\n"
 		"\n";
 
-	cl_git_pass(parse_both(&header, data, strlen(data)));
+	cl_git_pass(parse_both(&parser, data, strlen(data)));
 
-	cl_assert_equal_i(3, header.version);
-	cl_assert_equal_i(GIT_OID_SHA256, header.oid_type);
+	cl_assert_equal_i(3, parser.header.version);
+	cl_assert_equal_i(GIT_OID_SHA256, parser.header.oid_type);
 
-	cl_assert_equal_i(1, (int)header.prerequisites.size);
+	cl_assert_equal_i(1, (int)parser.header.prerequisites.size);
 	cl_git_pass(git_oid_from_string(&expected, SHA256_B, GIT_OID_SHA256));
-	cl_assert(git_oid_equal(&expected, &header.prerequisites.ptr[0]));
+	cl_assert(git_oid_equal(&expected, &parser.header.prerequisites.ptr[0]));
 
-	cl_assert_equal_i(1, (int)header.refs.length);
-	head = git_vector_get(&header.refs, 0);
+	cl_assert_equal_i(1, (int)parser.header.refs.length);
+	head = git_vector_get(&parser.header.refs, 0);
 	cl_assert_equal_s("refs/heads/master", head->name);
 	cl_git_pass(git_oid_from_string(&expected, SHA256_A, GIT_OID_SHA256));
 	cl_assert(git_oid_equal(&expected, &head->oid));
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 void test_bundle_parse__v2_default_is_sha1(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	const char *data =
 		"# v2 git bundle\n"
 		SHA1_A " refs/heads/master\n"
 		"\n";
 
-	cl_git_pass(parse_both(&header, data, strlen(data)));
-	cl_assert_equal_i(GIT_OID_SHA1, header.oid_type);
+	cl_git_pass(parse_both(&parser, data, strlen(data)));
+	cl_assert_equal_i(GIT_OID_SHA1, parser.header.oid_type);
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 void test_bundle_parse__v3_default_is_sha1(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	const char *data =
 		"# v3 git bundle\n"
 		SHA1_A " refs/heads/master\n"
 		"\n";
 
-	cl_git_pass(parse_both(&header, data, strlen(data)));
-	cl_assert_equal_i(GIT_OID_SHA1, header.oid_type);
+	cl_git_pass(parse_both(&parser, data, strlen(data)));
+	cl_assert_equal_i(GIT_OID_SHA1, parser.header.oid_type);
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 void test_bundle_parse__empty_header(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	const char *data = "# v2 git bundle\n\n";
 
-	cl_git_pass(parse_both(&header, data, strlen(data)));
+	cl_git_pass(parse_both(&parser, data, strlen(data)));
 
-	cl_assert_equal_i(0, (int)header.refs.length);
-	cl_assert_equal_i(0, (int)header.prerequisites.size);
-	cl_assert_equal_i((int)strlen(data), (int)header.pack_offset);
+	cl_assert_equal_i(0, (int)parser.header.refs.length);
+	cl_assert_equal_i(0, (int)parser.header.prerequisites.size);
+	cl_assert_equal_i((int)strlen(data), (int)parser.header.pack_offset);
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 void test_bundle_parse__long_and_chunk_spanning_lines(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	git_str data = GIT_STR_INIT, name = GIT_STR_INIT;
 	git_remote_head *head;
 	size_t i;
@@ -276,14 +286,14 @@ void test_bundle_parse__long_and_chunk_spanning_lines(void)
 	cl_git_pass(git_str_printf(&data, "%s %s\n", SHA1_A, name.ptr));
 	cl_git_pass(git_str_puts(&data, "\n"));
 
-	cl_git_pass(parse_both(&header, data.ptr, data.size));
+	cl_git_pass(parse_both(&parser, data.ptr, data.size));
 
-	cl_assert_equal_i(1, (int)header.refs.length);
-	head = git_vector_get(&header.refs, 0);
+	cl_assert_equal_i(1, (int)parser.header.refs.length);
+	head = git_vector_get(&parser.header.refs, 0);
 	cl_assert_equal_s(name.ptr, head->name);
-	cl_assert_equal_i((int)data.size, (int)header.pack_offset);
+	cl_assert_equal_i((int)data.size, (int)parser.header.pack_offset);
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 	git_str_dispose(&data);
 	git_str_dispose(&name);
 }
@@ -320,20 +330,17 @@ static int long_signature_read(
 
 void test_bundle_parse__bounds_signature_reads(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
-	git_bundle_reader reader = { 0 };
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	size_t calls = 0;
 
-	reader.read = long_signature_read;
-	reader.payload = &calls;
-	cl_assert_equal_i(GIT_EINVALID,
-		git_bundle_header_parse(&header, &reader));
+	parser.read = long_signature_read;
+	parser.payload = &calls;
+	cl_assert_equal_i(GIT_EINVALID, git_bundle_parser_parse(&parser));
 
 	/* Probing a non-bundle does not buffer its entire first line. */
 	cl_assert_equal_i(1, (int)calls);
 
-	git_bundle_reader_dispose(&reader);
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 static int endless_header_read(
@@ -360,20 +367,17 @@ static int endless_header_read(
 
 void test_bundle_parse__bounds_header_line_reads(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
-	git_bundle_reader reader = { 0 };
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	size_t calls = 0;
 
-	reader.read = endless_header_read;
-	reader.payload = &calls;
+	parser.read = endless_header_read;
+	parser.payload = &calls;
 
-	cl_assert_equal_i(GIT_EINVALID,
-		git_bundle_header_parse(&header, &reader));
+	cl_assert_equal_i(GIT_EINVALID, git_bundle_parser_parse(&parser));
 	cl_assert(calls < 200);
 	cl_assert(strstr(git_error_last()->message, "line is too long") != NULL);
 
-	git_bundle_reader_dispose(&reader);
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 static int failing_read_header(
@@ -396,13 +400,13 @@ static void failing_backend_free(git_odb_backend *backend)
 
 void test_bundle_parse__prerequisite_check_propagates_odb_errors(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	git_odb_backend *backend;
 	git_repository *repo;
 	git_odb *odb;
 	const char *data = "# v2 git bundle\n-" SHA1_A "\n\n";
 
-	cl_git_pass(parse_memory(&header, data, strlen(data)));
+	cl_git_pass(parse_memory(&parser, data, strlen(data)));
 	cl_git_pass(git_repository_init(&repo, "prereq.git", true));
 	cl_git_pass(git_repository_odb(&odb, repo));
 
@@ -414,13 +418,13 @@ void test_bundle_parse__prerequisite_check_propagates_odb_errors(void)
 	cl_git_pass(git_odb_add_backend(odb, backend, 100));
 
 	cl_git_fail_with(GIT_EUSER,
-		git_bundle_check_prerequisites(&header, repo));
+		git_bundle_check_prerequisites(&parser.header, repo));
 	cl_assert_equal_s("injected object database failure",
 		git_error_last()->message);
 
 	git_odb_free(odb);
 	git_repository_free(repo);
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 void test_bundle_parse__rejects_missing_separator(void)
@@ -450,17 +454,17 @@ void test_bundle_parse__rejects_bad_ref_names(void)
 
 void test_bundle_parse__rejects_embedded_nul(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	const char data[] =
 		"# v2 git bundle\n"
 		SHA1_A " refs/heads/mas\0ter\n"
 		"\n";
 
 	cl_assert_equal_i(GIT_EINVALID,
-		parse_both(&header, data, sizeof(data) - 1));
+		parse_both(&parser, data, sizeof(data) - 1));
 	cl_assert_equal_i(GIT_ERROR_INVALID, git_error_last()->klass);
 
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 }
 
 void test_bundle_parse__rejects_embedded_carriage_return(void)
@@ -530,8 +534,7 @@ void test_bundle_parse__rejects_prerequisite_after_ref(void)
 /* an operational failure is propagated, not reported as a format miss */
 void test_bundle_parse__propagates_read_errors(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
-	git_bundle_reader reader;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	int fd;
 
 	cl_git_mkfile(TMP_BUNDLE, V2_HEADER);
@@ -543,60 +546,134 @@ void test_bundle_parse__propagates_read_errors(void)
 	 */
 	cl_must_pass(fd = p_open(TMP_BUNDLE, O_WRONLY));
 
-	git_bundle_reader_fromfd(&reader, fd);
-	cl_assert_equal_i(-1, git_bundle_header_parse(&header, &reader));
+	cl_assert_equal_i(-1, git_bundle_parser_parse_fd(&parser, fd));
 	cl_assert_equal_i(GIT_ERROR_OS, git_error_last()->klass);
 
-	git_bundle_reader_dispose(&reader);
-	git_bundle_header_dispose(&header);
+	/* the failing source is released, and its error survives */
+	assert_source_released(&parser);
+
+	git_bundle_parser_dispose(&parser);
 	p_close(fd);
 }
 
 void test_bundle_parse__parses_fixture_files(void)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
-	git_bundle_reader reader;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	git_remote_head *head;
 	int fd;
 
 	cl_must_pass(fd = p_open(cl_fixture("bundle/testrepo.bundle"), O_RDONLY));
 
-	git_bundle_reader_fromfd(&reader, fd);
-	cl_git_pass(git_bundle_header_parse(&header, &reader));
+	cl_git_pass(git_bundle_parser_parse_fd(&parser, fd));
 
-	cl_assert_equal_i(2, header.version);
-	cl_assert_equal_i(GIT_OID_SHA1, header.oid_type);
-	cl_assert_equal_i(0, (int)header.prerequisites.size);
+	cl_assert_equal_i(2, parser.header.version);
+	cl_assert_equal_i(GIT_OID_SHA1, parser.header.oid_type);
+	cl_assert_equal_i(0, (int)parser.header.prerequisites.size);
 
 	/* HEAD is recorded last, and is preserved in header order */
-	head = git_vector_get(&header.refs, header.refs.length - 1);
+	head = git_vector_get(&parser.header.refs, parser.header.refs.length - 1);
 	cl_assert_equal_s("HEAD", head->name);
 
-	git_bundle_reader_dispose(&reader);
-	git_bundle_header_dispose(&header);
 	p_close(fd);
 
 	cl_must_pass(fd = p_open(cl_fixture("bundle/incremental.bundle"), O_RDONLY));
 
-	git_bundle_reader_fromfd(&reader, fd);
-	cl_git_pass(git_bundle_header_parse(&header, &reader));
+	cl_git_pass(git_bundle_parser_parse_fd(&parser, fd));
 
-	cl_assert_equal_i(1, (int)header.prerequisites.size);
-	cl_assert_equal_i(1, (int)header.refs.length);
+	cl_assert_equal_i(1, (int)parser.header.prerequisites.size);
+	cl_assert_equal_i(1, (int)parser.header.refs.length);
 
-	git_bundle_reader_dispose(&reader);
-	git_bundle_header_dispose(&header);
 	p_close(fd);
 
 	cl_must_pass(fd = p_open(cl_fixture("bundle/testrepo_256.bundle"), O_RDONLY));
 
-	git_bundle_reader_fromfd(&reader, fd);
-	cl_git_pass(git_bundle_header_parse(&header, &reader));
+	cl_git_pass(git_bundle_parser_parse_fd(&parser, fd));
 
-	cl_assert_equal_i(3, header.version);
-	cl_assert_equal_i(GIT_OID_SHA256, header.oid_type);
+	cl_assert_equal_i(3, parser.header.version);
+	cl_assert_equal_i(GIT_OID_SHA256, parser.header.oid_type);
 
-	git_bundle_reader_dispose(&reader);
-	git_bundle_header_dispose(&header);
+	git_bundle_parser_dispose(&parser);
 	p_close(fd);
+}
+
+/* re-parsing replaces the previous result rather than adding to it */
+void test_bundle_parse__reparse_releases_previous_result(void)
+{
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
+	const char *first = V2_HEADER;
+	const char *second =
+		"# v2 git bundle\n" SHA1_B " refs/heads/only\n\n";
+	git_remote_head *head;
+
+	cl_git_pass(parse_memory(&parser, first, strlen(first)));
+	cl_assert_equal_i(2, (int)parser.header.refs.length);
+	cl_assert_equal_i(1, (int)parser.header.prerequisites.size);
+
+	cl_git_pass(parse_memory(&parser, second, strlen(second)));
+	cl_assert_equal_i(1, (int)parser.header.refs.length);
+	cl_assert_equal_i(0, (int)parser.header.prerequisites.size);
+
+	head = git_vector_get(&parser.header.refs, 0);
+	cl_assert_equal_s("refs/heads/only", head->name);
+
+	git_bundle_parser_dispose(&parser);
+}
+
+void test_bundle_parse__dispose_is_idempotent(void)
+{
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
+	const char *data = V2_HEADER;
+
+	/* a zero-initialized parser is valid */
+	git_bundle_parser_dispose(&parser);
+
+	cl_git_pass(parse_memory(&parser, data, strlen(data)));
+
+	git_bundle_parser_dispose(&parser);
+	git_bundle_parser_dispose(&parser);
+
+	cl_assert_equal_i(0, (int)parser.header.version);
+	cl_assert_equal_i(0, (int)parser.header.refs.length);
+	cl_assert_equal_i(0, (int)parser.header.prerequisites.size);
+}
+
+/*
+ * Whatever a parse returns, it hands the source back.  A successful and
+ * an unsupported parse keep their header; a hard failure does not.
+ */
+void test_bundle_parse__releases_source_on_every_outcome(void)
+{
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
+	const char *unsupported =
+		"# v3 git bundle\n@filter=blob:none\n"
+		SHA1_A " refs/heads/master\n\n";
+	const char *invalid = "not a bundle\n";
+	int fd;
+
+	cl_git_mkfile(TMP_BUNDLE, V2_HEADER);
+	cl_must_pass(fd = p_open(TMP_BUNDLE, O_RDONLY));
+
+	cl_git_pass(git_bundle_parser_parse_fd(&parser, fd));
+	assert_source_released(&parser);
+	cl_assert_equal_i(2, (int)parser.header.version);
+
+	/* the descriptor is borrowed: still open, still the caller's */
+	cl_must_pass(p_lseek(fd, 0, SEEK_SET));
+	p_close(fd);
+
+	cl_assert_equal_i(GIT_ENOTSUPPORTED,
+		parse_memory(&parser, unsupported, strlen(unsupported)));
+	assert_source_released(&parser);
+	cl_assert_equal_i(3, (int)parser.header.version);
+	cl_assert_equal_i(1, (int)parser.header.refs.length);
+	cl_assert(strstr(git_error_last()->message, "filtered") != NULL);
+
+	cl_assert_equal_i(GIT_EINVALID,
+		parse_memory(&parser, invalid, strlen(invalid)));
+	assert_source_released(&parser);
+	cl_assert_equal_i(0, (int)parser.header.version);
+	cl_assert_equal_i(0, (int)parser.header.refs.length);
+	cl_assert_equal_i(GIT_ERROR_INVALID, git_error_last()->klass);
+
+	git_bundle_parser_dispose(&parser);
 }

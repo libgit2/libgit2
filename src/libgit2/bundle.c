@@ -21,12 +21,14 @@
 #define BUNDLE_CAP_OBJECT_FORMAT "object-format"
 #define BUNDLE_CAP_FILTER "filter"
 
-static int reader_read_fd(void *payload, void *buf, size_t len, size_t *out_read)
+static void bundle_header_dispose(git_bundle_header *header);
+
+static int source_read_fd(void *payload, void *buf, size_t len, size_t *out_read)
 {
-	git_bundle_reader *reader = payload;
+	git_bundle_parser *parser = payload;
 	ssize_t n;
 
-	if ((n = p_read(reader->fd, buf, len)) < 0) {
+	if ((n = p_read(parser->fd, buf, len)) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to read bundle");
 		return -1;
 	}
@@ -35,11 +37,11 @@ static int reader_read_fd(void *payload, void *buf, size_t len, size_t *out_read
 	return 0;
 }
 
-static int reader_seek_fd(void *payload, size_t offset)
+static int source_seek_fd(void *payload, size_t offset)
 {
-	git_bundle_reader *reader = payload;
+	git_bundle_parser *parser = payload;
 
-	if (p_lseek(reader->fd, (off_t)offset, SEEK_SET) < 0) {
+	if (p_lseek(parser->fd, (off_t)offset, SEEK_SET) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to seek in bundle");
 		return -1;
 	}
@@ -47,76 +49,66 @@ static int reader_seek_fd(void *payload, size_t offset)
 	return 0;
 }
 
-static int reader_read_memory(void *payload, void *buf, size_t len, size_t *out_read)
+static int source_read_memory(void *payload, void *buf, size_t len, size_t *out_read)
 {
-	git_bundle_reader *reader = payload;
-	size_t remaining = reader->data_len - reader->data_pos;
+	git_bundle_parser *parser = payload;
+	size_t remaining = parser->data_len - parser->data_pos;
 
 	if (len > remaining)
 		len = remaining;
 
-	memcpy(buf, reader->data + reader->data_pos, len);
-	reader->data_pos += len;
+	memcpy(buf, parser->data + parser->data_pos, len);
+	parser->data_pos += len;
 
 	*out_read = len;
 	return 0;
 }
 
-static int reader_seek_memory(void *payload, size_t offset)
+static int source_seek_memory(void *payload, size_t offset)
 {
-	git_bundle_reader *reader = payload;
+	git_bundle_parser *parser = payload;
 
-	reader->data_pos = min(offset, reader->data_len);
+	parser->data_pos = min(offset, parser->data_len);
 	return 0;
 }
 
-void git_bundle_reader_fromfd(git_bundle_reader *reader, int fd)
+/*
+ * Release the borrowed source and the transient parsing state, leaving
+ * only the parsed header behind.  Nothing here sets an error, so a
+ * caller can run this between a failed parse and its return without
+ * disturbing the diagnosis.
+ */
+static void parser_source_clear(git_bundle_parser *parser)
 {
-	memset(reader, 0, sizeof(*reader));
+	git_str_dispose(&parser->buf);
 
-	reader->read = reader_read_fd;
-	reader->seek = reader_seek_fd;
-	reader->payload = reader;
-	reader->fd = fd;
+	parser->read = NULL;
+	parser->seek = NULL;
+	parser->payload = NULL;
+	parser->fd = 0;
+	parser->data = NULL;
+	parser->data_len = 0;
+	parser->data_pos = 0;
+	parser->offset = 0;
+	parser->eof = 0;
 }
 
-void git_bundle_reader_frommemory(
-	git_bundle_reader *reader, const void *data, size_t len)
-{
-	memset(reader, 0, sizeof(*reader));
-
-	reader->read = reader_read_memory;
-	reader->seek = reader_seek_memory;
-	reader->payload = reader;
-	reader->fd = -1;
-	reader->data = data;
-	reader->data_len = len;
-}
-
-void git_bundle_reader_dispose(git_bundle_reader *reader)
-{
-	if (!reader)
-		return;
-
-	git_str_dispose(&reader->buf);
-}
-
-static int reader_fill(git_bundle_reader *reader)
+static int parser_fill(git_bundle_parser *parser)
 {
 	char chunk[BUNDLE_READ_CHUNK];
 	size_t read_len = 0;
 	int error;
 
-	if ((error = reader->read(reader->payload, chunk, sizeof(chunk),
+	if ((error = parser->read(parser->payload, chunk, sizeof(chunk),
 			&read_len)) < 0)
 		return error;
 
 	if (read_len == 0) {
-		reader->eof = 1;
+		parser->eof = 1;
 		return 0;
 	}
 
-	return git_str_put(&reader->buf, chunk, read_len);
+	return git_str_put(&parser->buf, chunk, read_len);
 }
 
 /*
@@ -125,8 +117,8 @@ static int reader_fill(git_bundle_reader *reader)
  * and GIT_EINVALID for a truncated final line or for bytes that may not
  * appear in a header.
  */
-static int reader_readline(
-	git_str *out, git_bundle_reader *reader, size_t max_len)
+static int parser_readline(
+	git_str *out, git_bundle_parser *parser, size_t max_len)
 {
 	const char *nl = NULL;
 	size_t linelen, scan_offset = 0;
@@ -134,17 +126,17 @@ static int reader_readline(
 
 	git_str_clear(out);
 
-	while (reader->buf.size == scan_offset ||
-	       (nl = memchr(reader->buf.ptr + scan_offset, '\n',
-			reader->buf.size - scan_offset)) == NULL) {
-		if (reader->buf.size > max_len) {
+	while (parser->buf.size == scan_offset ||
+	       (nl = memchr(parser->buf.ptr + scan_offset, '\n',
+			parser->buf.size - scan_offset)) == NULL) {
+		if (parser->buf.size > max_len) {
 			git_error_set(GIT_ERROR_INVALID,
 				"bundle header line is too long");
 			return GIT_EINVALID;
 		}
 
-		if (reader->eof) {
-			if (reader->buf.size == 0)
+		if (parser->eof) {
+			if (parser->buf.size == 0)
 				return GIT_ITEROVER;
 
 			git_error_set(GIT_ERROR_INVALID,
@@ -152,13 +144,13 @@ static int reader_readline(
 			return GIT_EINVALID;
 		}
 
-		scan_offset = reader->buf.size;
+		scan_offset = parser->buf.size;
 
-		if ((error = reader_fill(reader)) < 0)
+		if ((error = parser_fill(parser)) < 0)
 			return error;
 	}
 
-	linelen = (size_t)(nl - reader->buf.ptr);
+	linelen = (size_t)(nl - parser->buf.ptr);
 
 	if (linelen > max_len) {
 		git_error_set(GIT_ERROR_INVALID,
@@ -166,18 +158,18 @@ static int reader_readline(
 		return GIT_EINVALID;
 	}
 
-	if (memchr(reader->buf.ptr, '\0', linelen) != NULL ||
-	    memchr(reader->buf.ptr, '\r', linelen) != NULL) {
+	if (memchr(parser->buf.ptr, '\0', linelen) != NULL ||
+	    memchr(parser->buf.ptr, '\r', linelen) != NULL) {
 		git_error_set(GIT_ERROR_INVALID,
 			"invalid character in bundle header");
 		return GIT_EINVALID;
 	}
 
-	if ((error = git_str_put(out, reader->buf.ptr, linelen)) < 0)
+	if ((error = git_str_put(out, parser->buf.ptr, linelen)) < 0)
 		return error;
 
-	git_str_consume_bytes(&reader->buf, linelen + 1);
-	reader->offset += linelen + 1;
+	git_str_consume_bytes(&parser->buf, linelen + 1);
+	parser->offset += linelen + 1;
 
 	return 0;
 }
@@ -361,15 +353,12 @@ static int add_ref(git_bundle_header *header, const char *line)
 	return 0;
 }
 
-int git_bundle_header_parse(
-	git_bundle_header *header, git_bundle_reader *reader)
+static int parser_parse_header(git_bundle_parser *parser)
 {
+	git_bundle_header *header = &parser->header;
 	git_str line = GIT_STR_INIT;
 	int seen_object_format = 0, unsupported = 0;
 	int error;
-
-	GIT_ASSERT_ARG(header);
-	GIT_ASSERT_ARG(reader);
 
 	memset(header, 0, sizeof(*header));
 	header->oid_type = GIT_OID_SHA1;
@@ -377,7 +366,7 @@ int git_bundle_header_parse(
 	if ((error = git_vector_init(&header->refs, 0, NULL)) < 0)
 		goto on_error;
 
-	if ((error = reader_readline(&line, reader,
+	if ((error = parser_readline(&line, parser,
 			max(CONST_STRLEN(GIT_BUNDLE_SIGNATURE_V2),
 				CONST_STRLEN(GIT_BUNDLE_SIGNATURE_V3)))) < 0) {
 		if (error == GIT_ITEROVER) {
@@ -398,7 +387,7 @@ int git_bundle_header_parse(
 		goto on_error;
 	}
 
-	while ((error = reader_readline(&line, reader,
+	while ((error = parser_readline(&line, parser,
 			BUNDLE_HEADER_LINE_MAX)) == 0) {
 		if (line.size == 0)
 			break;
@@ -453,10 +442,10 @@ int git_bundle_header_parse(
 	if (error < 0)
 		goto on_error;
 
-	header->pack_offset = reader->offset;
+	header->pack_offset = parser->offset;
 
-	if (reader->seek &&
-	    (error = reader->seek(reader->payload, header->pack_offset)) < 0)
+	if (parser->seek &&
+	    (error = parser->seek(parser->payload, header->pack_offset)) < 0)
 		goto on_error;
 
 	git_str_dispose(&line);
@@ -466,8 +455,63 @@ int git_bundle_header_parse(
 
 on_error:
 	git_str_dispose(&line);
-	git_bundle_header_dispose(header);
+
+	if (error != GIT_ENOTSUPPORTED)
+		bundle_header_dispose(header);
+
 	return error;
+}
+
+int git_bundle_parser_parse(git_bundle_parser *parser)
+{
+	int error;
+
+	GIT_ASSERT_ARG(parser);
+	GIT_ASSERT_ARG(parser->read);
+
+	bundle_header_dispose(&parser->header);
+
+	error = parser_parse_header(parser);
+
+	parser_source_clear(parser);
+
+	return error;
+}
+
+int git_bundle_parser_parse_fd(git_bundle_parser *parser, int fd)
+{
+	GIT_ASSERT_ARG(parser);
+
+	parser->read = source_read_fd;
+	parser->seek = source_seek_fd;
+	parser->payload = parser;
+	parser->fd = fd;
+
+	return git_bundle_parser_parse(parser);
+}
+
+int git_bundle_parser_parse_memory(
+	git_bundle_parser *parser, const void *data, size_t len)
+{
+	GIT_ASSERT_ARG(parser);
+
+	parser->read = source_read_memory;
+	parser->seek = source_seek_memory;
+	parser->payload = parser;
+	parser->data = data;
+	parser->data_len = len;
+	parser->data_pos = 0;
+
+	return git_bundle_parser_parse(parser);
+}
+
+void git_bundle_parser_dispose(git_bundle_parser *parser)
+{
+	if (!parser)
+		return;
+
+	parser_source_clear(parser);
+	bundle_header_dispose(&parser->header);
 }
 
 int git_bundle_check_prerequisites(
@@ -510,13 +554,10 @@ int git_bundle_check_prerequisites(
 	return 0;
 }
 
-void git_bundle_header_dispose(git_bundle_header *header)
+static void bundle_header_dispose(git_bundle_header *header)
 {
 	git_remote_head *head;
 	size_t i;
-
-	if (!header)
-		return;
 
 	git_vector_foreach(&header->refs, i, head) {
 		git__free(head->name);

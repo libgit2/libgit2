@@ -1,18 +1,3 @@
-Unreleased
-----------
-
-## Major changes
-
-* **Clone and fetch from a git bundle**
-  `git_clone` can now clone a self-contained local git bundle, and `git_remote_fetch` can fetch a self-contained or incremental bundle whose prerequisites exist in the destination.
-  Bundles are recognized by their contents, whatever the path's extension.
-  SHA1 and SHA256, transfer progress, and cancellation are supported.
-  Creating bundles, pushing to them, shallow operations, filtered bundles, and Git's bundle-URI protocol are not supported.
-  The low-level constructor is available as `git_transport_bundle`.
-
-  A bundle does not have to record `HEAD`, and libgit2 does not invent one when it is missing.
-  Such a clone preserves libgit2's existing behavior for a remote that advertises no `HEAD`: the configured initial branch remains unborn and no files are checked out.
-
 v1.9.0
 ------
 

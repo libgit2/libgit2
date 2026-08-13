@@ -1,4 +1,5 @@
 #include "clar_libgit2.h"
+#include "fs_path.h"
 #include "futils.h"
 #include "posix.h"
 #include "git2/sys/remote.h"
@@ -10,7 +11,9 @@ static git_transport _transport = GIT_TRANSPORT_INIT;
 void test_transport_register__cleanup(void)
 {
 	git_transport_unregister("ssh");
+	git_transport_unregister("bundle");
 	cl_fixture_cleanup("colon-path");
+	cl_fixture_cleanup("bundle-path");
 }
 
 static int dummy_transport(git_transport **transport, git_remote *owner, void *param)
@@ -104,6 +107,46 @@ void test_transport_register__custom_ssh_precedes_colon_bundle_path(void)
 
 	cl_git_pass(git_transport_unregister("ssh"));
 #endif
+}
+
+/*
+ * A bundle is selected by probing its contents, not by a URL scheme, so
+ * these check that registration still gets the last word over the
+ * built-in bundle transport at both places the probe runs.
+ */
+void test_transport_register__custom_bundle_overrides_probe(void)
+{
+	git_transport *transport;
+
+	cl_must_pass(p_mkdir("bundle-path", 0777));
+	cl_git_pass(git_futils_cp(cl_fixture("bundle/testrepo.bundle"),
+		"bundle-path/probed.bundle", 0666));
+	cl_git_pass(git_transport_register("bundle", dummy_transport, NULL));
+
+	cl_git_pass(git_transport_new(&transport, NULL,
+		"./bundle-path/probed.bundle"));
+	cl_assert(transport == &_transport);
+
+	cl_git_pass(git_transport_unregister("bundle"));
+}
+
+/* on Windows this is the drive-rooted probe, which runs before the colon check */
+void test_transport_register__custom_bundle_overrides_absolute_probe(void)
+{
+	git_transport *transport;
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_fs_path_prettify(&path,
+		cl_fixture("bundle/testrepo.bundle"), NULL));
+	cl_assert(git_fs_path_is_absolute(path.ptr));
+
+	cl_git_pass(git_transport_register("bundle", dummy_transport, NULL));
+
+	cl_git_pass(git_transport_new(&transport, NULL, path.ptr));
+	cl_assert(transport == &_transport);
+
+	cl_git_pass(git_transport_unregister("bundle"));
+	git_str_dispose(&path);
 }
 
 static int custom_subtransport_stream__read(

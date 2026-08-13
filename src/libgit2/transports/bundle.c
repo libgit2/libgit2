@@ -25,7 +25,7 @@ typedef struct {
 	git_transport parent;
 	git_remote *owner;
 	int fd;
-	git_bundle_header header;
+	git_bundle_parser parser;
 	git_remote_connect_options connect_opts;
 	git_atomic32 cancelled;
 	unsigned connected : 1,
@@ -62,23 +62,20 @@ static bool bundle_is_local_path(const char *url)
 	return true;
 }
 
-int git_transport_bundle__probe(git_bundle_probe_t *out, const char *url)
+int git_transport_bundle__probe(bool *out, const char *url)
 {
-	git_bundle_header header = GIT_BUNDLE_HEADER_INIT;
-	git_bundle_reader reader;
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
 	struct stat st;
 	int fd, error;
 
-	*out = GIT_BUNDLE_PROBE_NONE;
+	*out = false;
 
 	if (!bundle_is_local_path(url))
 		return 0;
 
 	/*
-	 * Classify the path before opening it.  On systems where this
-	 * probe runs before the directory check, `open` on a directory
-	 * succeeds and only the read fails; treating that as an
-	 * operational error would break every ordinary local clone.
+	 * Only regular files can be bundles.  Avoid opening special files,
+	 * which may block or have side effects.
 	 */
 	if (p_stat(url, &st) < 0 || !S_ISREG(st.st_mode))
 		return 0;
@@ -88,21 +85,19 @@ int git_transport_bundle__probe(git_bundle_probe_t *out, const char *url)
 		return -1;
 	}
 
-	git_bundle_reader_fromfd(&reader, fd);
-	error = git_bundle_header_parse(&header, &reader);
-	git_bundle_reader_dispose(&reader);
-	git_bundle_header_dispose(&header);
+	error = git_bundle_parser_parse_fd(&parser, fd);
+	git_bundle_parser_dispose(&parser);
 	p_close(fd);
 
 	if (error == 0) {
-		*out = GIT_BUNDLE_PROBE_SUPPORTED;
+		*out = true;
 		return 0;
 	}
 
 	if (error == GIT_ENOTSUPPORTED) {
 		/* connect will report the specific reason */
 		git_error_clear();
-		*out = GIT_BUNDLE_PROBE_UNSUPPORTED;
+		*out = true;
 		return 0;
 	}
 
@@ -144,7 +139,7 @@ static void bundle_reset(transport_bundle *t)
 		t->fd = -1;
 	}
 
-	git_bundle_header_dispose(&t->header);
+	git_bundle_parser_dispose(&t->parser);
 
 	t->connected = 0;
 	t->have_refs = 0;
@@ -160,7 +155,6 @@ static int bundle_connect(
 	const git_remote_connect_options *connect_opts)
 {
 	transport_bundle *t = (transport_bundle *)transport;
-	git_bundle_reader reader;
 	int error;
 
 	if (t->connected)
@@ -184,16 +178,12 @@ static int bundle_connect(
 		goto on_error;
 	}
 
-	git_bundle_reader_fromfd(&reader, t->fd);
-	error = git_bundle_header_parse(&t->header, &reader);
-	git_bundle_reader_dispose(&reader);
-
-	if (error < 0)
+	if ((error = git_bundle_parser_parse_fd(&t->parser, t->fd)) < 0)
 		goto on_error;
 
 	/* the descriptor is now positioned at the first byte of the pack */
 
-	move_head_first(&t->header.refs);
+	move_head_first(&t->parser.header.refs);
 
 	t->connected = 1;
 	t->have_refs = 1;
@@ -238,7 +228,7 @@ static int bundle_oid_type(git_oid_t *out, git_transport *transport)
 {
 	transport_bundle *t = (transport_bundle *)transport;
 
-	*out = t->header.oid_type;
+	*out = t->parser.header.oid_type;
 
 	return 0;
 }
@@ -254,8 +244,8 @@ static int bundle_ls(
 		return -1;
 	}
 
-	*out = (const git_remote_head **)t->header.refs.contents;
-	*size = t->header.refs.length;
+	*out = (const git_remote_head **)t->parser.header.refs.contents;
+	*size = t->parser.header.refs.length;
 
 	return 0;
 }
@@ -306,15 +296,15 @@ static int bundle_negotiate_fetch(
 
 	repo_oid_type = git_repository_oid_type(repo);
 
-	if (repo_oid_type != t->header.oid_type) {
+	if (repo_oid_type != t->parser.header.oid_type) {
 		git_error_set(GIT_ERROR_NET,
 			"the bundle uses %s object ids, but the repository uses %s",
-			git_oid_type_name(t->header.oid_type),
+			git_oid_type_name(t->parser.header.oid_type),
 			git_oid_type_name(repo_oid_type));
 		return -1;
 	}
 
-	if ((error = git_bundle_check_prerequisites(&t->header, repo)) < 0)
+	if ((error = git_bundle_check_prerequisites(&t->parser.header, repo)) < 0)
 		return error;
 
 	t->verified = 1;
@@ -361,7 +351,7 @@ static int bundle_download_pack(
 	 * Connect left the descriptor here, but a previous download may
 	 * have moved it; a retry must start at the first byte of the pack.
 	 */
-	if (p_lseek(t->fd, (off_t)t->header.pack_offset, SEEK_SET) < 0) {
+	if (p_lseek(t->fd, (off_t)t->parser.header.pack_offset, SEEK_SET) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to seek in bundle");
 		return -1;
 	}
@@ -479,7 +469,7 @@ int git_transport_bundle(git_transport **out, git_remote *owner, void *param)
 
 	t->owner = owner;
 	t->fd = -1;
-	t->header.oid_type = GIT_OID_SHA1;
+	t->parser.header.oid_type = GIT_OID_SHA1;
 
 	*out = (git_transport *)t;
 
