@@ -1,3 +1,17 @@
+v1.8.7
+------
+
+This is a security release with one change.
+
+* Escape remote repository paths in libssh2
+
+  In v1.8.5, we started escaping repository paths in the OpenSSH-based
+  exec ssh transport. Bring the same escaping to the libssh2 transport
+  to avoid any potential command injection.
+
+In addition, changes have been ported from the main branch to update
+CI builds.
+
 v1.8.6
 ------
 
