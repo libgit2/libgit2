@@ -38,3 +38,6 @@
 [branch "mergeandremoteless"]
    remote = 
    merge = 
+[remote "https"]
+	url = https://github.com/libgit2/libgit2
+	fetch = +refs/heads/*:refs/remotes/https/*
