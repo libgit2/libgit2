@@ -151,6 +151,17 @@ int git_zstream_get_output(void *out, size_t *out_len, git_zstream *zstream)
 		if (git_zstream_get_output_chunk(out, &out_written, zstream) < 0)
 			return -1;
 
+		/*
+		 * with output space still available, a Z_BUF_ERROR that wrote
+		 * nothing could be the input is exhausted in the middle of the stream.
+		 * It is unlikely further input will arrive within this loop,
+		 * so we fail it.
+		 */
+		if (!out_written && zstream->zerr == Z_BUF_ERROR) {
+			git_error_set(GIT_ERROR_ZLIB, "premature end of zlib stream");
+			return -1;
+		}
+
 		out_remain -= out_written;
 		out = ((char *)out) + out_written;
 	}
