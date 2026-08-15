@@ -244,10 +244,10 @@ static int set_data(
 	}
 
 	if (format_str) {
-		if ((eos = memchr(format_str, ' ', len - (format_str - line))) == NULL)
-			eos = memchr(format_str, '\0', len - (format_str - line));
-
-		GIT_ASSERT(eos);
+		if ((eos = memchr(format_str, ' ', len - (format_str - line))) == NULL &&
+		    (eos = memchr(format_str, '\n', len - (format_str - line))) == NULL &&
+		    (eos = memchr(format_str, '\0', len - (format_str - line))) == NULL)
+			eos = line + len;
 
 		format_len = eos - format_str;
 
