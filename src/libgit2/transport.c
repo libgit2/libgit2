@@ -12,6 +12,7 @@
 #include "git2/net.h"
 #include "git2/transport.h"
 #include "git2/sys/transport.h"
+#include "bundle.h"
 #include "fs_path.h"
 
 typedef struct transport_definition {
@@ -31,6 +32,13 @@ static git_smart_subtransport_definition ssh_subtransport_definition = { git_sma
 #endif
 
 static transport_definition local_transport_definition = { "file://", git_transport_local, NULL };
+/*
+ * Bundles are recognized by their contents, not by a URL scheme, so this
+ * definition is never reached by prefix matching and is not listed in
+ * `transports` below.  Its prefix exists so that a caller can override
+ * the built-in transport with `git_transport_register("bundle", ...)`.
+ */
+static transport_definition bundle_transport_definition = { "bundle://", git_transport_bundle, NULL };
 
 static transport_definition transports[] = {
 	{ "git://",   git_transport_smart, &git_subtransport_definition },
@@ -77,12 +85,27 @@ static transport_definition * transport_find_by_url(const char *url)
 	return NULL;
 }
 
+/*
+ * A custom `bundle` transport, if one is registered, replaces the
+ * built-in one for every path that probes as a bundle.
+ */
+static transport_definition *bundle_definition(void)
+{
+	transport_definition *d =
+		transport_find_by_url(bundle_transport_definition.prefix);
+
+	return d ? d : &bundle_transport_definition;
+}
+
 static int transport_find_fn(
 	git_transport_cb *out,
 	const char *url,
 	void **param)
 {
 	transport_definition *definition = transport_find_by_url(url);
+	bool is_bundle;
+	bool bundle_probed = false;
+	int error;
 
 #ifdef GIT_WIN32
 	/* On Windows, it might not be possible to discern between absolute local
@@ -94,14 +117,34 @@ static int transport_find_fn(
 		definition = &local_transport_definition;
 #endif
 
-	/* For other systems, perform the SSH check first, to avoid going to the
-	 * filesystem if it is not necessary */
+#ifdef GIT_WIN32
+	/* Probe a drive-rooted file before the colon check so that a Windows
+	 * drive letter is not mistaken for an SSH host. */
+	if (!definition && git_fs_path_root(url) > 0) {
+		if ((error = git_transport_bundle__probe(&is_bundle, url)) < 0)
+			return error;
+
+		bundle_probed = true;
+
+		if (is_bundle)
+			definition = bundle_definition();
+	}
+#endif
 
 	/* It could be a SSH remote path. Check to see if there's a : */
 	if (!definition && strrchr(url, ':')) {
 		/* re-search transports again with ssh:// as url
 		 * so that we can find a third party ssh transport */
 		definition = transport_find_by_url("ssh://");
+	}
+
+	/* A bundle is a regular file, so the directory checks fall through. */
+	if (!definition && !bundle_probed) {
+		if ((error = git_transport_bundle__probe(&is_bundle, url)) < 0)
+			return error;
+
+		if (is_bundle)
+			definition = bundle_definition();
 	}
 
 #ifndef GIT_WIN32
