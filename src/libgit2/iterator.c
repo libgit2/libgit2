@@ -1169,8 +1169,13 @@ static void filesystem_iterator_frame_push_ignores(
 		/* push new ignores for files in this directory */
 		relative_path = frame_entry->path + previous_frame->path_len;
 
-		/* inherit ignored from parent if no rule specified */
-		if (new_frame->is_ignored <= GIT_IGNORE_NOTFOUND)
+		/*
+		 * Inherit ignored from the parent if no rule was specified or
+		 * if a negative rule cannot reinclude an ignored parent.
+		 */
+		if (new_frame->is_ignored <= GIT_IGNORE_NOTFOUND ||
+		    (new_frame->is_ignored == GIT_IGNORE_FALSE &&
+		     previous_frame->is_ignored == GIT_IGNORE_TRUE))
 			new_frame->is_ignored = previous_frame->is_ignored;
 
 		git_ignore__push_dir(&iter->ignores, relative_path);
@@ -1739,11 +1744,15 @@ static void filesystem_iterator_update_ignored(filesystem_iterator *iter)
 		iter->current_is_ignored = GIT_IGNORE_NOTFOUND;
 	}
 
-	/* use ignore from containing frame stack */
-	if (iter->current_is_ignored <= GIT_IGNORE_NOTFOUND) {
-		frame = filesystem_iterator_current_frame(iter);
+	/*
+	 * Use ignore from the containing frame if no rule was specified or
+	 * if a negative rule cannot reinclude an entry in an ignored parent.
+	 */
+	frame = filesystem_iterator_current_frame(iter);
+	if (iter->current_is_ignored <= GIT_IGNORE_NOTFOUND ||
+	    (iter->current_is_ignored == GIT_IGNORE_FALSE &&
+	     frame->is_ignored == GIT_IGNORE_TRUE))
 		iter->current_is_ignored = frame->is_ignored;
-	}
 }
 
 GIT_INLINE(bool) filesystem_iterator_current_is_ignored(
