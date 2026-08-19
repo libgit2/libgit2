@@ -103,6 +103,41 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	return 0;
 }
 
+int git_signature__resolved(
+	git_signature **dest,
+	const git_signature *source,
+	const char *name,
+	const char *email)
+{
+	git_signature *signature;
+
+	GIT_ASSERT_ARG(source);
+	GIT_ASSERT_ARG(name);
+	GIT_ASSERT_ARG(email);
+
+	*dest = NULL;
+
+	if (contains_angle_brackets(name) ||
+		contains_angle_brackets(email)) {
+		return signature_error(
+			"Neither `name` nor `email` should contain angle brackets chars.");
+	}
+
+	signature = git__calloc(1, sizeof(git_signature));
+	GIT_ERROR_CHECK_ALLOC(signature);
+
+	signature->name = extract_trimmed(name, strlen(name));
+	GIT_ERROR_CHECK_ALLOC(signature->name);
+	signature->email = extract_trimmed(email, strlen(email));
+	GIT_ERROR_CHECK_ALLOC(signature->email);
+
+	signature->when = source->when;
+
+	*dest = signature;
+
+	return 0;
+}
+
 int git_signature_dup(git_signature **dest, const git_signature *source)
 {
 	git_signature *signature;
