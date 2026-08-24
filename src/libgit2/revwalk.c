@@ -988,6 +988,11 @@ int git_revwalk_pathspec(git_revwalk *walk, git_pathspec *pathspec) {
 		walk->pathspec_wildcard = pathspec_has_wildcard(pathspec);
 		walk->limited = 1;
 	}
+	/* Reset previously set pathspec */ 
+	else if (walk->pathspec) {
+		walk->pathspec = NULL;
+		walk->pathspec_wildcard = false;
+	}
 
 	return 0;
 }
