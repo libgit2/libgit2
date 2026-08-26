@@ -1018,11 +1018,6 @@ static int index_entry_init(
 			"could not initialize index entry. "
 			"Index is not backed up by an existing repository.");
 
-	/*
-	 * FIXME: this is duplicated with the work in
-	 * git_blob__create_from_paths. It should accept an optional stat
-	 * structure so we can pass in the one we have to do here.
-	 */
 	repo = INDEX_OWNER(index);
 	if (git_repository__ensure_not_bare(repo, "create blob from file") < 0)
 		return GIT_EBAREREPO;
@@ -1039,9 +1034,9 @@ static int index_entry_init(
 	if (index_entry_create(&entry, INDEX_OWNER(index), rel_path, &st, true) < 0)
 		return -1;
 
-	/* write the blob to disk and get the oid and stat info */
+	/* write the blob to disk and get the oid */
 	error = git_blob__create_from_paths(
-		&oid, &st, INDEX_OWNER(index), NULL, rel_path, 0, true);
+		&oid, NULL, INDEX_OWNER(index), NULL, rel_path, 0, true, &st);
 
 	if (error < 0) {
 		index_entry_free(entry);
