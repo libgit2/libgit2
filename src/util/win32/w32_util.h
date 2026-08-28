@@ -67,7 +67,7 @@ extern int git_win32__file_attribute_to_stat(
 /**
  * Converts a FILETIME structure to a struct timespec.
  *
- * @param FILETIME A pointer to a FILETIME
+ * @param ft A pointer to a FILETIME
  * @param ts A pointer to the timespec structure to fill in
  */
 GIT_INLINE(void) git_win32__filetime_to_timespec(

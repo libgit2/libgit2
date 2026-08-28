@@ -136,7 +136,7 @@ struct git_refdb_backend {
 	 *
 	 * A refdb implementation must provide this function.
 	 *
-	 * @param out The implementation shall set this to the allocated
+	 * @param iter The implementation shall set this to the allocated
 	 *          reference iterator. A custom structure may be used with an
 	 *          embedded `git_reference_iterator` structure. Both `next`
 	 *          and `next_name` functions of `git_reference_iterator` need
@@ -339,7 +339,7 @@ struct git_refdb_backend {
 	 * @param update_reflog `1` in case the reflog should be updated, `0`
 	 *                    otherwise.
 	 * @param ref The reference which should be unlocked.
-	 * @param who The person updating the reference. Shall be used to create
+	 * @param sig The person updating the reference. Shall be used to create
 	 *          a reflog entry in case `update_reflog` is set.
 	 * @param message The message detailing what kind of reference update is
 	 *              performed. Shall be used to create a reflog entry in

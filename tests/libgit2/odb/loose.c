@@ -23,6 +23,21 @@ static void write_object_files(object_data *d)
 	p_close(fd);
 }
 
+static void write_truncated_object_file(object_data *d, size_t len)
+{
+	int fd;
+
+	cl_assert(len < d->blen);
+
+	if (p_mkdir(d->dir, GIT_OBJECT_DIR_MODE) < 0)
+		cl_assert(errno == EEXIST);
+
+	cl_assert((fd = p_creat(d->file, S_IREAD | S_IWRITE)) >= 0);
+	cl_must_pass(p_write(fd, d->bytes, len));
+
+	p_close(fd);
+}
+
 static void cmp_objects(git_rawobj *o, object_data *d)
 {
 	cl_assert(o->type == git_object_string2type(d->type));
@@ -118,6 +133,56 @@ static void test_readstream_object(object_data *data, size_t blocksize)
 	cmp_objects(&tmp, data);
 
 	git_odb_stream_free(stream);
+	git_odb_free(odb);
+}
+
+static void test_read_truncated_object(object_data *data, size_t len)
+{
+	git_oid id;
+	git_odb_object *obj;
+	git_odb *odb;
+	git_odb_options opts = GIT_ODB_OPTIONS_INIT;
+
+	opts.oid_type = data->id_type;
+
+	write_truncated_object_file(data, len);
+
+	cl_git_pass(git_odb_open_ext(&odb, "test-objects", &opts));
+	cl_git_pass(git_oid_from_string(&id, data->id, data->id_type));
+	cl_git_fail(git_odb_read(&obj, odb, &id));
+
+	git_odb_free(odb);
+}
+
+static void test_readstream_truncated_object(object_data *data, size_t len)
+{
+	git_oid id;
+	git_odb *odb;
+	git_odb_stream *stream;
+	git_object_t type;
+	size_t obj_len;
+	char buf[128];
+	int error;
+	git_odb_options opts = GIT_ODB_OPTIONS_INIT;
+
+	opts.oid_type = data->id_type;
+
+	write_truncated_object_file(data, len);
+
+	cl_git_pass(git_odb_open_ext(&odb, "test-objects", &opts));
+	cl_git_pass(git_oid_from_string(&id, data->id, data->id_type));
+
+	/* truncation may already be detected when inflating the header */
+	error = git_odb_open_rstream(&stream, &obj_len, &type, odb, &id);
+
+	if (!error) {
+		while ((error = git_odb_stream_read(stream, buf, sizeof(buf))) > 0)
+			;
+		git_odb_stream_free(stream);
+	}
+
+	cl_assert(error < 0);
+
 	git_odb_free(odb);
 }
 
@@ -238,6 +303,40 @@ void test_odb_loose__streaming_reads_sha256(void)
 		test_readstream_object(&two_sha256, blocksizes[i]);
 		test_readstream_object(&some_sha256, blocksizes[i]);
 	}
+}
+
+void test_odb_loose__read_truncated_zlib_header_fails_sha1(void)
+{
+	/* only the first two bytes of the zlib stream are left on disk */
+	test_read_truncated_object(&commit, 2);
+}
+
+void test_odb_loose__read_truncated_zlib_header_fails_sha256(void)
+{
+	test_read_truncated_object(&commit_sha256, 2);
+}
+
+void test_odb_loose__read_truncated_object_body_fails_sha1(void)
+{
+	/* the stream is cut off in the middle of the object body */
+	test_read_truncated_object(&commit, commit.blen / 2);
+}
+
+void test_odb_loose__read_truncated_object_body_fails_sha256(void)
+{
+	test_read_truncated_object(&commit_sha256, commit_sha256.blen / 2);
+}
+
+void test_odb_loose__streaming_read_truncated_fails_sha1(void)
+{
+	test_readstream_truncated_object(&commit, 2);
+	test_readstream_truncated_object(&commit, commit.blen / 2);
+}
+
+void test_odb_loose__streaming_read_truncated_fails_sha256(void)
+{
+	test_readstream_truncated_object(&commit_sha256, 2);
+	test_readstream_truncated_object(&commit_sha256, commit_sha256.blen / 2);
 }
 
 void test_odb_loose__read_header_sha1(void)

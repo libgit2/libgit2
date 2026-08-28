@@ -78,7 +78,7 @@ static int gen_proto(git_str *request, const char *cmd, git_net_url *url)
 
 	git_str_puts(request, cmd);
 	git_str_puts(request, " '");
-	git_str_puts(request, repo);
+	git_str_puts_escaped(request, repo, "'!", "'\\", "'");
 	git_str_puts(request, "'");
 
 	if (git_str_oom(request))
