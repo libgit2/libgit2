@@ -95,20 +95,20 @@ endif()
 # Modules
 
 include(FeatureSummary)
+include(AddCFlagIfSupported)
+include(EnableWarnings)
+include(DefaultCFlags)
 include(CheckLibraryExists)
 include(CheckFunctionExists)
 include(CheckSymbolExists)
 include(CheckStructHasMember)
 include(CheckPrototypeDefinitionSafe)
-include(AddCFlagIfSupported)
 include(FindPkgLibraries)
 include(FindThreads)
 include(FindStatNsec)
 include(Findfutimens)
 include(GNUInstallDirs)
 include(IdeSplitSources)
-include(EnableWarnings)
-include(DefaultCFlags)
 include(ExperimentalFeatures)
 
 
