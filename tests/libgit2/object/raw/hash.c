@@ -1,3 +1,4 @@
+#include <stdint.h>
 
 #include "clar_libgit2.h"
 
@@ -178,4 +179,43 @@ void test_object_raw_hash__hash_multi_byte_object(void)
 	cl_git_pass(git_oid_from_string(&id1, some_id, GIT_OID_SHA1));
 	hash_object_pass(&id2, &some_obj);
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
+}
+
+/*
+ * The hash result must not depend on the alignment of the input buffer.
+ * A buffer offset by one byte forces every full 64-byte block handed to
+ * the SHA-1 implementation to start at an address that is not a multiple
+ * of four, which used to be read directly as `uint32_t` on platforms
+ * where the SHA-1 backend allows unaligned access.
+ */
+void test_object_raw_hash__hash_buffer_at_odd_alignment(void)
+{
+	unsigned char reference[192];
+	unsigned char *storage;
+	unsigned char *misaligned;
+	unsigned char hash1[GIT_HASH_SHA1_SIZE];
+	unsigned char hash2[GIT_HASH_SHA1_SIZE];
+	size_t i;
+
+	for (i = 0; i < sizeof(reference); i++)
+		reference[i] = (unsigned char)((i * 37) + 11);
+
+	/*
+	 * malloc'd storage is aligned to at least the size of the largest
+	 * scalar type, so offsetting it by one byte is guaranteed to not be
+	 * a multiple of four, unlike a plain stack array whose byte
+	 * alignment isn't guaranteed either way.
+	 */
+	cl_assert((storage = git__malloc(sizeof(reference) + 1)) != NULL);
+	misaligned = storage + 1;
+	cl_assert(((uintptr_t)misaligned & 3) != 0);
+
+	memcpy(misaligned, reference, sizeof(reference));
+
+	cl_git_pass(git_hash_buf(hash1, reference, sizeof(reference), GIT_HASH_ALGORITHM_SHA1));
+	cl_git_pass(git_hash_buf(hash2, misaligned, sizeof(reference), GIT_HASH_ALGORITHM_SHA1));
+
+	cl_assert(memcmp(hash1, hash2, GIT_HASH_SHA1_SIZE) == 0);
+
+	git__free(storage);
 }

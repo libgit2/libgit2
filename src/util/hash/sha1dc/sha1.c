@@ -1840,7 +1840,19 @@ void SHA1DCUpdate(SHA1_CTX *ctx, const char *buf, size_t len)
 		ctx->total += 64;
 
 #if defined(SHA1DC_ALLOW_UNALIGNED_ACCESS)
-		sha1_process(ctx, (uint32_t*)(buf));
+		/* buf's alignment is only known to the caller: reading it
+		 * directly as uint32_t here is only well-defined when it
+		 * happens to be 4-byte aligned. Since buf only advances by
+		 * multiples of 64 within this loop, checking once is enough. */
+		if ((((uintptr_t)buf) & 3) == 0)
+		{
+			sha1_process(ctx, (uint32_t*)(buf));
+		}
+		else
+		{
+			memcpy(ctx->buffer, buf, 64);
+			sha1_process(ctx, (uint32_t*)(ctx->buffer));
+		}
 #else
 		memcpy(ctx->buffer, buf, 64);
 		sha1_process(ctx, (uint32_t*)(ctx->buffer));
