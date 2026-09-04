@@ -15,6 +15,7 @@
 #include "delta.h"
 #include "filter.h"
 #include "repository.h"
+#include "remote.h"
 #include "blob.h"
 #include "oid.h"
 
@@ -51,6 +52,28 @@ static git_cache *odb_cache(git_odb *odb)
 	}
 
 	return &odb->own_cache;
+}
+
+static int odb_fetch_promisor(git_odb *db, const git_oid *id)
+{
+	git_repository *repo = GIT_REFCOUNT_OWNER(db);
+	git_oid oid;
+	git_oidarray oids = { &oid, 1 };
+	int error;
+
+	if (!repo)
+		return GIT_ENOTFOUND;
+
+	if (git_atomic32_inc(&db->promisor_fetching) != 1) {
+		git_atomic32_dec(&db->promisor_fetching);
+		return GIT_ENOTFOUND;
+	}
+
+	git_oid_cpy(&oid, id);
+	error = git_repository_fetch_promisor(
+		repo, &oids, repo->promisor_fetch_options);
+	git_atomic32_dec(&db->promisor_fetching);
+	return error;
 }
 
 static int odb_otype_fast(git_object_t *type_p, git_odb *db, const git_oid *id);
@@ -1052,6 +1075,15 @@ int git_odb__read_header_or_object(
 	if (error == GIT_ENOTFOUND && !git_odb_refresh(db))
 		error = odb_read_header_1(len_p, type_p, db, id, true);
 
+	if (error == GIT_ENOTFOUND) {
+		int fetch_error = odb_fetch_promisor(db, id);
+
+		if (!fetch_error && !git_odb_refresh(db))
+			error = odb_read_header_1(len_p, type_p, db, id, false);
+		else if (fetch_error != GIT_ENOTFOUND)
+			error = fetch_error;
+	}
+
 	if (error == GIT_ENOTFOUND)
 		return git_odb__error_notfound("cannot read header for", id, git_oid_hexsize(db->options.oid_type));
 
@@ -1171,6 +1203,15 @@ int git_odb_read(git_odb_object **out, git_odb *db, const git_oid *id)
 
 	if (error == GIT_ENOTFOUND && !git_odb_refresh(db))
 		error = odb_read_1(out, db, id, true);
+
+	if (error == GIT_ENOTFOUND) {
+		int fetch_error = odb_fetch_promisor(db, id);
+
+		if (!fetch_error && !git_odb_refresh(db))
+			error = odb_read_1(out, db, id, false);
+		else if (fetch_error != GIT_ENOTFOUND)
+			error = fetch_error;
+	}
 
 	if (error == GIT_ENOTFOUND)
 		return git_odb__error_notfound("no match for id", id, git_oid_hexsize(git_oid_type(id)));

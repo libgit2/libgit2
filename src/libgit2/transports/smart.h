@@ -36,6 +36,7 @@
 #define GIT_CAP_WANT_TIP_SHA1 "allow-tip-sha1-in-want"
 #define GIT_CAP_WANT_REACHABLE_SHA1 "allow-reachable-sha1-in-want"
 #define GIT_CAP_SHALLOW "shallow"
+#define GIT_CAP_FILTER "filter"
 #define GIT_CAP_OBJECT_FORMAT "object-format="
 #define GIT_CAP_AGENT "agent="
 #define GIT_CAP_PUSH_OPTIONS "push-options"
@@ -148,6 +149,7 @@ typedef struct transport_smart_caps {
 	             want_tip_sha1:1,
 	             want_reachable_sha1:1,
 	             shallow:1,
+	             filter:1,
 	             push_options:1;
 	char *object_format;
 	char *agent;

@@ -21,6 +21,58 @@
 #include "refs.h"
 #include "transports/smart.h"
 
+static bool filter_spec_is_blob_limit(const char *filter_spec)
+{
+	const char *size;
+
+	if (strncmp(filter_spec, "blob:limit=", 11))
+		return false;
+
+	size = filter_spec + 11;
+	if (!*size)
+		return false;
+
+	while (git__isdigit(*size))
+		size++;
+
+	return !*size || (!size[1] && strchr("kmg", *size));
+}
+
+static bool filter_spec_is_tree_depth(const char *filter_spec)
+{
+	const char *depth;
+
+	if (strncmp(filter_spec, "tree:", 5))
+		return false;
+
+	depth = filter_spec + 5;
+	if (!*depth)
+		return false;
+
+	while (git__isdigit(*depth))
+		depth++;
+
+	return !*depth;
+}
+
+static int validate_filter_spec(const char *filter_spec)
+{
+	if (!filter_spec)
+		return 0;
+
+	if (!strcmp(filter_spec, "blob:none") ||
+	    filter_spec_is_blob_limit(filter_spec) ||
+	    filter_spec_is_tree_depth(filter_spec))
+		return 0;
+
+	git_error_set(
+	        GIT_ERROR_INVALID,
+	        "unsupported fetch filter '%s'; supported filters are "
+	        "'blob:none', 'blob:limit=<n>[kmg]', and 'tree:<depth>'",
+	        filter_spec);
+	return GIT_EINVALIDSPEC;
+}
+
 static int maybe_want(git_remote *remote, git_remote_head *head, git_refspec *tagspec, git_remote_autotag_option_t tagopt)
 {
 	int match = 0, valid;
@@ -142,6 +194,14 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 		if (!git_oid__is_hexstr(spec->src, remote->repo->oid_type))
 			continue;
 
+		if (!(remote_caps & (GIT_REMOTE_CAPABILITY_TIP_OID |
+		                     GIT_REMOTE_CAPABILITY_REACHABLE_OID))) {
+			git_error_set(
+				GIT_ERROR_NET,
+				"server does not support fetching objects by ID");
+			error = GIT_ENOTSUPPORTED;
+			goto cleanup;
+		}
 
 		if ((error = maybe_want_oid(remote, spec)) < 0)
 			goto cleanup;
@@ -166,11 +226,25 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	int error;
 
 	remote->need_pack = 0;
+	remote->nego.filter_spec = NULL;
 
 	if (opts) {
 		GIT_ASSERT_ARG(opts->depth >= 0);
 		remote->nego.depth = opts->depth;
+
+		if (opts->version >= 2)
+			remote->nego.filter_spec = opts->filter_spec;
 	}
+
+	if (remote->nego.filter_spec && !remote->name) {
+		git_error_set(
+			GIT_ERROR_INVALID,
+			"filtered fetch requires a named remote");
+		return GIT_EINVALID;
+	}
+
+	if ((error = validate_filter_spec(remote->nego.filter_spec)) < 0)
+		return error;
 
 	if (filter_wants(remote, opts) < 0)
 		return -1;
@@ -206,17 +280,23 @@ int git_fetch_download_pack(git_remote *remote)
 	git_transport *t = remote->transport;
 	int error;
 
-	if (!remote->need_pack)
-		return 0;
+	if (remote->need_pack) {
+		if ((error = t->download_pack(t, remote->repo, &remote->stats)) != 0 ||
+		    (error = t->shallow_roots(&shallow_roots, t)) != 0)
+			return error;
 
-	if ((error = t->download_pack(t, remote->repo, &remote->stats)) != 0 ||
-	    (error = t->shallow_roots(&shallow_roots, t)) != 0)
-		return error;
+		error = git_repository__shallow_roots_write(remote->repo, &shallow_roots);
+		git_oidarray_dispose(&shallow_roots);
 
-	error = git_repository__shallow_roots_write(remote->repo, &shallow_roots);
+		if (error < 0)
+			return error;
+	}
 
-	git_oidarray_dispose(&shallow_roots);
-	return error;
+	if (remote->nego.filter_spec)
+		return git_repository__set_partial_clone(
+			remote->repo, remote->name, remote->nego.filter_spec);
+
+	return 0;
 }
 
 int git_fetch_options_init(git_fetch_options *opts, unsigned int version)

@@ -297,10 +297,13 @@ static int local_negotiate_fetch(
 	git_remote_head *rhead;
 	unsigned int i;
 
-	GIT_UNUSED(wants);
-
 	if (wants->depth) {
 		git_error_set(GIT_ERROR_NET, "shallow fetch is not supported by the local transport");
+		return GIT_ENOTSUPPORTED;
+	}
+
+	if (wants->filter_spec) {
+		git_error_set(GIT_ERROR_NET, "filtered fetch is not supported by the local transport");
 		return GIT_ENOTSUPPORTED;
 	}
 

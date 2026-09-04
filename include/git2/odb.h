@@ -172,6 +172,8 @@ GIT_EXTERN(void) git_odb_free(git_odb *db);
  *
  * This method queries all available ODB backends
  * trying to read the given OID.
+ * For a repository-owned ODB configured as a partial clone, an omitted
+ * object is fetched from its promisor remote and read again.
  *
  * The returned object is reference counted and
  * internally cached, so it should be closed
@@ -222,6 +224,8 @@ GIT_EXTERN(int) git_odb_read_prefix(git_odb_object **obj, git_odb *db, const git
  * Note that most backends do not support reading only the header
  * of an object, so the whole object will be read and then the
  * header will be returned.
+ * For a repository-owned ODB configured as a partial clone, an omitted
+ * object is fetched from its promisor remote and read again.
  *
  * @param[out] len_out pointer where to store the length
  * @param[out] type_out pointer where to store the type

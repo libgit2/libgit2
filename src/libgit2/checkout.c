@@ -1748,6 +1748,29 @@ static int checkout_safe_for_update_only(
 	return 0;
 }
 
+static int checkout_lookup_blob(
+	git_blob **out,
+	checkout_data *data,
+	const git_oid *oid,
+	const char *path)
+{
+	int error;
+
+	if ((error = git_blob_lookup(out, data->repo, oid)) != GIT_ENOTFOUND ||
+	    !data->opts.missing_blob_cb)
+		return error;
+
+	git_error_clear();
+
+	if ((error = data->opts.missing_blob_cb(
+			 data->repo, oid, path, data->opts.missing_blob_payload)) != 0) {
+		return git_error_set_after_callback_function(
+			error, "git_checkout missing blob");
+	}
+
+	return git_blob_lookup(out, data->repo, oid);
+}
+
 static int checkout_write_content(
 	checkout_data *data,
 	const git_oid *oid,
@@ -1759,7 +1782,7 @@ static int checkout_write_content(
 	int error = 0;
 	git_blob *blob;
 
-	if ((error = git_blob_lookup(&blob, data->repo, oid)) < 0)
+	if ((error = checkout_lookup_blob(&blob, data, oid, hint_path)) < 0)
 		return error;
 
 	if (S_ISLNK(mode))

@@ -698,6 +698,7 @@ static int buffer_want_with_caps(
 	const git_remote_head *head,
 	transport_smart_caps *caps,
 	git_oid_t oid_type,
+	const git_fetch_negotiation *wants,
 	git_str *buf)
 {
 	git_str str = GIT_STR_INIT;
@@ -730,6 +731,14 @@ static int buffer_want_with_caps(
 
 	if (caps->shallow)
 		git_str_puts(&str, GIT_CAP_SHALLOW " ");
+
+	if (wants->filter_spec)
+		git_str_puts(&str, GIT_CAP_FILTER " ");
+
+	if (caps->want_reachable_sha1)
+		git_str_puts(&str, GIT_CAP_WANT_REACHABLE_SHA1 " ");
+	else if (caps->want_tip_sha1)
+		git_str_puts(&str, GIT_CAP_WANT_TIP_SHA1 " ");
 
 	if (git_str_oom(&str))
 		return -1;
@@ -784,7 +793,7 @@ int git_pkt_buffer_wants(
 				break;
 		}
 
-		if (buffer_want_with_caps(wants->refs[i], caps, oid_type, buf) < 0)
+		if (buffer_want_with_caps(wants->refs[i], caps, oid_type, wants, buf) < 0)
 			return -1;
 
 		i++;
@@ -831,6 +840,20 @@ int git_pkt_buffer_wants(
 		git_str_printf(buf,"%04x%s", (unsigned int)git_str_len(&deepen_buf) + 4, git_str_cstr(&deepen_buf));
 
 		git_str_dispose(&deepen_buf);
+
+		if (git_str_oom(buf))
+			return -1;
+	}
+
+	if (wants->filter_spec) {
+		git_str filter_buf = GIT_STR_INIT;
+
+		git_str_printf(&filter_buf, "filter %s\n", wants->filter_spec);
+		git_str_printf(
+			buf, "%04x%s",
+			(unsigned int)git_str_len(&filter_buf) + 4,
+			git_str_cstr(&filter_buf));
+		git_str_dispose(&filter_buf);
 
 		if (git_str_oom(buf))
 			return -1;

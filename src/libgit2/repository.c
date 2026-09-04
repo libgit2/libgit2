@@ -1923,6 +1923,7 @@ static const char *builtin_extensions[] = {
 	"preciousobjects",
 	"refstorage",
 	"relativeworktrees",
+	"partialclone",
 };
 
 static git_vector user_extensions = { 0, git__strcmp_cb };
@@ -2057,6 +2058,49 @@ int git_repository__set_objectformat(
 	}
 
 	return 0;
+}
+
+int git_repository__set_partial_clone(
+	git_repository *repo,
+	const char *remote_name,
+	const char *filter_spec)
+{
+	git_config *config;
+	git_str promisor_key = GIT_STR_INIT;
+	git_str filter_key = GIT_STR_INIT;
+	int error;
+
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(remote_name);
+	GIT_ASSERT_ARG(filter_spec);
+
+	if ((error = git_repository_config__weakptr(&config, repo)) < 0)
+		goto done;
+
+	if ((error = git_config_set_int32(
+			 config, "core.repositoryformatversion", 1)) < 0 ||
+	    (error = git_config_set_string(
+			 config, "extensions.partialclone", remote_name)) < 0 ||
+	    (error = git_str_printf(
+			 &promisor_key, "remote.%s.promisor", remote_name)) < 0 ||
+	    (error = git_config_set_bool(config, promisor_key.ptr, true)) < 0 ||
+	    (error = git_str_printf(
+			 &filter_key, "remote.%s.partialclonefilter", remote_name)) < 0 ||
+	    (error = git_config_set_string(
+			 config, filter_key.ptr, filter_spec)) < 0)
+		goto done;
+
+done:
+	git_str_dispose(&promisor_key);
+	git_str_dispose(&filter_key);
+	return error;
+}
+
+void git_repository__set_promisor_fetch_options(
+	git_repository *repo,
+	const git_fetch_options *opts)
+{
+	repo->promisor_fetch_options = opts;
 }
 
 static int load_refstorage_format(git_repository *repo, git_config *config)

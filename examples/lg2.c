@@ -28,6 +28,7 @@ struct {
 	{ "ls-files",     lg2_ls_files,     1 },
 	{ "ls-remote",    lg2_ls_remote,    1 },
 	{ "merge",        lg2_merge,        1 },
+	{ "partial-clone", lg2_partial_clone, 0 },
 	{ "push",         lg2_push,        1  },
 	{ "rebase",       lg2_rebase,       0 },
 	{ "remote",       lg2_remote,       1 },

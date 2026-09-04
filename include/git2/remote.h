@@ -11,6 +11,7 @@
 #include "repository.h"
 #include "refspec.h"
 #include "net.h"
+#include "oidarray.h"
 #include "indexer.h"
 #include "strarray.h"
 #include "transport.h"
@@ -849,10 +850,23 @@ typedef struct {
 	 * Extra headers for this fetch operation
 	 */
 	git_strarray custom_headers;
+
+	/**
+	 * Object filter specification to send to the server during fetch.
+	 *
+	 * NULL performs an unfiltered fetch. This release supports
+	 * "blob:none", "blob:limit=<n>[kmg]", and "tree:<depth>". A filtered
+	 * fetch requires a server that advertises the `filter` upload-pack
+	 * capability.
+	 *
+	 * A filtered clone records the remote as its promisor remote so
+	 * omitted objects can be fetched on demand.
+	 */
+	const char *filter_spec;
 } git_fetch_options;
 
 /** Current version for the `git_fetch_options` structure */
-#define GIT_FETCH_OPTIONS_VERSION 1
+#define GIT_FETCH_OPTIONS_VERSION 2
 
 /** Static constructor for `git_fetch_options` */
 #define GIT_FETCH_OPTIONS_INIT { \
@@ -861,7 +875,11 @@ typedef struct {
 	GIT_FETCH_PRUNE_UNSPECIFIED, \
 	GIT_REMOTE_UPDATE_FETCHHEAD, \
 	GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED, \
-	GIT_PROXY_OPTIONS_INIT }
+	GIT_PROXY_OPTIONS_INIT, \
+	0, \
+	0, \
+	{ NULL, 0 }, \
+	NULL }
 
 /**
  * Initialize git_fetch_options structure
@@ -1139,6 +1157,44 @@ GIT_EXTERN(int) git_remote_fetch(
 		const git_strarray *refspecs,
 		const git_fetch_options *opts,
 		const char *reflog_message);
+
+/**
+ * Fetch individual object IDs from a remote.
+ *
+ * This is useful for backfilling objects omitted by a partial clone.
+ * The remote server must support fetching reachable objects by object ID.
+ *
+ * The supplied object IDs are fetched without an object filter and without
+ * automatic tag following. Fetch callbacks in `opts` are honored.
+ *
+ * @param remote remote to fetch from
+ * @param oids object IDs to fetch
+ * @param opts fetch options, or NULL for defaults
+ * @return 0 on success or an error code
+ */
+GIT_EXTERN(int) git_remote_fetch_oids(
+	git_remote *remote,
+	const git_oidarray *oids,
+	const git_fetch_options *opts);
+
+/**
+ * Fetch individual object IDs from this repository's promisor remote.
+ *
+ * The promisor remote is configured by `extensions.partialClone`, as in a
+ * Git partial clone. This is useful for hydrating objects omitted by a
+ * filtered fetch while keeping authentication, progress, and cancellation
+ * under the caller's control through `opts`.
+ *
+ * @param repo partial-clone repository
+ * @param oids object IDs to fetch
+ * @param opts fetch options, or NULL for defaults
+ * @return 0 on success, GIT_ENOTFOUND if no promisor remote is configured,
+ *         or an error code
+ */
+GIT_EXTERN(int) git_repository_fetch_promisor(
+	git_repository *repo,
+	const git_oidarray *oids,
+	const git_fetch_options *opts);
 
 /**
  * Prune tracking refs that are no longer present on remote.

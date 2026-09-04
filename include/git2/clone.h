@@ -11,6 +11,7 @@
 #include "types.h"
 #include "indexer.h"
 #include "checkout.h"
+#include "strarray.h"
 #include "remote.h"
 #include "transport.h"
 
@@ -168,10 +169,16 @@ typedef struct git_clone_options {
 	 * This parameter is ignored unless remote_cb is non-NULL.
 	 */
 	void *remote_cb_payload;
+
+	/** Directories to materialize with cone-mode sparse checkout. */
+	git_strarray sparse_checkout_directories;
+
+	/** Enable cone-mode sparse checkout during clone. */
+	int sparse_checkout;
 } git_clone_options;
 
 /** Current version for the `git_clone_options` structure */
-#define GIT_CLONE_OPTIONS_VERSION 1
+#define GIT_CLONE_OPTIONS_VERSION 3
 
 /** Static constructor for `git_clone_options` */
 #define GIT_CLONE_OPTIONS_INIT \

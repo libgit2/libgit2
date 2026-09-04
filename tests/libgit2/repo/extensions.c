@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "futils.h"
+#include "repository.h"
 #include "sysdir.h"
 #include <ctype.h>
 
@@ -86,6 +87,40 @@ void test_repo_extensions__relativeworktrees(void)
 	git_repository *extended = NULL;
 
 	cl_repo_set_string(repo, "extensions.relativeWorktrees", "true");
+
+	cl_git_pass(git_repository_open(&extended, "empty_bare.git"));
+	git_repository_free(extended);
+}
+
+void test_repo_extensions__partialclone(void)
+{
+	git_config *config;
+	git_repository *extended;
+	const char *remote_name;
+	const char *filter_spec;
+	int version;
+	int promisor;
+
+	cl_git_pass(git_repository__set_partial_clone(repo, "origin", "blob:none"));
+	cl_git_pass(git_repository_config_snapshot(&config, repo));
+
+	cl_git_pass(git_config_get_int32(
+		&version, config, "core.repositoryformatversion"));
+	cl_assert_equal_i(1, version);
+
+	cl_git_pass(git_config_get_string(
+		&remote_name, config, "extensions.partialclone"));
+	cl_assert_equal_s("origin", remote_name);
+
+	cl_git_pass(git_config_get_bool(
+		&promisor, config, "remote.origin.promisor"));
+	cl_assert(promisor);
+
+	cl_git_pass(git_config_get_string(
+		&filter_spec, config, "remote.origin.partialclonefilter"));
+	cl_assert_equal_s("blob:none", filter_spec);
+
+	git_config_free(config);
 
 	cl_git_pass(git_repository_open(&extended, "empty_bare.git"));
 	git_repository_free(extended);

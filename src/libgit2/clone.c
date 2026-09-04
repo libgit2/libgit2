@@ -15,6 +15,7 @@
 #include "git2/checkout.h"
 #include "git2/commit.h"
 #include "git2/tree.h"
+#include "git2/sparse.h"
 
 #include "checkout.h"
 #include "remote.h"
@@ -369,7 +370,7 @@ static int should_checkout(
 {
 	int error;
 
-	if (!opts || is_bare ||
+	if (!opts || is_bare || opts->sparse_checkout ||
 	    opts->checkout_opts.checkout_strategy == GIT_CHECKOUT_NONE) {
 		*out = false;
 		return 0;
@@ -380,6 +381,21 @@ static int should_checkout(
 
 	*out = !error;
 	return 0;
+}
+
+static int sparse_checkout_clone(git_repository *repo, const git_clone_options *opts)
+{
+	int error;
+
+	if (!opts->sparse_checkout)
+		return 0;
+
+	git_repository__set_promisor_fetch_options(repo, &opts->fetch_opts);
+	error = git_sparse_checkout_apply(
+		repo, &opts->sparse_checkout_directories, &opts->checkout_opts);
+	git_repository__set_promisor_fetch_options(repo, NULL);
+
+	return error;
 }
 
 static int checkout_branch(
@@ -452,7 +468,8 @@ static int clone_into(
 	if ((error = git_remote_fetch(remote, NULL, &opts->fetch_opts, git_str_cstr(&reflog_message))) != 0)
 		goto cleanup;
 
-	error = checkout_branch(repo, remote, opts, git_str_cstr(&reflog_message));
+	if ((error = checkout_branch(repo, remote, opts, git_str_cstr(&reflog_message))) == 0)
+		error = sparse_checkout_clone(repo, opts);
 
 cleanup:
 	git_remote_free(remote);
@@ -557,7 +574,8 @@ static int clone_local_into(
 	if ((error = git_remote_fetch(remote, NULL, &opts->fetch_opts, git_str_cstr(&reflog_message))) != 0)
 		goto cleanup;
 
-	error = checkout_branch(repo, remote, opts, git_str_cstr(&reflog_message));
+	if ((error = checkout_branch(repo, remote, opts, git_str_cstr(&reflog_message))) == 0)
+		error = sparse_checkout_clone(repo, opts);
 
 cleanup:
 	git_str_dispose(&reflog_message);
@@ -622,6 +640,21 @@ static int clone_repo(
 
 	GIT_ERROR_CHECK_VERSION(&options, GIT_CLONE_OPTIONS_VERSION, "git_clone_options");
 
+	if (options.sparse_checkout_directories.count &&
+	    !options.sparse_checkout_directories.strings) {
+		git_error_set(
+			GIT_ERROR_INVALID,
+			"sparse checkout directories must not be NULL");
+		return GIT_EINVALID;
+	}
+	if (!options.sparse_checkout &&
+	    options.sparse_checkout_directories.count) {
+		git_error_set(
+			GIT_ERROR_INVALID,
+			"sparse checkout directories require sparse checkout to be enabled");
+		return GIT_EINVALID;
+	}
+
 	/* enforce some behavior on fetch */
 	options.fetch_opts.update_fetchhead = 0;
 
@@ -650,7 +683,9 @@ static int clone_repo(
 	if (!(error = create_and_configure_origin(&origin, repo, url, &options))) {
 		bool clone_local;
 
-		if ((error = git_clone__should_clone_local(&clone_local, url, options.local)) < 0) {
+		if (options.fetch_opts.filter_spec)
+			clone_local = false;
+		else if ((error = git_clone__should_clone_local(&clone_local, url, options.local)) < 0) {
 			git_remote_free(origin);
 			return error;
 		}

@@ -9,6 +9,28 @@ static git_repository *g_repo;
 static git_checkout_options g_opts;
 static git_object *g_object;
 
+typedef struct {
+	const char *content;
+	bool called;
+} missing_blob_data;
+
+static int hydrate_missing_blob(
+	git_repository *repo,
+	const git_oid *oid,
+	const char *path,
+	void *payload)
+{
+	missing_blob_data *data = payload;
+	git_oid hydrated_id;
+
+	cl_assert_equal_s("hydrated.txt", path);
+	cl_git_pass(git_blob_create_from_buffer(
+		&hydrated_id, repo, data->content, strlen(data->content)));
+	cl_assert_equal_oid(oid, &hydrated_id);
+	data->called = true;
+	return 0;
+}
+
 static void assert_status_entrycount(git_repository *repo, size_t count)
 {
 	git_status_list *status;
@@ -43,6 +65,43 @@ void test_checkout_tree__cannot_checkout_a_non_treeish(void)
 	/* blob */
 	cl_git_pass(git_revparse_single(&g_object, g_repo, "a71586c1dfe8a71c6cbf6c129f404c5642ff31bd"));
 	cl_git_fail(git_checkout_tree(g_repo, g_object, NULL));
+}
+
+void test_checkout_tree__hydrates_missing_blob(void)
+{
+	static const char content[] = "hydrated content\n";
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
+	git_treebuilder *builder;
+	git_tree *tree;
+	git_oid blob_id;
+	git_oid tree_id;
+	missing_blob_data data = { content, false };
+
+	id_opts.object_type = GIT_OBJECT_BLOB;
+	cl_git_pass(git_object_id_from_buffer(
+		&blob_id, content, strlen(content), &id_opts));
+
+	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 0));
+	cl_git_pass(git_treebuilder_insert(
+		NULL, builder, "hydrated.txt", &blob_id, GIT_FILEMODE_BLOB));
+	cl_git_pass(git_treebuilder_write(&tree_id, builder));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_STRICT_OBJECT_CREATION, 1));
+	git_treebuilder_free(builder);
+
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+
+	opts.checkout_strategy = GIT_CHECKOUT_FORCE;
+	opts.missing_blob_cb = hydrate_missing_blob;
+	opts.missing_blob_payload = &data;
+
+	cl_git_pass(git_checkout_tree(g_repo, (git_object *)tree, &opts));
+	cl_assert(data.called);
+	cl_assert_equal_file(
+		content, strlen(content), "./testrepo/hydrated.txt");
+
+	git_tree_free(tree);
 }
 
 void test_checkout_tree__can_checkout_a_subdirectory_from_a_commit(void)

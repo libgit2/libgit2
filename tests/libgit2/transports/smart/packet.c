@@ -351,3 +351,72 @@ void test_transports_smart_packet__ref_pkt(void)
 		"00360000000000000000000000000000000000000000 HEAD HEAD",
 		"0000000000000000000000000000000000000000", "HEAD HEAD", NULL);
 }
+
+void test_transports_smart_packet__filter_capability(void)
+{
+	git_pkt_ref pkt = { 0 };
+	transport_smart_caps caps = { 0 };
+	git_vector symrefs = GIT_VECTOR_INIT;
+
+	pkt.capabilities = GIT_CAP_FILTER;
+
+	cl_git_pass(git_smart__detect_caps(&pkt, &caps, &symrefs));
+	cl_assert(caps.common);
+	cl_assert(caps.filter);
+
+	git_vector_dispose(&symrefs);
+}
+
+void test_transports_smart_packet__blob_none_filter_request(void)
+{
+	static const char expected[] =
+		"003awant 0000000000000000000000000000000000000000 filter \n"
+		"0015filter blob:none\n"
+		"0000";
+	git_remote_head head = { 0 };
+	const git_remote_head *refs[] = { &head };
+	git_fetch_negotiation wants = { 0 };
+	transport_smart_caps caps = { 0 };
+	git_str packet = GIT_STR_INIT;
+
+	cl_git_pass(git_oid_from_string(
+		&head.oid, "0000000000000000000000000000000000000000", GIT_OID_SHA1));
+
+	wants.refs = refs;
+	wants.refs_len = 1;
+	wants.filter_spec = "blob:none";
+	caps.common = 1;
+	caps.filter = 1;
+
+	cl_git_pass(git_pkt_buffer_wants(&wants, &caps, &packet));
+	cl_assert_equal_i(sizeof(expected) - 1, packet.size);
+	cl_assert_equal_strn(expected, packet.ptr, packet.size);
+
+	git_str_dispose(&packet);
+}
+
+void test_transports_smart_packet__reachable_oid_capability(void)
+{
+	static const char expected[] =
+		"0050want 0000000000000000000000000000000000000000 allow-reachable-sha1-in-want \n"
+		"0000";
+	git_remote_head head = { 0 };
+	const git_remote_head *refs[] = { &head };
+	git_fetch_negotiation wants = { 0 };
+	transport_smart_caps caps = { 0 };
+	git_str packet = GIT_STR_INIT;
+
+	cl_git_pass(git_oid_from_string(
+		&head.oid, "0000000000000000000000000000000000000000", GIT_OID_SHA1));
+
+	wants.refs = refs;
+	wants.refs_len = 1;
+	caps.common = 1;
+	caps.want_reachable_sha1 = 1;
+
+	cl_git_pass(git_pkt_buffer_wants(&wants, &caps, &packet));
+	cl_assert_equal_i(sizeof(expected) - 1, packet.size);
+	cl_assert_equal_strn(expected, packet.ptr, packet.size);
+
+	git_str_dispose(&packet);
+}

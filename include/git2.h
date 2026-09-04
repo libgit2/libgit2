@@ -63,6 +63,7 @@
 #include "git2/stash.h"
 #include "git2/status.h"
 #include "git2/submodule.h"
+#include "git2/sparse.h"
 #include "git2/tag.h"
 #include "git2/transport.h"
 #include "git2/transaction.h"

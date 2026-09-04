@@ -90,4 +90,3 @@ might make good smaller projects by themselves.
 * Include conflicts in diff results and in status
     * GIT_DELTA_CONFLICT for items in conflict (with multiple files)
     * Appropriate flags for status
-* Support sparse checkout (i.e. "core.sparsecheckout" and ".git/info/sparse-checkout")

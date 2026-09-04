@@ -1,6 +1,8 @@
 #include "clar_libgit2.h"
 
 #include "git2/clone.h"
+#include "git2/index.h"
+#include "git2/sparse.h"
 #include "clone.h"
 #include "path.h"
 #include "posix.h"
@@ -265,6 +267,187 @@ void test_clone_local__shallow_fails(void)
 	opts.fetch_opts.depth = 4;
 
 	cl_git_fail_with(GIT_ENOTSUPPORTED, git_clone(&repo, cl_fixture("testrepo.git"), "./clone.git", &opts));
+}
+
+void test_clone_local__filtered_clone_reaches_transport(void)
+{
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	opts.fetch_opts.filter_spec = "blob:none";
+
+	cl_git_fail_with(
+	        GIT_ENOTSUPPORTED, git_clone(
+	                                   &repo, cl_fixture("testrepo.git"),
+	                                   "./clone.git", &opts));
+}
+
+void test_clone_local__filtered_sparse_clone_reaches_transport(void)
+{
+	char *directories[] = { "source" };
+	git_strarray sparse_directories = {
+		directories,
+		ARRAY_SIZE(directories),
+	};
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	opts.fetch_opts.filter_spec = "blob:none";
+	opts.sparse_checkout_directories = sparse_directories;
+	opts.sparse_checkout = 1;
+
+	cl_git_fail_with(
+		GIT_ENOTSUPPORTED,
+		git_clone(&repo, cl_fixture("testrepo.git"), "./clone.git", &opts));
+}
+
+void test_clone_local__blob_limit_filtered_sparse_clone_reaches_transport(void)
+{
+	char *directories[] = { "source" };
+	git_strarray sparse_directories = {
+		directories,
+		ARRAY_SIZE(directories),
+	};
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	opts.fetch_opts.filter_spec = "blob:limit=1k";
+	opts.sparse_checkout_directories = sparse_directories;
+	opts.sparse_checkout = 1;
+
+	cl_git_fail_with(
+	        GIT_ENOTSUPPORTED, git_clone(
+	                                   &repo, cl_fixture("testrepo.git"),
+	                                   "./clone.git", &opts));
+}
+
+void test_clone_local__tree_depth_filtered_sparse_clone_reaches_transport(void)
+{
+	char *directories[] = { "source" };
+	git_strarray sparse_directories = {
+		directories,
+		ARRAY_SIZE(directories),
+	};
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	opts.fetch_opts.filter_spec = "tree:2";
+	opts.sparse_checkout_directories = sparse_directories;
+	opts.sparse_checkout = 1;
+
+	cl_git_fail_with(
+	        GIT_ENOTSUPPORTED, git_clone(
+	                                   &repo, cl_fixture("testrepo.git"),
+	                                   "./clone.git", &opts));
+}
+
+void test_clone_local__rejects_invalid_blob_limit_filter(void)
+{
+	char *directories[] = { "source" };
+	git_strarray sparse_directories = {
+		directories,
+		ARRAY_SIZE(directories),
+	};
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	opts.fetch_opts.filter_spec = "blob:limit=1x";
+	opts.sparse_checkout_directories = sparse_directories;
+	opts.sparse_checkout = 1;
+
+	cl_git_fail_with(
+	        GIT_EINVALIDSPEC, git_clone(
+	                                  &repo, cl_fixture("testrepo.git"),
+	                                  "./clone.git", &opts));
+}
+
+void test_clone_local__rejects_invalid_tree_depth_filter(void)
+{
+	char *directories[] = { "source" };
+	git_strarray sparse_directories = {
+		directories,
+		ARRAY_SIZE(directories),
+	};
+	git_repository *repo;
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+
+	opts.fetch_opts.filter_spec = "tree:";
+	opts.sparse_checkout_directories = sparse_directories;
+	opts.sparse_checkout = 1;
+
+	cl_git_fail_with(
+	        GIT_EINVALIDSPEC, git_clone(
+	                                  &repo, cl_fixture("testrepo.git"),
+	                                  "./clone.git", &opts));
+}
+
+void test_clone_local__sparse_checkout(void)
+{
+	char *directories[] = { "selected" };
+	git_strarray sparse_directories = {
+		directories,
+		ARRAY_SIZE(directories),
+	};
+	git_strarray root_only = { NULL, 0 };
+	git_clone_options opts = GIT_CLONE_OPTIONS_INIT;
+	git_index *index;
+	git_repository *source, *clone, *full;
+	int sparse_enabled;
+
+	cl_git_pass(git_repository_init(&source, "./source", 0));
+	cl_git_mkfile("./source/root.txt", "root\n");
+	cl_git_pass(p_mkdir("./source/selected", 0777));
+	cl_git_mkfile("./source/selected/keep.txt", "keep\n");
+	cl_git_pass(p_mkdir("./source/excluded", 0777));
+	cl_git_mkfile("./source/excluded/drop.txt", "drop\n");
+
+	cl_git_pass(git_repository_index(&index, source));
+	cl_git_pass(git_index_add_all(index, NULL, 0, NULL, NULL));
+	cl_git_pass(git_index_write(index));
+	cl_repo_commit_from_index(NULL, source, NULL, 0, "initial commit");
+	cl_git_pass(git_clone(&full, "./source", "./full", NULL));
+
+	cl_git_pass(git_sparse_checkout_apply(
+		full, &sparse_directories, NULL));
+	cl_assert(!git_fs_path_isfile("./full/excluded/drop.txt"));
+
+	cl_git_pass(p_mkdir("./full/excluded", 0777));
+	cl_git_mkfile("./full/excluded/drop.txt", "modified\n");
+	cl_git_pass(git_sparse_checkout_apply(full, &root_only, NULL));
+	cl_assert(git_fs_path_isfile("./full/excluded/drop.txt"));
+
+	opts.sparse_checkout_directories = sparse_directories;
+	opts.sparse_checkout = 1;
+	cl_git_pass(git_clone(&clone, "./source", "./clone", &opts));
+
+	cl_assert(git_fs_path_isfile("./clone/root.txt"));
+	cl_assert(git_fs_path_isfile("./clone/selected/keep.txt"));
+	cl_assert(!git_fs_path_isfile("./clone/excluded/drop.txt"));
+	cl_git_pass(git_sparse_checkout_disable(clone, NULL));
+	cl_git_pass(git_sparse_checkout_is_enabled(&sparse_enabled, clone));
+	cl_assert(!sparse_enabled);
+	cl_assert(git_fs_path_isfile("./clone/excluded/drop.txt"));
+
+	git_repository_free(clone);
+	opts.sparse_checkout_directories.strings = NULL;
+	opts.sparse_checkout_directories.count = 0;
+	cl_git_pass(git_clone(&clone, "./source", "./root-only", &opts));
+	cl_assert(git_fs_path_isfile("./root-only/root.txt"));
+	cl_assert(!git_fs_path_isfile("./root-only/selected/keep.txt"));
+	cl_assert(!git_fs_path_isfile("./root-only/excluded/drop.txt"));
+
+	git_index_free(index);
+	git_repository_free(clone);
+	git_repository_free(full);
+	git_repository_free(source);
+	cl_git_pass(
+	        git_futils_rmdir_r("./clone", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(git_futils_rmdir_r(
+	        "./root-only", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(
+	        git_futils_rmdir_r("./full", NULL, GIT_RMDIR_REMOVE_FILES));
+	cl_git_pass(
+	        git_futils_rmdir_r("./source", NULL, GIT_RMDIR_REMOVE_FILES));
 }
 
 void test_clone_local__sha256_via_no_local(void)

@@ -51,6 +51,7 @@ struct git_odb {
 	git_vector backends;
 	git_cache own_cache;
 	git_commit_graph *cgraph;
+	git_atomic32 promisor_fetching;
 	unsigned int do_fsync :1;
 };
 

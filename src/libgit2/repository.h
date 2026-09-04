@@ -14,6 +14,7 @@
 #include "git2/odb.h"
 #include "git2/repository.h"
 #include "git2/object.h"
+#include "git2/remote.h"
 #include "git2/config.h"
 #include "git2/sys/repository.h"
 
@@ -168,6 +169,8 @@ struct git_repository {
 
 	git_atomic32 attr_session_key;
 
+	const git_fetch_options *promisor_fetch_options;
+
 	intptr_t configmap_cache[GIT_CONFIGMAP_CACHE_MAX];
 	git_submodule_cache *submodule_cache;
 };
@@ -281,5 +284,14 @@ void git_repository__free_extensions(void);
 int git_repository__set_objectformat(
 	git_repository *repo,
 	git_oid_t oid_type);
+
+int git_repository__set_partial_clone(
+	git_repository *repo,
+	const char *remote_name,
+	const char *filter_spec);
+
+void git_repository__set_promisor_fetch_options(
+	git_repository *repo,
+	const git_fetch_options *opts);
 
 #endif

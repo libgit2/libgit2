@@ -255,6 +255,12 @@ int git_smart__detect_caps(
 			continue;
 		}
 
+		if (!git__prefixcmp(ptr, GIT_CAP_FILTER)) {
+			caps->common = caps->filter = 1;
+			ptr += strlen(GIT_CAP_FILTER);
+			continue;
+		}
+
 		/* We don't know this capability, so skip it */
 		ptr = strchr(ptr, ' ');
 	}
@@ -385,6 +391,11 @@ static int setup_caps(
 	} else {
 		caps->shallow = 0;
 	}
+
+	if (wants->filter_spec && !caps->filter)
+		return cap_not_sup_err(GIT_CAP_FILTER);
+	else if (!wants->filter_spec)
+		caps->filter = 0;
 
 	return 0;
 }
