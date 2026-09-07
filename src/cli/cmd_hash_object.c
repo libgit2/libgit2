@@ -108,7 +108,7 @@ int cmd_hash_object(int argc, char **argv)
 		goto done;
 	}
 
-	oid_type = git_repository_oid_type(repo);
+	oid_type = repo ? git_repository_oid_type(repo) : GIT_OID_DEFAULT;
 
 	/*
 	 * TODO: we're reading blobs, we shouldn't pull them all into main
