@@ -514,7 +514,7 @@ static int refdb_reftable_init(git_refdb_backend *_backend,
 			data.error = 0;
 
 			if ((error = reftable_stack_add(stack->stack, refdb_reftable_write_head_table,
-							&data, &backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+							&data, &backend->write_opts)) < 0) {
 				if (data.error)
 					error = data.error;
 				else
@@ -1004,7 +1004,7 @@ static int refdb_reftable_write(git_refdb_backend *_backend,
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_table, &data,
-					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1159,7 +1159,7 @@ static int refdb_reftable_delete(git_refdb_backend *_backend,
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_delete_table, &data,
-					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1349,7 +1349,7 @@ static int refdb_reftable_rename(git_reference **out,
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_rename_table, &data,
-					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1448,7 +1448,7 @@ static int refdb_reftable_ensure_log(git_refdb_backend *_backend,
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_log_existence_table, &data,
-					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1651,7 +1651,7 @@ static int refdb_reftable_reflog_write(git_refdb_backend *_backend, git_reflog *
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_write_reflog_table, &data,
-					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1718,7 +1718,7 @@ static int refdb_reftable_reflog_rename(git_refdb_backend *_backend, const char 
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_reflog_write_rename_table, &data,
-					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
@@ -1774,7 +1774,7 @@ static int refdb_reftable_reflog_delete(git_refdb_backend *_backend, const char 
 		goto out;
 
 	if ((error = reftable_stack_add(data.stack->stack, refdb_reftable_reflog_write_delete_table, &data,
-					&backend->write_opts, REFTABLE_STACK_NEW_ADDITION_RELOAD)) < 0) {
+					&backend->write_opts)) < 0) {
 		if (data.error)
 			error = data.error;
 		else
