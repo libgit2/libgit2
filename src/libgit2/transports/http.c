@@ -729,14 +729,16 @@ static int http_close(git_smart_subtransport *t)
 	git_net_url_dispose(&transport->server.url);
 	git_net_url_dispose(&transport->proxy.url);
 
+	/* The call below closes associated file descriptors.  */
+	git_http_client_free(transport->http_client);
+	transport->http_client = NULL;
+
 	return 0;
 }
 
 static void http_free(git_smart_subtransport *t)
 {
 	http_subtransport *transport = GIT_CONTAINER_OF(t, http_subtransport, parent);
-
-	git_http_client_free(transport->http_client);
 
 	http_close(t);
 	git__free(transport);
