@@ -13,6 +13,7 @@
 #include "git2/transport.h"
 #include "git2/sys/transport.h"
 #include "fs_path.h"
+#include "net.h"
 
 typedef struct transport_definition {
 	char *prefix;
@@ -98,7 +99,7 @@ static int transport_find_fn(
 	 * filesystem if it is not necessary */
 
 	/* It could be a SSH remote path. Check to see if there's a : */
-	if (!definition && strrchr(url, ':')) {
+	if (!definition && strrchr(url, ':') && !git_net_str_is_url(url)) {
 		/* re-search transports again with ssh:// as url
 		 * so that we can find a third party ssh transport */
 		definition = transport_find_by_url("ssh://");

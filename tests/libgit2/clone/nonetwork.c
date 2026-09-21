@@ -64,6 +64,13 @@ void test_clone_nonetwork__bad_urls(void)
 				"./foo", &g_options));
 }
 
+void test_clone_nonetwork__unknown_url_scheme(void)
+{
+	cl_git_fail(git_clone(&g_repo, "foo://example.com", "./foo", &g_options));
+	cl_assert_equal_s("unsupported URL protocol", git_error_last()->message);
+	cl_assert(!git_fs_path_exists("./foo"));
+}
+
 void test_clone_nonetwork__do_not_clean_existing_directory(void)
 {
 	/* Clone should not remove the directory if it already exists, but
