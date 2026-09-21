@@ -290,7 +290,7 @@ static int ref_pkt(
 
 	/* Determine OID type from capabilities */
 	if (!data->seen_capabilities && set_data(data, line, len) < 0)
-		return -1;
+		goto out_free;
 
 	GIT_ASSERT(data->oid_type);
 	oid_hexsize = git_oid_hexsize(data->oid_type);
@@ -334,6 +334,7 @@ static int ref_pkt(
 
 out_err:
 	git_error_set(GIT_ERROR_NET, "error parsing REF pkt-line");
+out_free:
 	if (pkt)
 		git__free(pkt->head.name);
 	git__free(pkt);
