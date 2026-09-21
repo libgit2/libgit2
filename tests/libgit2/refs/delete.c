@@ -121,3 +121,71 @@ void test_refs_delete__head(void)
 	cl_git_fail(git_reference_delete(ref));
 	git_reference_free(ref);
 }
+
+void test_refs_delete__remove_head(void)
+{
+	git_reference *ref;
+	git_str head_path = GIT_STR_INIT;
+
+	/* Check that it is not possible to delete HEAD by name either */
+
+	cl_git_pass(git_str_joinpath(&head_path, git_repository_path(g_repo), "HEAD"));
+	cl_assert(git_fs_path_exists(head_path.ptr));
+
+	cl_git_fail(git_reference_remove(g_repo, "HEAD"));
+
+	cl_assert(git_fs_path_exists(head_path.ptr));
+	cl_git_pass(git_reference_lookup(&ref, g_repo, "HEAD"));
+	git_reference_free(ref);
+
+	git_str_dispose(&head_path);
+}
+
+void test_refs_delete__remove_invalid_name(void)
+{
+	/*
+	 * Names that are not valid reference names must be rejected before
+	 * they reach the backend; otherwise a caller passing an untrusted
+	 * name can remove files from the repository control directory.
+	 */
+	const char *invalid[] = {
+		"config",
+		"description",
+		"index",
+		"refs/heads/ab..cd",
+		"refs/heads/foo.lock",
+		"refs/heads/with space",
+		"refs/heads/"
+	};
+	git_str path = GIT_STR_INIT;
+	size_t i;
+
+	for (i = 0; i < ARRAY_SIZE(invalid); i++) {
+		cl_git_fail_with(GIT_EINVALIDSPEC,
+			git_reference_remove(g_repo, invalid[i]));
+	}
+
+	/* the control files that exist must still be there */
+	cl_git_pass(git_str_joinpath(&path, git_repository_path(g_repo), "config"));
+	cl_assert(git_fs_path_exists(path.ptr));
+
+	cl_git_pass(git_str_joinpath(&path, git_repository_path(g_repo), "index"));
+	cl_assert(git_fs_path_exists(path.ptr));
+
+	git_str_dispose(&path);
+}
+
+void test_refs_delete__remove_one_level_name(void)
+{
+	/* one-level names that _are_ valid references remain removable */
+	git_reference *ref;
+	git_oid id;
+
+	git_oid_from_string(&id, current_master_tip, GIT_OID_SHA1);
+
+	cl_git_pass(git_reference_create(&ref, g_repo, "ORIG_HEAD", &id, 0, NULL));
+	git_reference_free(ref);
+
+	cl_git_pass(git_reference_remove(g_repo, "ORIG_HEAD"));
+	cl_git_fail(git_reference_lookup(&ref, g_repo, "ORIG_HEAD"));
+}

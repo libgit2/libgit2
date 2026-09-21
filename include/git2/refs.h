@@ -438,9 +438,11 @@ GIT_EXTERN(int) git_reference_delete(git_reference *ref);
  * This method removes the named reference from the repository without
  * looking at its old value.
  *
+ * `name` must be a well-formed reference name; `HEAD` cannot be removed.
+ *
  * @param repo The repository to remove the reference from
  * @param name The reference to remove
- * @return 0 or an error code
+ * @return 0, GIT_EINVALIDSPEC or an error code
  */
 GIT_EXTERN(int) git_reference_remove(git_repository *repo, const char *name);
 
