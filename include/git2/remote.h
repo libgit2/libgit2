@@ -1273,8 +1273,21 @@ GIT_EXTERN(int) git_remote_delete(git_repository *repo, const char *name);
  * or none of them point to HEAD's commit, or an error message.
  */
 GIT_EXTERN(int) git_remote_default_branch(git_buf *out, git_remote *remote);
+/**
+ * Sets the default branch (HEAD) for a remote.
+ *
+ * @param repo The repository containing the remote
+ * @param remote_name The name of the remote
+ * @param branch_name The name of the branch to set as HEAD, or NULL to determine automatically
+ * @return 0 on success, or an error code
+ */
+GIT_EXTERN(int) git_remote_set_head(
+	git_repository *repo,
+	const char *remote_name,
+	const char *branch_name);
 
 /** @} */
 GIT_END_DECL
 
 #endif
+

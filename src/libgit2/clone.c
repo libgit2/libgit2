@@ -168,47 +168,9 @@ static int update_remote_head(
 	git_str *target,
 	const char *reflog_message)
 {
-	git_refspec *refspec;
-	git_reference *remote_head = NULL;
-	git_str remote_head_name = GIT_STR_INIT;
-	git_str remote_branch_name = GIT_STR_INIT;
-	int error;
+	GIT_UNUSED(reflog_message);
 
-	/* Determine the remote tracking ref name from the local branch */
-	refspec = git_remote__matching_refspec(remote, git_str_cstr(target));
-
-	if (refspec == NULL) {
-		git_error_set(GIT_ERROR_NET, "the remote's default branch does not fit the refspec configuration");
-		error = GIT_EINVALIDSPEC;
-		goto cleanup;
-	}
-
-	if ((error = git_refspec__transform(
-		&remote_branch_name,
-		refspec,
-		git_str_cstr(target))) < 0)
-		goto cleanup;
-
-	if ((error = git_str_printf(&remote_head_name,
-		"%s%s/%s",
-		GIT_REFS_REMOTES_DIR,
-		git_remote_name(remote),
-		GIT_HEAD_REF)) < 0)
-		goto cleanup;
-
-	error = git_reference_symbolic_create(
-		&remote_head,
-		repo,
-		git_str_cstr(&remote_head_name),
-		git_str_cstr(&remote_branch_name),
-		true,
-		reflog_message);
-
-cleanup:
-	git_reference_free(remote_head);
-	git_str_dispose(&remote_branch_name);
-	git_str_dispose(&remote_head_name);
-	return error;
+	return git_remote_set_head(repo, git_remote_name(remote), git_str_cstr(target));
 }
 
 static int update_head_to_remote(
