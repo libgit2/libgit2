@@ -304,7 +304,7 @@ static ssize_t socket_write(
 	GIT_ASSERT(flags == 0);
 	GIT_UNUSED(flags);
 
-	ret = p_send(st->s, data, len, 0);
+	HANDLE_EINTR(ret, p_send(st->s, data, len, 0));
 
 	if (st->parent.timeout && ret < 0 &&
 	    (errno == EAGAIN || errno != EWOULDBLOCK)) {
@@ -315,7 +315,7 @@ static ssize_t socket_write(
 		ret = poll_with_retry(&fd, st->parent.timeout);
 
 		if (ret == 1) {
-			ret = p_send(st->s, data, len, 0);
+			HANDLE_EINTR(ret, p_send(st->s, data, len, 0));
 		} else if (ret == 0) {
 			git_error_set(GIT_ERROR_NET,
 				"could not write to socket: timed out");
@@ -340,7 +340,7 @@ static ssize_t socket_read(
 	struct pollfd fd;
 	ssize_t ret;
 
-	ret = p_recv(st->s, data, len, 0);
+	HANDLE_EINTR(ret, p_recv(st->s, data, len, 0));
 
 	if (st->parent.timeout && ret < 0 &&
 	    (errno == EAGAIN || errno != EWOULDBLOCK)) {
@@ -351,7 +351,7 @@ static ssize_t socket_read(
 		ret = poll_with_retry(&fd, st->parent.timeout);
 
 		if (ret == 1) {
-			ret = p_recv(st->s, data, len, 0);
+			HANDLE_EINTR(ret, p_recv(st->s, data, len, 0));
 		} else if (ret == 0) {
 			git_error_set(GIT_ERROR_NET,
 				"could not read from socket: timed out");
