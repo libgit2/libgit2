@@ -738,6 +738,51 @@ void test_ignore_status__negation_overrides_info_exclude(void)
 	cl_assert_equal_i(GIT_STATUS_WT_NEW, (int)status);
 }
 
+void test_ignore_status__negation_overrides_info_exclude_in_workdir_scan(void)
+{
+	git_status_list *statuslist;
+	git_status_options status_opts = GIT_STATUS_OPTIONS_INIT;
+	const git_status_entry *entry;
+	git_diff *diff;
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	const git_diff_delta *delta;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_rewritefile(
+		"empty_standard_repo/.git/info/exclude", "vendor/\n");
+	cl_git_rewritefile("empty_standard_repo/.gitignore", "!vendor\n");
+	cl_git_pass(git_futils_mkdir_r(
+		"empty_standard_repo/vendor", 0777));
+	cl_git_mkfile("empty_standard_repo/vendor/file.bin", "content\n");
+
+	status_opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED;
+	cl_git_pass(git_status_list_new(&statuslist, g_repo, &status_opts));
+	cl_assert_equal_sz(2, git_status_list_entrycount(statuslist));
+	entry = git_status_byindex(statuslist, 0);
+	cl_assert_equal_s(".gitignore", entry->index_to_workdir->new_file.path);
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, entry->status);
+	entry = git_status_byindex(statuslist, 1);
+	cl_assert_equal_s("vendor/", entry->index_to_workdir->new_file.path);
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, entry->status);
+	git_status_list_free(statuslist);
+
+	cl_git_pass(git_status_list_new(&statuslist, g_repo, NULL));
+	cl_assert_equal_sz(2, git_status_list_entrycount(statuslist));
+	entry = git_status_byindex(statuslist, 1);
+	cl_assert_equal_s("vendor/file.bin", entry->index_to_workdir->new_file.path);
+	cl_assert_equal_i(GIT_STATUS_WT_NEW, entry->status);
+	git_status_list_free(statuslist);
+
+	diff_opts.flags = GIT_DIFF_INCLUDE_UNTRACKED |
+		GIT_DIFF_RECURSE_UNTRACKED_DIRS;
+	cl_git_pass(git_diff_tree_to_workdir(&diff, g_repo, NULL, &diff_opts));
+	cl_assert_equal_sz(2, git_diff_num_deltas(diff));
+	delta = git_diff_get_delta(diff, 1);
+	cl_assert_equal_s("vendor/file.bin", delta->new_file.path);
+	cl_assert_equal_i(GIT_DELTA_UNTRACKED, delta->status);
+	git_diff_free(diff);
+}
+
 void test_ignore_status__internal_negation_overrides_ignore_file(void)
 {
 	unsigned int status;
