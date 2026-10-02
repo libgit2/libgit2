@@ -204,10 +204,6 @@ static int git_diff_driver_builtin(
 			drv, ddef->fns, ddef->flags)) < 0)
 		goto done;
 
-	if (ddef->words &&
-	    (error = git_regexp_compile(&drv->word_pattern, ddef->words, ddef->flags)) < 0)
-		goto done;
-
 	if ((error = git_diff_driver_map_put(&reg->map, drv->name, drv)) < 0)
 		goto done;
 

@@ -1,4 +1,7 @@
 #include "clar_libgit2.h"
+
+#include <locale.h>
+
 #include "diff_helpers.h"
 #include "repository.h"
 #include "diff_driver.h"
@@ -13,6 +16,48 @@ void test_diff_drivers__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
 	g_repo = NULL;
+}
+
+void test_diff_drivers__builtin_cpp_with_utf8_locale(void)
+{
+	git_index *index;
+	git_diff *diff = NULL;
+	git_patch *patch = NULL;
+	char *previous_locale;
+	int error;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_mkfile("empty_standard_repo/.gitattributes", "*.c diff=cpp\n");
+	cl_git_mkfile("empty_standard_repo/file.c", "int value(void) { return 1; }\n");
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_bypath(index, "file.c"));
+	git_index_free(index);
+
+	/* Vary the size so change detection does not depend on timestamps. */
+	cl_git_mkfile("empty_standard_repo/file.c", "int value(void) { return 20; }\n");
+
+	previous_locale = git__strdup(setlocale(LC_CTYPE, NULL));
+	cl_assert(previous_locale);
+	if (!setlocale(LC_CTYPE, "UTF-8") &&
+	    !setlocale(LC_CTYPE, "c.utf8") &&
+	    !setlocale(LC_CTYPE, "en_US.UTF-8")) {
+		git__free(previous_locale);
+		cl_skip();
+	}
+
+	/* Before the fix, macOS regcomp_l rejects the cpp word pattern and
+	 * git_patch_from_diff() fails with "illegal byte sequence". */
+	error = git_diff_index_to_workdir(&diff, g_repo, NULL, NULL);
+	if (!error)
+		error = git_patch_from_diff(&patch, diff, 0);
+
+	setlocale(LC_CTYPE, previous_locale);
+	git__free(previous_locale);
+	cl_git_pass(error);
+	cl_assert_equal_sz(1, git_patch_num_hunks(patch));
+
+	git_patch_free(patch);
+	git_diff_free(diff);
 }
 
 static void overwrite_filemode(const char *expected, git_buf *actual)
