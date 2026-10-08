@@ -517,13 +517,30 @@ int git_delta_read_header_fromstream(
 
 	len = read = 0;
 	while (len < buffer_len) {
+		off64_t curpos = stream->curpos;
+
 		read = git_packfile_stream_read(stream, &buffer[len], buffer_len - len);
 
 		if (read == 0)
 			break;
 
-		if (read == GIT_EBUFS)
+		if (read == GIT_EBUFS) {
+			/*
+			 * The stream made no progress at all: inflate()
+			 * stalled on truncated input (Z_BUF_ERROR) and the
+			 * pack has no more data to offer (curpos is stuck
+			 * past the end of the packfile).  Retrying would
+			 * loop forever, so fail instead of hanging.
+			 */
+			if (stream->curpos == curpos) {
+				git_error_set(GIT_ERROR_ODB, "truncated packfile");
+				return -1;
+			}
 			continue;
+		}
+
+		if (read < 0)
+			return -1;
 
 		len += read;
 	}
