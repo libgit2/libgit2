@@ -121,6 +121,13 @@ GIT_EXTERN(int) git_packbuilder_insert_commit(git_packbuilder *pb, const git_oid
  * Those commits and all objects they reference will be inserted into
  * the packbuilder.
  *
+ * The commits hidden from the walk (see `git_revwalk_hide`) are taken
+ * to be those the receiving side has: objects referenced by the hidden
+ * parents of the inserted commits are not inserted. Like git, this only
+ * looks at those parents, not at all hidden commits, so objects that
+ * the receiving side only has through other hidden commits (e.g. after
+ * cherry-picking a change from another branch) may still be inserted.
+ *
  * @param pb the packbuilder
  * @param walk the revwalk to use to fill the packbuilder
  *
