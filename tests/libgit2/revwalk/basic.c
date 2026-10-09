@@ -648,3 +648,44 @@ void test_revwalk_basic__newer_hidden_commit_hides_old_commits(void)
 
 	cl_git_fail_with(GIT_ITEROVER, git_revwalk_next(&oid, _walk));
 }
+
+/*
+ * A walk with hidden commits looks at the newest commits first, and stops
+ * once only hidden commits are left, no matter in which order commits
+ * were pushed and hidden. Here, it doesn't look at the parent of an old
+ * hidden commit (which doesn't even exist).
+ *
+ * % git rev-list a65fedf ^be3563a
+ * a65fedf39aefe402d3bb6e24df4d4f5fe4547750
+ */
+void test_revwalk_basic__hidden_commits_walked_from_newest(void)
+{
+	const char *old_commit =
+		"tree 4b825dc642cb6eb9a060e54bf8d69288fbee4904\n"
+		"parent 0123456789012345678901234567890123456789\n"
+		"author A U Thor <author@example.com> 0 +0000\n"
+		"committer A U Thor <author@example.com> 0 +0000\n"
+		"\n"
+		"an old commit whose parent doesn't exist\n";
+	git_oid old_id, oid;
+	git_odb *odb;
+
+	revwalk_basic_setup_walk("testrepo.git");
+
+	cl_git_pass(git_repository_odb(&odb, _repo));
+	cl_git_pass(git_odb_write(&old_id, odb, old_commit,
+		strlen(old_commit), GIT_OBJECT_COMMIT));
+	git_odb_free(odb);
+
+	cl_git_pass(git_oid_from_string(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", GIT_OID_SHA1));
+	cl_git_pass(git_revwalk_push(_walk, &oid));
+	cl_git_pass(git_oid_from_string(&oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
+	cl_git_pass(git_revwalk_hide(_walk, &oid));
+	cl_git_pass(git_revwalk_hide(_walk, &old_id));
+
+	cl_git_pass(git_revwalk_next(&oid, _walk));
+	cl_assert(!git_oid_streq(&oid, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750"));
+
+	cl_git_fail_with(GIT_ITEROVER, git_revwalk_next(&oid, _walk));
+}
+
