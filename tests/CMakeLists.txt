@@ -4,7 +4,3 @@
 add_subdirectory(headertest)
 add_subdirectory(libgit2)
 add_subdirectory(util)
-
-if(TARGET git2_cli)
-	add_subdirectory(cli)
-endif()
