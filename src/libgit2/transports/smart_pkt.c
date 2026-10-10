@@ -284,13 +284,13 @@ static int ref_pkt(
 	git_pkt_ref *pkt;
 	size_t alloclen, oid_hexsize;
 
-	pkt = git__calloc(1, sizeof(git_pkt_ref));
-	GIT_ERROR_CHECK_ALLOC(pkt);
-	pkt->type = GIT_PKT_REF;
-
 	/* Determine OID type from capabilities */
 	if (!data->seen_capabilities && set_data(data, line, len) < 0)
 		return -1;
+
+	pkt = git__calloc(1, sizeof(git_pkt_ref));
+	GIT_ERROR_CHECK_ALLOC(pkt);
+	pkt->type = GIT_PKT_REF;
 
 	GIT_ASSERT(data->oid_type);
 	oid_hexsize = git_oid_hexsize(data->oid_type);

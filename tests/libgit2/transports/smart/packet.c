@@ -351,3 +351,20 @@ void test_transports_smart_packet__ref_pkt(void)
 		"00360000000000000000000000000000000000000000 HEAD HEAD",
 		"0000000000000000000000000000000000000000", "HEAD HEAD", NULL);
 }
+
+void test_transports_smart_packet__rejects_unknown_object_format(void)
+{
+	const char line[] =
+		"00530000000000000000000000000000000000000000 refs/heads/master\0"
+		"object-format=bogus\0";
+	const char *endptr;
+	git_pkt *pkt;
+	git_pkt_parse_data pkt_parse_data = { 0 };
+	const git_error *error;
+
+	cl_git_fail(git_pkt_parse_line(
+		&pkt, &endptr, line, sizeof(line), &pkt_parse_data));
+	cl_assert((error = git_error_last()) != NULL);
+	cl_assert_equal_i(GIT_ERROR_INVALID, error->klass);
+	cl_assert_equal_s("unknown remote object format 'bogus'", error->message);
+}
