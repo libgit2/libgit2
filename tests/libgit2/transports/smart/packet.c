@@ -351,3 +351,41 @@ void test_transports_smart_packet__ref_pkt(void)
 		"00360000000000000000000000000000000000000000 HEAD HEAD",
 		"0000000000000000000000000000000000000000", "HEAD HEAD", NULL);
 }
+
+void test_transports_smart_packet__ref_pkt_object_format(void)
+{
+	const char *endptr;
+	git_pkt *pkt;
+	git_pkt_parse_data pkt_parse_data = { 0 };
+	static const char unknown_format[] =
+		"00600000000000000000000000000000000000000000 refs/heads/master\0report-status object-format=bogus";
+
+	/* object-format followed by another capability */
+	assert_ref_parses(
+		"00700000000000000000000000000000000000000000 refs/heads/master\0report-status object-format=sha1 agent=git/2.42.0",
+		"0000000000000000000000000000000000000000", "refs/heads/master",
+		"report-status object-format=sha1 agent=git/2.42.0");
+
+	/*
+	 * object-format as the final capability: terminated by the end of
+	 * the pkt-line, a trailing newline or a NUL. Some servers (e.g.
+	 * tangled.org) advertise this shape, which previously failed a
+	 * GIT_ASSERT instead of parsing.
+	 */
+	assert_ref_parses(
+		"005F0000000000000000000000000000000000000000 refs/heads/master\0report-status object-format=sha1",
+		"0000000000000000000000000000000000000000", "refs/heads/master",
+		"report-status object-format=sha1");
+	assert_ref_parses(
+		"00600000000000000000000000000000000000000000 refs/heads/master\0report-status object-format=sha1\n",
+		"0000000000000000000000000000000000000000", "refs/heads/master",
+		"report-status object-format=sha1");
+	assert_ref_parses(
+		"00600000000000000000000000000000000000000000 refs/heads/master\0report-status object-format=sha1\0",
+		"0000000000000000000000000000000000000000", "refs/heads/master",
+		"report-status object-format=sha1");
+
+	/* an unknown object format is an error, not an assertion failure */
+	cl_git_fail(git_pkt_parse_line(&pkt, &endptr, unknown_format,
+		sizeof(unknown_format), &pkt_parse_data));
+}
