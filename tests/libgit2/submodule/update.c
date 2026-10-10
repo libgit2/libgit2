@@ -135,6 +135,7 @@ void test_submodule_update__update_submodule(void)
 void test_submodule_update__update_submodule_with_path(void)
 {
 	git_submodule *sm;
+	git_str dot_git_content = GIT_STR_INIT;
 	git_submodule_update_options update_options = GIT_SUBMODULE_UPDATE_OPTIONS_INIT;
 	unsigned int submodule_status = 0;
 	struct update_submodule_cb_payload update_payload = { 0 };
@@ -176,6 +177,12 @@ void test_submodule_update__update_submodule_with_path(void)
 	cl_assert_equal_i(1, update_payload.checkout_progress_called);
 	cl_assert_equal_i(1, update_payload.update_refs_called);
 
+	cl_git_pass(git_futils_readbuffer(&dot_git_content, "submodule_with_path/lib/testrepo/.git"));
+	cl_assert_equal_s("gitdir: ../../.git/modules/testrepo/\n", dot_git_content.ptr);
+	cl_assert(git_fs_path_isfile("submodule_with_path/.git/modules/testrepo/HEAD"));
+	cl_assert(!git_fs_path_exists("submodule_with_path/.git/modules/lib/testrepo"));
+
+	git_str_dispose(&dot_git_content);
 	git_submodule_free(sm);
 }
 
