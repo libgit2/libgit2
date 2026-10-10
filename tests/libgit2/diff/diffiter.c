@@ -73,6 +73,26 @@ void test_diff_diffiter__iterate_files_2(void)
 	git_diff_free(diff);
 }
 
+void test_diff_diffiter__iterate_files_progress(void)
+{
+	git_repository *repo = cl_git_sandbox_init("status");
+	git_diff *diff;
+	size_t num_d;
+	diff_expects exp = { 0 };
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, repo, NULL, NULL));
+
+	num_d = git_diff_num_deltas(diff);
+	cl_assert(num_d > 1); /* need at least 2 files to test real progress */
+
+	/* iterate via the public diff_foreach so that progress is computed */
+	cl_git_pass(git_diff_foreach(diff, diff_file_cb, NULL, NULL, NULL, &exp));
+
+	cl_assert_equal_sz(num_d, (size_t)exp.files);
+
+	git_diff_free(diff);
+}
+
 void test_diff_diffiter__iterate_files_and_hunks(void)
 {
 	git_repository *repo = cl_git_sandbox_init("status");
@@ -450,4 +470,3 @@ void test_diff_diffiter__checks_options_version(void)
 	err = git_error_last();
 	cl_assert_equal_i(GIT_ERROR_INVALID, err->klass);
 }
-

@@ -16,13 +16,14 @@ int git_patch__invoke_callbacks(
 	git_diff_binary_cb binary_cb,
 	git_diff_hunk_cb hunk_cb,
 	git_diff_line_cb line_cb,
+	float progress,
 	void *payload)
 {
 	int error = 0;
 	uint32_t i, j;
 
 	if (file_cb)
-		error = file_cb(patch->delta, 0, payload);
+		error = file_cb(patch->delta, progress, payload);
 
 	if (error)
 		return error;

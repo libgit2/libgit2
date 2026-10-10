@@ -876,7 +876,7 @@ int git_patch_print(
 		goto out;
 
 	if ((error = git_patch__invoke_callbacks(patch, diff_print_patch_file, diff_print_patch_binary,
-						 diff_print_patch_hunk, diff_print_patch_line, &pi)) < 0) {
+						 diff_print_patch_hunk, diff_print_patch_line, 0, &pi)) < 0) {
 		git_error_set_after_callback_function(error, "git_patch_print");
 		goto out;
 	}

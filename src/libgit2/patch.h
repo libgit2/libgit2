@@ -44,6 +44,7 @@ extern int git_patch__invoke_callbacks(
 	git_diff_binary_cb binary_cb,
 	git_diff_hunk_cb hunk_cb,
 	git_diff_line_cb line_cb,
+	float progress,
 	void *payload);
 
 extern int git_patch_line_stats(
