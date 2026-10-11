@@ -131,12 +131,17 @@ static int git_pool__ptr_cmp(const void * a, const void * b)
 
 int git_pool_init(git_pool *pool, size_t item_size)
 {
+	size_t page_size;
+
 	GIT_ASSERT_ARG(pool);
 	GIT_ASSERT_ARG(item_size >= 1);
 
+	if (git__page_size(&page_size) < 0)
+		page_size = 4096;
+
 	memset(pool, 0, sizeof(git_pool));
 	pool->item_size = item_size;
-	pool->page_size = git_pool__system_page_size();
+	pool->page_size = page_size;
 	git_vector_init(&pool->allocations, 100, git_pool__ptr_cmp);
 
 	return 0;
