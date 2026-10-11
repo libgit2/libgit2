@@ -19,7 +19,7 @@ void test_repo_extensions__initialize(void)
 void test_repo_extensions__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_EXTENSIONS, NULL, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_EXTENSIONS, NULL, (size_t)0));
 }
 
 void test_repo_extensions__builtin(void)

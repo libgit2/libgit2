@@ -29,7 +29,7 @@ void test_pack_filelimit__initialize_unlimited(void)
 {
 	expected_open_mwindow_files = 15;
 	cl_git_pass(git_libgit2_opts(GIT_OPT_GET_MWINDOW_FILE_LIMIT, &original_mwindow_file_limit));
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_MWINDOW_FILE_LIMIT, (size_t)0));
 }
 
 void test_pack_filelimit__cleanup(void)
