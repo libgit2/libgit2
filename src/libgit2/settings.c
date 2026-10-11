@@ -178,7 +178,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_CACHED_MEMORY:
-		*(va_arg(ap, ssize_t *)) = git_cache__current_storage.val;
+		*(va_arg(ap, ssize_t *)) = git_atomic_ssize_get(&git_cache__current_storage);
 		*(va_arg(ap, ssize_t *)) = git_cache__max_storage;
 		break;
 
