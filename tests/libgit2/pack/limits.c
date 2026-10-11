@@ -24,7 +24,7 @@ void test_pack_limits__max_object_size(void)
 
 	cl_git_pass(git_futils_readbuffer(&pack, cl_fixture("delta_100mb.pack")));
 
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_PACK_MAX_OBJECT_SIZE, 42 * 1024 * 1024));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_PACK_MAX_OBJECT_SIZE, (size_t)42 * 1024 * 1024));
 
 	cl_git_pass(git_indexer_new(&idx, ".", &opts));
 

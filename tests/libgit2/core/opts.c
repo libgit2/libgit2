@@ -3,7 +3,7 @@
 
 void test_core_opts__cleanup(void)
 {
-	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_EXTENSIONS, NULL, 0));
+	cl_git_pass(git_libgit2_opts(GIT_OPT_SET_EXTENSIONS, NULL, (size_t)0));
 }
 
 void test_core_opts__readwrite(void)
