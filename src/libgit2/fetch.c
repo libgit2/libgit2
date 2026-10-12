@@ -163,6 +163,7 @@ cleanup:
 int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 {
 	git_transport *t = remote->transport;
+	git_oid_t remote_oid_type, repo_oid_type;
 	int error;
 
 	remote->need_pack = 0;
@@ -170,6 +171,19 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	if (opts) {
 		GIT_ASSERT_ARG(opts->depth >= 0);
 		remote->nego.depth = opts->depth;
+	}
+
+	if ((error = git_remote_oid_type(&remote_oid_type, remote)) < 0)
+		return error;
+
+	repo_oid_type = git_repository_oid_type(remote->repo);
+
+	if (remote_oid_type != repo_oid_type) {
+		git_error_set(GIT_ERROR_NET,
+			"the remote uses %s object ids, but the repository uses %s",
+			git_oid_type_name(remote_oid_type),
+			git_oid_type_name(repo_oid_type));
+		return -1;
 	}
 
 	if (filter_wants(remote, opts) < 0)
