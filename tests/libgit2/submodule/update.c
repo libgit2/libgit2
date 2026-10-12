@@ -172,6 +172,10 @@ void test_submodule_update__update_submodule_with_path(void)
 	cl_assert(git_oid_streq(git_submodule_wd_id(sm), "a65fedf39aefe402d3bb6e24df4d4f5fe4547750") == 0);
 	cl_assert(git_oid_streq(git_submodule_index_id(sm), "a65fedf39aefe402d3bb6e24df4d4f5fe4547750") == 0);
 
+	/* the clone goes to modules/<name> ("testrepo"), not modules/<path> ("lib/testrepo") */
+	cl_assert(git_fs_path_isfile("submodule_with_path/.git/modules/testrepo/HEAD"));
+	cl_assert(!git_fs_path_exists("submodule_with_path/.git/modules/lib"));
+
 	/* verify that the expected callbacks have been called. */
 	cl_assert_equal_i(1, update_payload.checkout_progress_called);
 	cl_assert_equal_i(1, update_payload.update_refs_called);
