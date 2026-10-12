@@ -23,8 +23,9 @@ void cleanup_fixture_worktree(worktree_fixture *fixture)
 
 void setup_fixture_worktree(worktree_fixture *fixture)
 {
+	/* cleanup_fixture_worktree frees these and removes their sandboxes */
 	if (fixture->reponame)
-		fixture->repo = cl_git_sandbox_init(fixture->reponame);
+		fixture->repo = cl_git_sandbox_init_unmanaged(fixture->reponame);
 	if (fixture->worktreename)
-		fixture->worktree = cl_git_sandbox_init(fixture->worktreename);
+		fixture->worktree = cl_git_sandbox_init_unmanaged(fixture->worktreename);
 }
