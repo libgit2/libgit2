@@ -107,7 +107,5 @@ void test_repo_getters__commit_parents(void)
 
 	git_commitarray_dispose(&parents);
 
-	git_repository_free(repo);
-
-	cl_fixture_cleanup("testrepo");
+	cl_git_sandbox_cleanup();
 }
