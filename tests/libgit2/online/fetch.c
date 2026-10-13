@@ -105,11 +105,11 @@ void test_online_fetch__fetch_twice(void)
 	cl_git_pass(git_remote_create(&remote, _repo, "test", "https://github.com/libgit2/TestGitRepository.git"));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
-    	git_remote_disconnect(remote);
+		git_remote_disconnect(remote, NULL);
 
 	git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL);
 	cl_git_pass(git_remote_download(remote, NULL, NULL));
-	git_remote_disconnect(remote);
+	git_remote_disconnect(remote, NULL);
 
 	git_remote_free(remote);
 }
@@ -175,7 +175,7 @@ void test_online_fetch__doesnt_retrieve_a_pack_when_the_repository_is_up_to_date
 	cl_git_pass(git_remote_update_tips(remote, &options.callbacks, GIT_REMOTE_UPDATE_FETCHHEAD, options.download_tags, NULL));
 	cl_assert_equal_i(0, counter);
 
-	git_remote_disconnect(remote);
+	git_remote_disconnect(remote, NULL);
 
 	git_remote_free(remote);
 	git_repository_free(_repository);
@@ -242,7 +242,7 @@ void test_online_fetch__can_cancel(void)
 
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_fail_with(git_remote_download(remote, NULL, &options), -4321);
-	git_remote_disconnect(remote);
+	git_remote_disconnect(remote, NULL);
 	git_remote_free(remote);
 }
 
@@ -256,7 +256,7 @@ void test_online_fetch__ls_disconnected(void)
 				"http://github.com/libgit2/TestGitRepository.git"));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 	cl_git_pass(git_remote_ls(&refs, &refs_len_before, remote));
-	git_remote_disconnect(remote);
+	git_remote_disconnect(remote, NULL);
 	cl_git_pass(git_remote_ls(&refs, &refs_len_after, remote));
 
 	cl_assert_equal_i(refs_len_before, refs_len_after);
@@ -273,7 +273,7 @@ void test_online_fetch__remote_symrefs(void)
 	cl_git_pass(git_remote_create(&remote, _repo, "test",
 				"http://github.com/libgit2/TestGitRepository.git"));
 	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
-	git_remote_disconnect(remote);
+	git_remote_disconnect(remote, NULL);
 	cl_git_pass(git_remote_ls(&refs, &refs_len, remote));
 
 	cl_assert_equal_s("HEAD", refs[0]->name);
