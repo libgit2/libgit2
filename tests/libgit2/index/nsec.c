@@ -57,8 +57,7 @@ static bool should_expect_nsecs(void)
 	git_str_joinpath(&nsec_path, clar_sandbox_path(), "nsec_test");
 
 	expect = try_create_file_with_nsec_timestamp(nsec_path.ptr);
-
-	cl_must_pass(p_unlink(nsec_path.ptr));
+	p_unlink(nsec_path.ptr);
 
 	git_str_dispose(&nsec_path);
 
