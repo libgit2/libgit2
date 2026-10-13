@@ -211,3 +211,11 @@ void test_repo_discover__discovery_starting_at_system_root_causes_no_hang(void)
 	cl_git_fail(git_repository_discover(&out, "//localhost/", 0, NULL));
 #endif
 }
+
+void test_repo_discover__discovery_starting_at_unmounted_win_root_causes_no_hang(void)
+{
+#ifdef GIT_WIN32
+    git_buf out = GIT_BUF_INIT;
+    cl_git_fail(git_repository_discover(&out, "\\\\?\\Volume{20693787-e361-42da-97c9-f66d2468f001}\\EFI\\Boot", 0, NULL));
+#endif
+}
