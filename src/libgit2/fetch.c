@@ -64,6 +64,7 @@ static int mark_local(git_remote *remote)
 		   depth, we need to ask for it even though the head
 		   exists locally. */
 		if (remote->nego.depth == GIT_FETCH_DEPTH_FULL &&
+		    remote->nego.shallow_since == GIT_FETCH_SINCE_FULL &&
 		    git_odb_exists(odb, &head->oid))
 			head->local = 1;
 		else
@@ -171,6 +172,7 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	if (opts) {
 		GIT_ASSERT_ARG(opts->depth >= 0);
 		remote->nego.depth = opts->depth;
+		remote->nego.shallow_since = opts->shallow_since;
 	}
 
 	if ((error = git_remote_oid_type(&remote_oid_type, remote)) < 0)

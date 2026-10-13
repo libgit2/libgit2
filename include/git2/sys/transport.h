@@ -38,6 +38,7 @@ typedef struct {
 	git_oid *shallow_roots;
 	size_t shallow_roots_len;
 	int depth;
+	git_time_t shallow_since;
 } git_fetch_negotiation;
 
 struct git_transport {
