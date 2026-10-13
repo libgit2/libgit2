@@ -1,0 +1,45 @@
+name: "\U0001F41E Bug report"
+description: Create a report to help us improve
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: Reproduction
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      placeholder: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: version
+    attributes:
+      label: Version of libgit2
+      placeholder: Version of libgit2
+      description: |
+        (release number or SHA1)
+      render: shell-script
+    validations:
+      required: true
+
+  - type: textarea
+    id: operating-system
+    attributes:
+      label: Operating system(s) tested
+      placeholder: Operating system(s) tested
