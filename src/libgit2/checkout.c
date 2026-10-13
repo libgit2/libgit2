@@ -157,7 +157,7 @@ GIT_INLINE(bool) is_workdir_base_or_new(
 		git_oid__cmp(&newitem->id, workdir_id) == 0);
 }
 
-GIT_INLINE(bool) is_filemode_changed(git_filemode_t a, git_filemode_t b, int respect_filemode)
+GIT_INLINE(bool) is_filemode_changed(git_filemode_t a, git_filemode_t b, int respect_filemode, int respect_symlinks)
 {
 	/* If core.filemode = false, ignore links in the repository and executable bit changes */
 	if (!respect_filemode) {
@@ -168,6 +168,17 @@ GIT_INLINE(bool) is_filemode_changed(git_filemode_t a, git_filemode_t b, int res
 
 		a &= ~0111;
 		b &= ~0111;
+	}
+
+	/* If core.symlinks = false, symlinks are materialized as regular files via
+	 * git_futils_fake_symlink (see blob_content_to_link), so an index entry
+	 * with S_IFLNK vs. a workdir plain file is not a modification. Mirror what
+	 * diff_file already does via GIT_CONFIGMAP_SYMLINKS (issue #7363). */
+	if (!respect_symlinks) {
+		if (a == S_IFLNK)
+			a = GIT_FILEMODE_BLOB;
+		if (b == S_IFLNK)
+			b = GIT_FILEMODE_BLOB;
 	}
 
 	return (a != b);
@@ -219,11 +230,11 @@ static bool checkout_is_workdir_modified(
 	    !git_index_entry_newer_than_index(ie, data->index) &&
 	    git_index_time_eq(&wditem->mtime, &ie->mtime) &&
 	    wditem->file_size == ie->file_size &&
-	    !is_filemode_changed(wditem->mode, ie->mode, data->respect_filemode)) {
+	    !is_filemode_changed(wditem->mode, ie->mode, data->respect_filemode, data->can_symlink)) {
 
 		/* The workdir is modified iff the index entry is modified */
 		return !is_workdir_base_or_new(&ie->id, baseitem, newitem) ||
-			is_filemode_changed(baseitem->mode, ie->mode, data->respect_filemode);
+			is_filemode_changed(baseitem->mode, ie->mode, data->respect_filemode, data->can_symlink);
 	}
 
 	/* depending on where base is coming from, we may or may not know
@@ -236,7 +247,7 @@ static bool checkout_is_workdir_modified(
 	if (S_ISDIR(wditem->mode))
 		return false;
 
-	if (is_filemode_changed(baseitem->mode, wditem->mode, data->respect_filemode))
+	if (is_filemode_changed(baseitem->mode, wditem->mode, data->respect_filemode, data->can_symlink))
 		return true;
 
 	if (git_diff__oid_for_entry(&oid, data->diff, wditem, wditem->mode, NULL) < 0)
