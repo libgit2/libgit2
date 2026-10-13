@@ -197,6 +197,7 @@ int git_config_list_get(git_config_list_entry **out, git_config_list *config_lis
 	if (git_config_list_headmap_get(&entry, &config_list->map, key) != 0)
 		return GIT_ENOTFOUND;
 
+	git_config_list_incref(config_list);
 	*out = entry->entry;
 	return 0;
 }
@@ -218,6 +219,7 @@ int git_config_list_get_unique(git_config_list_entry **out, git_config_list *con
 		return -1;
 	}
 
+	git_config_list_incref(config_list);
 	*out = entry->entry;
 	return 0;
 }
@@ -265,6 +267,10 @@ int git_config_list_iterator_new(git_config_iterator **out, git_config_list *con
 void git_config_list_entry_free(git_config_backend_entry *e)
 {
 	git_config_list_entry *entry = (git_config_list_entry *)e;
+
+	if (entry == NULL)
+		return;
+
 	git_config_list_free(entry->config_list);
 }
 
