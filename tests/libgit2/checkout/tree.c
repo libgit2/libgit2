@@ -1672,3 +1672,54 @@ void test_checkout_tree__dry_run(void)
 
 	git_object_free(obj);
 }
+
+static git_tree *create_pathlist_tree(const char *content)
+{
+	git_tree_update updates[2];
+	git_tree *tree;
+	git_oid blob, id;
+
+	cl_git_pass(git_blob_create_from_buffer(&blob, g_repo, content, strlen(content)));
+
+	memset(updates, 0, sizeof(updates));
+	updates[0].action = GIT_TREE_UPDATE_UPSERT;
+	updates[0].filemode = GIT_FILEMODE_BLOB;
+	updates[0].path = "foo-bar/c";
+	git_oid_cpy(&updates[0].id, &blob);
+	updates[1].action = GIT_TREE_UPDATE_UPSERT;
+	updates[1].filemode = GIT_FILEMODE_BLOB;
+	updates[1].path = "foo/y";
+	git_oid_cpy(&updates[1].id, &blob);
+
+	cl_git_pass(git_tree_create_updated(&id, g_repo, NULL, 2, updates));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
+
+	return tree;
+}
+
+void test_checkout_tree__pathlist_entry_before_skipped_entry(void)
+{
+	char *paths[] = { "foo", "foo-bar/b" };
+	git_tree *old_tree, *new_tree;
+
+	old_tree = create_pathlist_tree("1\n");
+	new_tree = create_pathlist_tree("2\n");
+
+	cl_git_pass(git_checkout_tree(g_repo, (git_object *)old_tree, &g_opts));
+
+	g_opts.baseline = old_tree;
+	g_opts.checkout_strategy =
+		GIT_CHECKOUT_FORCE | GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+	g_opts.paths.strings = paths;
+	g_opts.paths.count = 2;
+
+	/* "foo" matches "foo/y", although "foo-bar/c" is between them */
+	cl_git_pass(git_checkout_tree(g_repo, (git_object *)new_tree, &g_opts));
+
+	cl_assert(git_fs_path_isfile("testrepo/foo/y"));
+	check_file_contents("testrepo/foo/y", "2\n");
+	check_file_contents("testrepo/foo-bar/c", "1\n");
+
+	git_tree_free(old_tree);
+	git_tree_free(new_tree);
+}

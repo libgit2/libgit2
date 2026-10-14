@@ -1395,3 +1395,39 @@ void test_iterator_index__include_conflicts(void)
 
 	git_index_free(index);
 }
+
+void test_iterator_index__pathlist_entry_before_skipped_entry(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	char *pathlist[] = { "foo", "foo-bar/b" };
+	const char *expected[] = { "foo/y" };
+	git_index_entry entry;
+	git_index *index;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_git_pass(git_repository_index(&index, g_repo));
+
+	memset(&entry, 0, sizeof(entry));
+	entry.mode = GIT_FILEMODE_BLOB;
+	cl_git_pass(git_blob_create_from_buffer(&entry.id, g_repo, "a\n", 2));
+
+	entry.path = "foo-bar/c";
+	cl_git_pass(git_index_add(index, &entry));
+	entry.path = "foo/y";
+	cl_git_pass(git_index_add(index, &entry));
+
+	/*
+	 * "foo-bar/c" skips over "foo-bar/b", but "foo" sorts before
+	 * "foo-bar/b" and still has to match "foo/y".
+	 */
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	i_opts.pathlist.strings = pathlist;
+	i_opts.pathlist.count = 2;
+
+	cl_git_pass(git_iterator_for_index(&i, g_repo, index, &i_opts));
+	expect_iterator_items(i, 1, expected, 1, expected);
+	git_iterator_free(i);
+
+	git_index_free(index);
+}

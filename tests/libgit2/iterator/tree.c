@@ -1078,3 +1078,53 @@ void test_iterator_tree__pathlist_no_match(void)
 	git_vector_dispose(&filelist);
 }
 
+
+static git_tree *create_pathlist_walk_tree(void)
+{
+	git_tree_update updates[2];
+	git_tree *tree;
+	git_oid blob, id;
+
+	cl_git_pass(git_blob_create_from_buffer(&blob, g_repo, "a\n", 2));
+
+	memset(updates, 0, sizeof(updates));
+	updates[0].action = GIT_TREE_UPDATE_UPSERT;
+	updates[0].filemode = GIT_FILEMODE_BLOB;
+	updates[0].path = "foo-bar/c";
+	git_oid_cpy(&updates[0].id, &blob);
+	updates[1].action = GIT_TREE_UPDATE_UPSERT;
+	updates[1].filemode = GIT_FILEMODE_BLOB;
+	updates[1].path = "foo/y";
+	git_oid_cpy(&updates[1].id, &blob);
+
+	cl_git_pass(git_tree_create_updated(&id, g_repo, NULL, 2, updates));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
+
+	return tree;
+}
+
+void test_iterator_tree__pathlist_entry_before_skipped_entry(void)
+{
+	git_iterator *i;
+	git_iterator_options i_opts = GIT_ITERATOR_OPTIONS_INIT;
+	char *pathlist[] = { "foo", "foo-bar/b" };
+	const char *expected[] = { "foo/y" };
+	git_tree *tree;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	tree = create_pathlist_walk_tree();
+
+	/*
+	 * "foo-bar/c" skips over "foo-bar/b", but "foo" sorts before
+	 * "foo-bar/b" and still has to match "foo/y".
+	 */
+	i_opts.flags = GIT_ITERATOR_DONT_IGNORE_CASE;
+	i_opts.pathlist.strings = pathlist;
+	i_opts.pathlist.count = 2;
+
+	cl_git_pass(git_iterator_for_tree(&i, tree, &i_opts));
+	expect_iterator_items(i, 1, expected, 1, expected);
+	git_iterator_free(i);
+
+	git_tree_free(tree);
+}
