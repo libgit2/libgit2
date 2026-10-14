@@ -118,6 +118,39 @@ static int handle_sockerr(GIT_SOCKET socket)
 	return -1;
 }
 
+/*
+ * poll(2) is not restarted after a signal handler runs, even one
+ * installed with SA_RESTART (on Linux and most other systems), so an
+ * application that uses signals would see network operations with a
+ * timeout fail spuriously with EINTR. Retry on EINTR, waiting only for
+ * the time remaining until the original deadline; returns 0 if that
+ * passes.
+ */
+GIT_INLINE(int) poll_with_retry(struct pollfd *fd, int timeout)
+{
+	uint64_t deadline = 0;
+	int remaining = timeout, ret;
+
+	if (timeout > 0)
+		deadline = git_time_monotonic() + (uint64_t)timeout;
+
+	while ((ret = p_poll(fd, 1, remaining)) < 0 && errno == EINTR) {
+		uint64_t now;
+
+		if (timeout <= 0)
+			continue;
+
+		now = git_time_monotonic();
+
+		if (now >= deadline)
+			return 0;
+
+		remaining = (int)(deadline - now);
+	}
+
+	return ret;
+}
+
 GIT_INLINE(bool) connect_would_block(int error)
 {
 #ifdef GIT_WIN32
@@ -152,7 +185,7 @@ static int connect_with_timeout(
 	fd.events = POLLOUT;
 	fd.revents = 0;
 
-	error = p_poll(&fd, 1, timeout);
+	error = poll_with_retry(&fd, timeout);
 
 	if (error == 0) {
 		return GIT_TIMEOUT;
@@ -271,7 +304,7 @@ static ssize_t socket_write(
 	GIT_ASSERT(flags == 0);
 	GIT_UNUSED(flags);
 
-	ret = p_send(st->s, data, len, 0);
+	HANDLE_EINTR(ret, p_send(st->s, data, len, 0));
 
 	if (st->parent.timeout && ret < 0 &&
 	    (errno == EAGAIN || errno != EWOULDBLOCK)) {
@@ -279,10 +312,10 @@ static ssize_t socket_write(
 		fd.events = POLLOUT;
 		fd.revents = 0;
 
-		ret = p_poll(&fd, 1, st->parent.timeout);
+		ret = poll_with_retry(&fd, st->parent.timeout);
 
 		if (ret == 1) {
-			ret = p_send(st->s, data, len, 0);
+			HANDLE_EINTR(ret, p_send(st->s, data, len, 0));
 		} else if (ret == 0) {
 			git_error_set(GIT_ERROR_NET,
 				"could not write to socket: timed out");
@@ -307,7 +340,7 @@ static ssize_t socket_read(
 	struct pollfd fd;
 	ssize_t ret;
 
-	ret = p_recv(st->s, data, len, 0);
+	HANDLE_EINTR(ret, p_recv(st->s, data, len, 0));
 
 	if (st->parent.timeout && ret < 0 &&
 	    (errno == EAGAIN || errno != EWOULDBLOCK)) {
@@ -315,10 +348,10 @@ static ssize_t socket_read(
 		fd.events = POLLIN;
 		fd.revents = 0;
 
-		ret = p_poll(&fd, 1, st->parent.timeout);
+		ret = poll_with_retry(&fd, st->parent.timeout);
 
 		if (ret == 1) {
-			ret = p_recv(st->s, data, len, 0);
+			HANDLE_EINTR(ret, p_recv(st->s, data, len, 0));
 		} else if (ret == 0) {
 			git_error_set(GIT_ERROR_NET,
 				"could not read from socket: timed out");
