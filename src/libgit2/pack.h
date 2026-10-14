@@ -69,7 +69,9 @@ struct git_pack_idx_header {
 };
 
 typedef struct git_pack_cache_entry {
-	size_t last_usage; /* enough? */
+	/* Neighbors in the cache's LRU list, most recently used first. */
+	struct git_pack_cache_entry *prev, *next;
+	off64_t offset;
 	git_atomic32 refcount;
 	git_rawobj raw;
 } git_pack_cache_entry;
@@ -100,7 +102,7 @@ GIT_HASHMAP_OID_PROTOTYPES(git_pack_oidmap, struct git_pack_entry *);
 typedef struct {
 	size_t memory_used;
 	size_t memory_limit;
-	size_t use_ctr;
+	git_pack_cache_entry *head, *tail; /* LRU list */
 	git_mutex lock;
 	git_pack_offsetmap entries;
 } git_pack_cache;
