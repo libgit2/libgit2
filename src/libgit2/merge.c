@@ -3523,8 +3523,8 @@ int git_merge(
 		&checkout_strategy)) < 0)
 		goto done;
 
-	if ((error = git_repository_index(&repo_index, repo) < 0) ||
-	    (error = git_index_read(repo_index, 0) < 0))
+	if ((error = git_repository_index(&repo_index, repo)) < 0 ||
+	    (error = git_index_read(repo_index, 0)) < 0)
 		goto done;
 
 	/* Write the merge setup files to the repository. */
