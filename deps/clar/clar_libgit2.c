@@ -249,6 +249,23 @@ git_repository *cl_git_sandbox_init_new(const char *sandbox)
 	return _cl_repo;
 }
 
+/*
+ * Like cl_git_sandbox_init, but the caller frees the repository and
+ * removes the sandbox. cl_git_sandbox_cleanup only cleans up sandbox.
+ */
+git_repository *cl_git_sandbox_init_unmanaged(const char *sandbox)
+{
+	git_repository *managed_repo = _cl_repo, *repo;
+	const char *managed_sandbox = _cl_sandbox;
+
+	repo = cl_git_sandbox_init(sandbox);
+
+	_cl_repo = managed_repo;
+	_cl_sandbox = managed_sandbox;
+
+	return repo;
+}
+
 git_repository *cl_git_sandbox_reopen(void)
 {
 	if (_cl_repo) {
