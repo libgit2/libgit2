@@ -39,7 +39,6 @@ struct git_diff_driver {
 	uint32_t binary_flags;
 	uint32_t other_flags;
 	git_array_t(git_diff_driver_pattern) fn_patterns;
-	git_regexp  word_pattern;
 	char name[GIT_FLEX_ARRAY];
 };
 
@@ -204,10 +203,6 @@ static int git_diff_driver_builtin(
 			drv, ddef->fns, ddef->flags)) < 0)
 		goto done;
 
-	if (ddef->words &&
-	    (error = git_regexp_compile(&drv->word_pattern, ddef->words, ddef->flags)) < 0)
-		goto done;
-
 	if ((error = git_diff_driver_map_put(&reg->map, drv->name, drv)) < 0)
 		goto done;
 
@@ -306,14 +301,9 @@ static int git_diff_driver_load(
 
 	if ((error = git_config__lookup_entry(&ce, cfg, name.ptr, false)) < 0)
 		goto done;
-	if (!ce || !ce->value)
-		/* no diff.<driver>.wordregex, so just continue */;
-	else if (!(error = git_regexp_compile(&drv->word_pattern, ce->value, 0)))
+	/* Word patterns are unused, but their presence still defines a driver. */
+	if (ce && ce->value)
 		found_driver = true;
-	else {
-		/* TODO: warn about bad regex instead of failure */
-		goto done;
-	}
 
 	/* TODO: look up diff.<driver>.algorithm to turn on minimal / patience
 	 * diff in drv->other_flags
@@ -393,8 +383,6 @@ void git_diff_driver_free(git_diff_driver *driver)
 	while ((pat = git_array_pop(driver->fn_patterns)) != NULL)
 		git_regexp_dispose(&pat->re);
 	git_array_clear(driver->fn_patterns);
-
-	git_regexp_dispose(&driver->word_pattern);
 
 	git__free(driver);
 }
