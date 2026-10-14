@@ -9,6 +9,7 @@
 #define INCLUDE_commit_graph_h__
 
 #include "common.h"
+#include "pathspec.h"
 
 #include "git2/types.h"
 #include "git2/sys/commit_graph.h"
@@ -116,6 +117,9 @@ typedef struct git_commit_graph_entry {
 	/* The object ID of the root tree of the commit. */
 	git_oid tree_oid;
 
+	/* The ID/offset for this entry within the commit graph */
+	size_t graph_id;
+
 	/* The object ID hash of the requested commit. */
 	git_oid sha1;
 } git_commit_graph_entry;
@@ -209,5 +213,30 @@ int git_commit_graph_file_parse(
 		git_commit_graph_file *file,
 		const unsigned char *data,
 		size_t size);
+
+typedef struct git_bloom_filter_cache {
+	git_vector match_cache;
+} git_bloom_filter_cache;
+
+typedef struct git_bloom_filter_hash_entry {
+	uint32_t h1;
+	uint32_t h2;
+} git_bloom_filter_hash_entry;
+
+int git_bloom_filter__cache_new(git_bloom_filter_cache **out,
+	git_pathspec *ps,
+	git_commit_graph_file *cgfile);
+
+void git_bloom_filter__cache_free(git_bloom_filter_cache *bfcache);
+
+/**
+ * Check the bloom filter to see whether or not paths from pathspec
+ * _might_ have been modified by the commit
+ * 
+ * @return int Return 0 if the commit definitly doesn't touch the pathspec
+ */
+int git_bloom_filter__check(git_bloom_filter_cache *bfcache,
+	git_commit_graph_file *cgfile,
+	size_t id);
 
 #endif

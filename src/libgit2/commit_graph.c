@@ -550,6 +550,7 @@ static int git_commit_graph_entry_get_byindex(
 	}
 
 	commit_data = file->commit_data + pos * (oid_size + 4 * sizeof(uint32_t));
+	e->graph_id = pos;
 	git_oid_from_raw(&e->tree_oid, commit_data, file->oid_type);
 	e->parent_indices[0] = ntohl(*((uint32_t *)(commit_data + oid_size)));
 	e->parent_indices[1] = ntohl(
@@ -1358,4 +1359,244 @@ int git_commit_graph__writer_dump(
 	git_commit_graph_writer *w)
 {
 	return commit_graph_write(w, commit_graph_write_buf, cgraph);
+}
+
+/*
+ * Returns the length of the literal, non-wildcard directory prefix of a
+ * pathspec pattern.
+ * Returns 0 if there is no such prefix (it starts with a wildcard)
+ */
+static size_t bloom_path_prefix_length(const char *pattern, size_t pattern_len)
+{
+	size_t i;
+	size_t last_slash = 0;
+
+	for (i = 0; i < pattern_len; i++) {
+		if (git__iswildcard((unsigned char)pattern[i]))
+			break;
+		else if (pattern[i] == '/')
+			last_slash = i;
+	}
+
+	/*
+	 * If we ran through the entire pattern without finding a wildcard
+	 * (why did we get called then?!), return the full length,
+	 * otherwise the prefix length
+	 */
+	if (i == pattern_len)
+		return pattern_len;
+	else
+		return last_slash;
+}
+
+/* Create a pre-computed hash of part of a path */
+static git_vector *bloom_filter_create_hash(git_attr_fnmatch *match,
+	size_t check_len,
+	git_commit_graph_file *cgfile)
+{
+	git_vector *match_entry = git__malloc(sizeof(git_vector));
+	if (!match_entry ||
+		git_vector_init(match_entry, 0, NULL) != 0) {
+		git__free(match_entry);
+		return NULL;
+	}
+
+	while (check_len > 0) {
+		const void *sep;
+		git_bloom_filter_hash_entry *hash_entry = git__malloc(
+				sizeof(git_bloom_filter_hash_entry));
+		if (!hash_entry) {
+			git_vector_dispose_deep(match_entry);
+			git__free(match_entry);
+			return NULL;
+		}
+
+		/*Pre-calculate hash*/
+		if (cgfile->bloom_filter_hash_version == 1) {
+			hash_entry->h1 = git__hash(
+					match->pattern, check_len, 0x293ae76f);
+			hash_entry->h2 = git__hash(
+					match->pattern, check_len, 0x7e646e2c);
+		} else {
+			hash_entry->h1 = git__hash_v2(
+					match->pattern, check_len, 0x293ae76f);
+			hash_entry->h2 = git__hash_v2(
+					match->pattern, check_len, 0x7e646e2c);
+		}
+		git_vector_insert(match_entry, hash_entry);
+
+		/*
+			* Move to the next ancestor directory, if any, dropping
+			* the separator itself from the next hash.
+			*/
+		sep = git__memrchr(match->pattern, '/', check_len);
+		check_len = sep ? (size_t)((const char *)sep -
+									match->pattern) :
+							0;
+	}
+	return match_entry;
+}
+
+int git_bloom_filter__cache_new(
+        git_bloom_filter_cache **out,
+        git_pathspec *ps,
+        git_commit_graph_file *cgfile)
+{
+	size_t i;
+	git_attr_fnmatch *match;
+	GIT_ASSERT(out);
+	GIT_ASSERT(ps);
+	GIT_ASSERT(cgfile);
+
+	*out = git__malloc(sizeof(git_bloom_filter_cache));
+	if (!*out)
+		return GIT_ERROR;
+	/* NOTE: ps->pathspec.length is sometimes an over-estimation of the size
+	 * we actually need. However, it should be a negligible problem
+	 */
+	if (git_vector_init(&(*out)->match_cache, ps->pathspec.length, NULL) != 0) {
+		git_bloom_filter__cache_free(*out);
+		*out = NULL;
+		return GIT_ERROR;
+	}
+
+	git_vector_foreach(&ps->pathspec, i, match) {
+		git_vector *match_entry;
+		size_t check_len;
+
+		/*
+		 * Ignore all negative patterns since we want to cache ways to
+		 * find potential changes
+		 */
+		if (match->flags & GIT_ATTR_FNMATCH_NEGATIVE) {
+			/* Bail out here since this pattern isn't usable against
+			 * the bloom filter*/
+			git_bloom_filter__cache_free(*out);
+			*out = NULL;
+			return GIT_EINVALID;
+		} else if (match->flags & GIT_ATTR_FNMATCH_HASWILD) {
+			/*
+			 * We can't filter on the entire pattern, but we can at
+			 * least filter on the non-wildcard path prefix
+			 */
+			check_len = bloom_path_prefix_length(
+			        match->pattern, match->length);
+			/* Bail out here since this pattern isn't usable against
+			 * the bloom filter*/
+			if (check_len == 0) {
+				git_bloom_filter__cache_free(*out);
+				*out = NULL;
+				return GIT_EINVALID;
+			}
+		} else {
+			check_len = match->length;
+		}
+
+		match_entry = bloom_filter_create_hash(match, check_len, cgfile);
+		if (match_entry) {
+			git_vector_insert(&(*out)->match_cache, match_entry);
+		} else {
+			git_bloom_filter__cache_free(*out);
+			*out = NULL;
+			return GIT_ERROR;
+		}
+	}
+	return 0;
+}
+
+void git_bloom_filter__cache_free(git_bloom_filter_cache *bfcache)
+{
+	size_t i;
+	git_vector *match_entry;
+
+	if (!bfcache)
+		return;
+
+	git_vector_foreach(&bfcache->match_cache, i, match_entry) {
+		git_vector_dispose_deep(match_entry);
+		git__free(match_entry);
+	}
+	git_vector_dispose(&bfcache->match_cache);
+	git__free(bfcache);
+}
+
+static bool bloom_filter_check_pattern(git_vector *match_entry,
+	git_commit_graph_file *cgfile,
+	const unsigned char *filter,
+	size_t filter_bits)
+{
+	git_bloom_filter_hash_entry *hash_entry;
+	size_t j, k;
+	git_vector_foreach(match_entry, j, hash_entry) {
+		bool component_in_filter = true;
+
+		for (k = 0; k < cgfile->bloom_filter_num_hashes; k++) {
+			/* This line has deliberate 32bit overflow */
+			uint32_t bit_index =
+					(uint32_t)(hash_entry->h1 +
+								(k * hash_entry->h2)) %
+					filter_bits;
+			if (!(filter[bit_index / 8] &
+					(1u << (bit_index & 7)))) {
+				component_in_filter = false;
+				break;
+			}
+		}
+		if (!component_in_filter) {
+			return false;
+		}
+	}
+	return true;
+}
+
+int git_bloom_filter__check(
+        git_bloom_filter_cache *bfcache,
+        git_commit_graph_file *cgfile,
+        size_t id)
+{
+	const unsigned char *filter;
+	uint32_t filter_start = 0, filter_end, length;
+	size_t filter_bits;
+	git_vector *match_entry;
+	size_t i;
+	GIT_ASSERT(bfcache);
+	GIT_ASSERT(cgfile);
+
+	/* Both the data and index need to be valid*/
+	if (!cgfile->bloom_filter_data || !cgfile->bloom_filter_indexes) {
+		return 1;
+	}
+
+	filter_end = ntohl(cgfile->bloom_filter_indexes[id]);
+	if (id > 0) {
+		filter_start = ntohl(cgfile->bloom_filter_indexes[id - 1]);
+	}
+	/* Mark as 'maybe' if the filter is corrupt or saturated */
+	if (filter_end == UINT32_MAX || filter_end < filter_start)
+		return 1;
+	length = filter_end - filter_start;
+	if (length == 0)
+		return 0; /* Commit didn't touch anything */
+
+	filter = cgfile->bloom_filter_data + filter_start;
+	/* Convert blocks to bits */
+	filter_bits = length * 8;
+
+	/*
+	 * match_cache holds one entry per pathspec pattern that has at least
+	 * one hash entry. A hash entry correspond to a file or folder name.
+	 * We return 1 if there's at match with at least one pattern.
+	 * In order to match a pattern, all it's hash entries must match.
+	 * Thus we return 0 (definitly not touched) if no pattern has all it's
+	 * hash entries matched in the filter.
+	 */
+	git_vector_foreach(&bfcache->match_cache, i, match_entry) {
+		/* All entries in a pattern matched, so it's a 'maybe touched'
+		 */
+		if (bloom_filter_check_pattern(
+				match_entry, cgfile, filter, filter_bits))
+			return 1;
+	}
+	/* This is a definite 'not touched' since no pattern returned a match */
+	return 0;
 }
