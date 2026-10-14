@@ -320,8 +320,11 @@ static git_blame_hunk *split_hunk_in_vector(
 	git_oid_cpy(&nh->orig_commit_id, &hunk->orig_commit_id);
 
 	/* Adjust hunk that was split */
+	if (git_vector_insert_sorted(vec, nh, NULL) < 0) {
+		free_hunk(nh);
+		return NULL;
+	}
 	hunk->lines_in_hunk -= new_line_count;
-	git_vector_insert_sorted(vec, nh, NULL);
 	{
 		git_blame_hunk *ret = return_new ? nh : hunk;
 		return ret;
@@ -551,7 +554,11 @@ static int buffer_hunk_cb(
 			blame->path, blame);
 		blame->current_diff_line++;
 		GIT_ERROR_CHECK_ALLOC(blame->current_hunk);
-		git_vector_insert(&blame->hunks, blame->current_hunk);
+		if (git_vector_insert(&blame->hunks, blame->current_hunk) < 0) {
+			free_hunk(blame->current_hunk);
+			blame->current_hunk = NULL;
+			return -1;
+		}
 	} else if (!hunk_starts_at_or_after_line(blame->current_hunk, wedge_line)){
 		/* If this hunk doesn't start between existing hunks, split a hunk up so it does */
 		blame->current_hunk = split_hunk_in_vector(&blame->hunks, blame->current_hunk,
@@ -587,7 +594,11 @@ static int buffer_line_cb(
 			shift_hunks_by(&blame->hunks, blame->current_diff_line, 1);
 			blame->current_hunk = new_hunk(blame->current_diff_line, 1, 0, blame->path, blame);
 			GIT_ERROR_CHECK_ALLOC(blame->current_hunk);
-			git_vector_insert_sorted(&blame->hunks, blame->current_hunk, NULL);
+			if (git_vector_insert_sorted(&blame->hunks, blame->current_hunk, NULL) < 0) {
+				free_hunk(blame->current_hunk);
+				blame->current_hunk = NULL;
+				return -1;
+			}
 		}
 		blame->current_diff_line++;
 	}
@@ -621,6 +632,7 @@ int git_blame_buffer(
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	size_t i;
 	git_blame_hunk *hunk;
+	int error;
 
 	diffopts.context_lines = 0;
 
@@ -634,15 +646,22 @@ int git_blame_buffer(
 	/* Duplicate all of the hunk structures in the reference blame */
 	git_vector_foreach(&reference->hunks, i, hunk) {
 		git_blame_hunk *h = dup_hunk(hunk, blame);
-		GIT_ERROR_CHECK_ALLOC(h);
 
-		git_vector_insert(&blame->hunks, h);
+		if (!h || git_vector_insert(&blame->hunks, h) < 0) {
+			if (h)
+				free_hunk(h);
+			git_blame_free(blame);
+			return -1;
+		}
 	}
 
 	/* Diff to the reference blob */
-	git_diff_blob_to_buffer(reference->final_blob, blame->path,
+	if ((error = git_diff_blob_to_buffer(reference->final_blob, blame->path,
 		buffer, buffer_len, blame->path, &diffopts,
-		NULL, NULL, buffer_hunk_cb, buffer_line_cb, blame);
+		NULL, NULL, buffer_hunk_cb, buffer_line_cb, blame)) < 0) {
+		git_blame_free(blame);
+		return error;
+	}
 
 	*out = blame;
 	return 0;
