@@ -168,6 +168,23 @@ int git_reference_remove(git_repository *repo, const char *name)
 	git_refdb *db;
 	int error;
 
+	/*
+	 * Unlike `git_reference_delete`, which is handed a reference that
+	 * has already been looked up, we only get a bare name.  Validate it
+	 * before it reaches the backend: the filesystem backend resolves a
+	 * reference name relative to the repository directory, so a caller
+	 * that passes through an untrusted value could otherwise remove
+	 * control files such as `config` or `index`.
+	 */
+	if ((error = git_reference__normalize_name(NULL, name,
+			GIT_REFERENCE_FORMAT_ALLOW_ONELEVEL)) < 0)
+		return error;
+
+	if (!strcmp(name, GIT_HEAD_FILE)) {
+		git_error_set(GIT_ERROR_REFERENCE, "cannot delete HEAD");
+		return GIT_ERROR;
+	}
+
 	if ((error = git_repository_refdb__weakptr(&db, repo)) < 0)
 		return error;
 
