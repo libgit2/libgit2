@@ -1,0 +1,12 @@
+[core]
+	repositoryformatversion = 1
+	filemode = false
+	bare = false
+	logallrefupdates = true
+	symlinks = false
+	ignorecase = true
+	hideDotFiles = dotGitOnly
+[submodule "sub"]
+	url = ../sub.git
+[extensions]
+	refstorage = reftable

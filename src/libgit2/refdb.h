@@ -12,6 +12,8 @@
 #include "git2/refdb.h"
 #include "repository.h"
 
+#define GIT_INVALID_HEAD "refs/heads/.invalid"
+
 struct git_refdb {
 	git_refcount rc;
 	git_repository *repo;
@@ -19,6 +21,11 @@ struct git_refdb {
 };
 
 void git_refdb__free(git_refdb *db);
+
+int git_refdb_init(git_refdb *refdb,
+		   const char *head_target,
+		   mode_t mode,
+		   uint32_t flags);
 
 int git_refdb_exists(
 	int *exists,
@@ -124,5 +131,26 @@ int git_refdb_ensure_log(git_refdb *refdb, const char *refname);
 
 int git_refdb_lock(void **payload, git_refdb *db, const char *refname);
 int git_refdb_unlock(git_refdb *db, void *payload, int success, int update_reflog, const git_reference *ref, const git_signature *sig, const char *message);
+
+GIT_INLINE(const char *) git_refdb_type_name(git_refdb_t type)
+{
+	switch (type) {
+	case GIT_REFDB_FILES:
+		return "files";
+	case GIT_REFDB_REFTABLE:
+		return "reftable";
+	default:
+		return "unknown";
+	}
+}
+
+GIT_INLINE(git_refdb_t) git_refdb_type_fromstr(const char *name)
+{
+	if (strcmp(name, "files") == 0)
+		return GIT_REFDB_FILES;
+	if (strcmp(name, "reftable") == 0)
+		return GIT_REFDB_REFTABLE;
+	return 0;
+}
 
 #endif

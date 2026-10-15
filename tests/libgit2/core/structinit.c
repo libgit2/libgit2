@@ -5,6 +5,8 @@
 #include <git2/sys/odb_backend.h>
 #include <git2/sys/refdb_backend.h>
 #include <git2/sys/transport.h>
+#include <git2/sys/midx.h>
+#include <git2/sys/repository.h>
 
 #define STRINGIFY(s) #s
 
@@ -78,6 +80,11 @@ void test_core_structinit__compare(void)
 		git_apply_options, GIT_APPLY_OPTIONS_VERSION, \
 		GIT_APPLY_OPTIONS_INIT, git_apply_options_init);
 
+	/* attr */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_attr_options, GIT_ATTR_OPTIONS_VERSION, \
+		GIT_ATTR_OPTIONS_INIT, git_attr_options_init);
+
 	/* blame */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_blame_options, GIT_BLAME_OPTIONS_VERSION, \
@@ -93,10 +100,36 @@ void test_core_structinit__compare(void)
 		git_checkout_options, GIT_CHECKOUT_OPTIONS_VERSION, \
 		GIT_CHECKOUT_OPTIONS_INIT, git_checkout_options_init);
 
+	/* cherrypick */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_cherrypick_options, GIT_CHERRYPICK_OPTIONS_VERSION, \
+		GIT_CHERRYPICK_OPTIONS_INIT, git_cherrypick_options_init);
+
 	/* clone */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_clone_options, GIT_CLONE_OPTIONS_VERSION, \
 		GIT_CLONE_OPTIONS_INIT, git_clone_options_init);
+
+	/* commit_create */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_commit_create_options, \
+		GIT_COMMIT_CREATE_OPTIONS_VERSION, \
+		GIT_COMMIT_CREATE_OPTIONS_INIT, \
+		git_commit_create_options_init);
+
+	/* commit_create_ext */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_commit_create_ext_options, \
+		GIT_COMMIT_CREATE_EXT_OPTIONS_VERSION, \
+		GIT_COMMIT_CREATE_EXT_OPTIONS_INIT, \
+		git_commit_create_ext_options_init);
+
+	/* commit_graph_open */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_commit_graph_open_options, \
+		GIT_COMMIT_GRAPH_OPEN_OPTIONS_VERSION, \
+		GIT_COMMIT_GRAPH_OPEN_OPTIONS_INIT, \
+		git_commit_graph_open_options_init);
 
 	/* commit_graph_writer */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
@@ -104,6 +137,18 @@ void test_core_structinit__compare(void)
 		GIT_COMMIT_GRAPH_WRITER_OPTIONS_VERSION, \
 		GIT_COMMIT_GRAPH_WRITER_OPTIONS_INIT, \
 		git_commit_graph_writer_options_init);
+
+	/* describe */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_describe_options, GIT_DESCRIBE_OPTIONS_VERSION, \
+		GIT_DESCRIBE_OPTIONS_INIT, git_describe_options_init);
+
+	/* describe_format */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_describe_format_options, \
+		GIT_DESCRIBE_FORMAT_OPTIONS_VERSION, \
+		GIT_DESCRIBE_FORMAT_OPTIONS_INIT, \
+		git_describe_format_options_init);
 
 	/* diff */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
@@ -115,10 +160,32 @@ void test_core_structinit__compare(void)
 		git_diff_find_options, GIT_DIFF_FIND_OPTIONS_VERSION, \
 		GIT_DIFF_FIND_OPTIONS_INIT, git_diff_find_options_init);
 
+	/* email_create */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_email_create_options, \
+		GIT_EMAIL_CREATE_OPTIONS_VERSION, \
+		GIT_EMAIL_CREATE_OPTIONS_INIT, \
+		git_email_create_options_init);
+
 	/* filter */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_filter, GIT_FILTER_VERSION, \
 		GIT_FILTER_INIT, git_filter_init);
+
+	/* filter_options_init */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_filter_options, GIT_FILTER_OPTIONS_VERSION, \
+		GIT_FILTER_OPTIONS_INIT, git_filter_options_init);
+
+	/* index */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_index_options, GIT_INDEX_OPTIONS_VERSION, \
+		GIT_INDEX_OPTIONS_INIT, git_index_options_init);
+
+	/* indexer */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_indexer_options, GIT_INDEXER_OPTIONS_VERSION, \
+		GIT_INDEXER_OPTIONS_INIT, git_indexer_options_init);
 
 	/* merge_file_input */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
@@ -135,10 +202,63 @@ void test_core_structinit__compare(void)
 		git_merge_options, GIT_MERGE_OPTIONS_VERSION, \
 		GIT_MERGE_OPTIONS_INIT, git_merge_options_init);
 
+	/* object_id */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_object_id_options, GIT_OBJECT_ID_OPTIONS_VERSION, \
+		GIT_OBJECT_ID_OPTIONS_INIT, git_object_id_options_init);
+
+	/* odb */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_odb_options, GIT_ODB_OPTIONS_VERSION, \
+		GIT_ODB_OPTIONS_INIT, git_odb_options_init);
+
+	/* odb_backend_pack */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_odb_backend_pack_options, \
+		GIT_ODB_BACKEND_PACK_OPTIONS_VERSION, \
+		GIT_ODB_BACKEND_PACK_OPTIONS_INIT, \
+		git_odb_backend_pack_options_init);
+
+	/* odb_backend_loose */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_odb_backend_loose_options, \
+		GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION, \
+		GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT, \
+		git_odb_backend_loose_options_init);
+
+	/* proxy */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_proxy_options, GIT_PROXY_OPTIONS_VERSION, \
+		GIT_PROXY_OPTIONS_INIT, git_proxy_options_init);
+
+	/* rebase */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_rebase_options, GIT_REBASE_OPTIONS_VERSION, \
+		GIT_REBASE_OPTIONS_INIT, git_rebase_options_init);
+
+	/* remote_create */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_remote_create_options, \
+		GIT_REMOTE_CREATE_OPTIONS_VERSION, \
+		GIT_REMOTE_CREATE_OPTIONS_INIT, \
+		git_remote_create_options_init);
+
+	/* fetch */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_fetch_options, GIT_FETCH_OPTIONS_VERSION, \
+		GIT_FETCH_OPTIONS_INIT, git_fetch_options_init);
+
 	/* push */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_push_options, GIT_PUSH_OPTIONS_VERSION, \
 		GIT_PUSH_OPTIONS_INIT, git_push_options_init);
+
+	/* remote_connect */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_remote_connect_options, \
+		GIT_REMOTE_CONNECT_OPTIONS_VERSION, \
+		GIT_REMOTE_CONNECT_OPTIONS_INIT, \
+		git_remote_connect_options_init);
 
 	/* remote */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
@@ -147,8 +267,10 @@ void test_core_structinit__compare(void)
 
 	/* repository_init */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
-		git_repository_init_options, GIT_REPOSITORY_INIT_OPTIONS_VERSION, \
-		GIT_REPOSITORY_INIT_OPTIONS_INIT, git_repository_init_options_init);
+		git_repository_init_options, \
+		GIT_REPOSITORY_INIT_OPTIONS_VERSION, \
+		GIT_REPOSITORY_INIT_OPTIONS_INIT, \
+		git_repository_init_options_init);
 
 	/* revert */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
@@ -180,6 +302,13 @@ void test_core_structinit__compare(void)
 		git_config_backend, GIT_CONFIG_BACKEND_VERSION, \
 		GIT_CONFIG_BACKEND_INIT, git_config_init_backend);
 
+	/* config_backend_memory */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_config_backend_memory_options, \
+		GIT_CONFIG_BACKEND_MEMORY_OPTIONS_VERSION, \
+		GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT, \
+		git_config_backend_memory_options_init);
+
 	/* odb_backend */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_odb_backend, GIT_ODB_BACKEND_VERSION, \
@@ -187,20 +316,50 @@ void test_core_structinit__compare(void)
 
 	/* refdb_backend */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
-		git_refdb_backend, GIT_REFDB_BACKEND_VERSION, \
-		GIT_REFDB_BACKEND_INIT, git_refdb_init_backend);
+		git_refdb_backend, \
+		GIT_REFDB_BACKEND_VERSION, \
+		GIT_REFDB_BACKEND_INIT, \
+		git_refdb_init_backend);
 
 	/* submodule update */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
-		git_submodule_update_options, GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
-		GIT_SUBMODULE_UPDATE_OPTIONS_INIT, git_submodule_update_options_init);
+		git_submodule_update_options, \
+		GIT_SUBMODULE_UPDATE_OPTIONS_VERSION, \
+		GIT_SUBMODULE_UPDATE_OPTIONS_INIT, \
+		git_submodule_update_options_init);
 
-	/* submodule update */
+	/* worktree add */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
-		git_proxy_options, GIT_PROXY_OPTIONS_VERSION, \
-		GIT_PROXY_OPTIONS_INIT, git_proxy_options_init);
+		git_worktree_add_options, \
+		GIT_WORKTREE_ADD_OPTIONS_VERSION, \
+		GIT_WORKTREE_ADD_OPTIONS_INIT, \
+		git_worktree_add_options_init);
 
+	/* worktree prune */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
-		git_diff_patchid_options, GIT_DIFF_PATCHID_OPTIONS_VERSION, \
-		GIT_DIFF_PATCHID_OPTIONS_INIT, git_diff_patchid_options_init);
+		git_worktree_prune_options, \
+		GIT_WORKTREE_PRUNE_OPTIONS_VERSION, \
+		GIT_WORKTREE_PRUNE_OPTIONS_INIT, \
+		git_worktree_prune_options_init);
+
+	/* midx_writer */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_midx_writer_options, \
+		GIT_MIDX_WRITER_OPTIONS_VERSION, \
+		GIT_MIDX_WRITER_OPTIONS_INIT, \
+		git_midx_writer_options_init);
+
+	/* repository new */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_repository_new_options, \
+		GIT_REPOSITORY_NEW_OPTIONS_VERSION, \
+		GIT_REPOSITORY_NEW_OPTIONS_INIT, \
+		git_repository_new_options_init);
+
+	/* worktree prune */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_worktree_prune_options, \
+		GIT_WORKTREE_PRUNE_OPTIONS_VERSION, \
+		GIT_WORKTREE_PRUNE_OPTIONS_INIT, \
+		git_worktree_prune_options_init);
 }

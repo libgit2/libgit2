@@ -7,7 +7,7 @@
 
 #include "common.h"
 
-#ifdef GIT_WINHTTP
+#ifdef GIT_HTTPS_WINHTTP
 
 #include "git2.h"
 #include "git2/transport.h"
@@ -62,8 +62,6 @@
 #ifndef DWORD_MAX
 # define DWORD_MAX 0xffffffff
 #endif
-
-bool git_http__expect_continue = false;
 
 static const char *prefix_https = "https://";
 static const char *upload_pack_service = "upload-pack";
@@ -1715,4 +1713,4 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	return 0;
 }
 
-#endif /* GIT_WINHTTP */
+#endif /* GIT_HTTPS_WINHTTP */

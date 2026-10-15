@@ -48,4 +48,17 @@ GIT_INLINE(int) cli_error_git(void)
 
 #define cli_error_os() (perror(PROGRAM_NAME), CLI_EXIT_OS)
 
+#if (defined(_DEBUG) || defined(GIT_ASSERT_HARD)) && GIT_ASSERT_HARD != 0
+# include <assert.h>
+# define CLI_ASSERT(expr) assert(expr)
+#else
+# define CLI_ASSERT(expr) do { \
+		if (!(expr)) { \
+			fprintf(stderr, "%s: assertion failed: '%s'\n", \
+				PROGRAM_NAME, #expr); \
+			exit(255); \
+		} \
+	} while(0)
+#endif
+
 #endif /* CLI_error_h__ */

@@ -70,7 +70,7 @@ void test_sha1__detect_collision_attack(void)
 		0x9a, 0xe6, 0xa4, 0xc8, 0x0c, 0xad, 0xcc, 0xbb, 0x7f, 0x0a
 	};
 
-#ifdef GIT_SHA1_COLLISIONDETECT
+#ifdef GIT_SHA1_BUILTIN
 	GIT_UNUSED(&expected);
 	cl_git_fail(sha1_file(actual, FIXTURE_DIR "/shattered-1.pdf"));
 	cl_assert_equal_s("SHA1 collision attack detected", git_error_last()->message);

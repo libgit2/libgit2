@@ -91,6 +91,10 @@ typedef enum {
  *
  * @see git_apply_to_tree
  * @see git_apply
+ *
+ * @options[version] GIT_APPLY_OPTIONS_VERSION
+ * @options[init_macro] GIT_APPLY_OPTIONS_INIT
+ * @options[init_function] git_apply_options_init
  */
 typedef struct {
 	unsigned int version; /**< The version */
@@ -130,7 +134,7 @@ GIT_EXTERN(int) git_apply_options_init(git_apply_options *opts, unsigned int ver
  * Apply a `git_diff` to a `git_tree`, and return the resulting image
  * as an index.
  *
- * @param out the postimage of the application
+ * @param[out] out the postimage of the application
  * @param repo the repository to apply
  * @param preimage the tree to apply the diff to
  * @param diff the diff to apply

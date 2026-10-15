@@ -281,10 +281,11 @@ static int build_untracked_tree(
 	git_tree *i_tree = NULL;
 	git_diff *diff = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	struct stash_update_rules data = {0};
 	int error;
 
-	if ((error = git_index__new(&i_index, repo->oid_type)) < 0)
+	if ((error = git_index_new_ext(&i_index, &index_opts)) < 0)
 		goto cleanup;
 
 	if (flags & GIT_STASH_INCLUDE_UNTRACKED) {
@@ -484,10 +485,11 @@ static int commit_worktree(
 {
 	git_index *i_index = NULL, *r_index = NULL;
 	git_tree *w_tree = NULL;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	int error = 0, ignorecase;
 
 	if ((error = git_repository_index(&r_index, repo) < 0) ||
-	    (error = git_index__new(&i_index, repo->oid_type)) < 0 ||
+	    (error = git_index_new_ext(&i_index, &index_opts)) < 0 ||
 	    (error = git_index__fill(i_index, &r_index->entries) < 0) ||
 	    (error = git_repository__configmap_lookup(&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
 		goto cleanup;
@@ -553,10 +555,10 @@ static int update_reflog(
 	git_reference *stash;
 	int error;
 
-	if ((error = git_reference_ensure_log(repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reference_ensure_log(repo, GIT_STASH_REF)) < 0)
 		return error;
 
-	error = git_reference_create(&stash, repo, GIT_REFS_STASH_FILE, w_commit_oid, 1, message);
+	error = git_reference_create(&stash, repo, GIT_STASH_REF, w_commit_oid, 1, message);
 
 	git_reference_free(stash);
 
@@ -688,6 +690,7 @@ int git_stash_save_with_opts(
 	git_str msg = GIT_STR_INIT;
 	git_tree *tree = NULL;
 	git_reference *head = NULL;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	bool has_paths = false;
 
 	int error;
@@ -732,7 +735,7 @@ int git_stash_save_with_opts(
 					     i_commit, b_commit, u_commit)) < 0)
 			goto cleanup;
 	} else {
-		if ((error = git_index__new(&paths_index, repo->oid_type)) < 0 ||
+		if ((error = git_index_new_ext(&paths_index, &index_opts)) < 0 ||
 		    (error = retrieve_head(&head, repo)) < 0 ||
 		    (error = git_reference_peel((git_object**)&tree, head, GIT_OBJECT_TREE)) < 0 ||
 		    (error = git_index_read_tree(paths_index, tree)) < 0 ||
@@ -776,10 +779,10 @@ static int retrieve_stash_commit(
 	size_t max;
 	const git_reflog_entry *entry;
 
-	if ((error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reference_lookup(&stash, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
-	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reflog_read(&reflog, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
 	max = git_reflog_entrycount(reflog);
@@ -1010,9 +1013,10 @@ static int stage_new_files(
 	git_iterator *iterators[2] = { NULL, NULL };
 	git_iterator_options iterator_options = GIT_ITERATOR_OPTIONS_INIT;
 	git_index *index = NULL;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	int error;
 
-	if ((error = git_index__new(&index, repo->oid_type)) < 0 ||
+	if ((error = git_index_new_ext(&index, &index_opts)) < 0 ||
 		(error = git_iterator_for_tree(
 			&iterators[0], parent_tree, &iterator_options)) < 0 ||
 		(error = git_iterator_for_tree(
@@ -1184,7 +1188,7 @@ int git_stash_foreach(
 	size_t i, max;
 	const git_reflog_entry *entry;
 
-	error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE);
+	error = git_reference_lookup(&stash, repo, GIT_STASH_REF);
 	if (error == GIT_ENOTFOUND) {
 		git_error_clear();
 		return 0;
@@ -1192,7 +1196,7 @@ int git_stash_foreach(
 	if (error < 0)
 		goto cleanup;
 
-	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reflog_read(&reflog, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
 	max = git_reflog_entrycount(reflog);
@@ -1229,13 +1233,13 @@ int git_stash_drop(
 	if ((error = git_transaction_new(&tx, repo)) < 0)
 		return error;
 
-	if ((error = git_transaction_lock_ref(tx, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_transaction_lock_ref(tx, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
-	if ((error = git_reference_lookup(&stash, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reference_lookup(&stash, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
-	if ((error = git_reflog_read(&reflog, repo, GIT_REFS_STASH_FILE)) < 0)
+	if ((error = git_reflog_read(&reflog, repo, GIT_STASH_REF)) < 0)
 		goto cleanup;
 
 	max = git_reflog_entrycount(reflog);
@@ -1249,17 +1253,17 @@ int git_stash_drop(
 	if ((error = git_reflog_drop(reflog, index, true)) < 0)
 		goto cleanup;
 
-	if ((error = git_transaction_set_reflog(tx, GIT_REFS_STASH_FILE, reflog)) < 0)
+	if ((error = git_transaction_set_reflog(tx, GIT_STASH_REF, reflog)) < 0)
 		goto cleanup;
 
 	if (max == 1) {
-		if ((error = git_transaction_remove(tx, GIT_REFS_STASH_FILE)) < 0)
+		if ((error = git_transaction_remove(tx, GIT_STASH_REF)) < 0)
 			goto cleanup;
 	} else if (index == 0) {
 		const git_reflog_entry *entry;
 
 		entry = git_reflog_entry_byindex(reflog, 0);
-		if ((error = git_transaction_set_target(tx, GIT_REFS_STASH_FILE, &entry->oid_cur, NULL, NULL)) < 0)
+		if ((error = git_transaction_set_target(tx, GIT_STASH_REF, &entry->oid_cur, NULL, NULL)) < 0)
 			goto cleanup;
 	}
 

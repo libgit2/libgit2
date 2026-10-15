@@ -189,15 +189,9 @@ static void compute_diff_no_index(git_diff **diff, struct diff_options *o) {
 		git_patch_to_buf(&buf, patch),
 		"patch to buf", NULL);
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-	check_lg2(
-		git_diff_from_buffer(diff, buf.ptr, buf.size, NULL),
-		"diff from patch", NULL);
-#else
 	check_lg2(
 		git_diff_from_buffer(diff, buf.ptr, buf.size),
 		"diff from patch", NULL);
-#endif
 
 	git_patch_free(patch);
 	git_buf_dispose(&buf);

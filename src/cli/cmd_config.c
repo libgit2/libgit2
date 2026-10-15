@@ -115,8 +115,6 @@ static int replace_all_config(git_config *config)
 static const char *level_name(git_config_level_t level)
 {
 	switch (level) {
-	case GIT_CONFIG_LEVEL_PROGRAMDATA:
-		return "programdata";
 	case GIT_CONFIG_LEVEL_SYSTEM:
 		return "system";
 	case GIT_CONFIG_LEVEL_XDG:

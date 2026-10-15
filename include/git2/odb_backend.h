@@ -20,7 +20,13 @@
  */
 GIT_BEGIN_DECL
 
-/** Options for configuring a packfile object backend. */
+/**
+ * Options for configuring a packfile object backend.
+ *
+ * @options[version] GIT_ODB_BACKEND_PACK_OPTIONS_VERSION
+ * @options[init_macro] GIT_ODB_BACKEND_PACK_OPTIONS_INIT
+ * @options[init_function] git_odb_backend_pack_options_init
+ */
 typedef struct {
 	unsigned int version; /**< version for the struct */
 
@@ -41,11 +47,33 @@ typedef struct {
 #define GIT_ODB_BACKEND_PACK_OPTIONS_INIT \
 	{ GIT_ODB_BACKEND_PACK_OPTIONS_VERSION }
 
+/**
+ * Initialize git_odb_backend_pack_options structure
+ *
+ * Initialize a `git_odb_backend_pack_options` with default values.
+ * Equivalent to creating an instance with
+ * GIT_ODB_BACKEND_PACK_OPTIONS_INIT.
+ *
+ * @param opts The `git_odb_backend_pack_options` struct to initialize.
+ * @param version The struct version; pass
+ *                `GIT_ODB_BACKEND_PACK_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_odb_backend_pack_options_init(
+	git_odb_backend_pack_options *opts,
+	unsigned int version);
+
 typedef enum {
 	GIT_ODB_BACKEND_LOOSE_FSYNC = (1 << 0)
 } git_odb_backend_loose_flag_t;
 
-/** Options for configuring a loose object backend. */
+/**
+ * Options for configuring a loose object backend.
+ *
+ * @options[version] GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION
+ * @options[init_macro] GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT
+ * @options[init_function] git_odb_backend_loose_options_init
+ */
 typedef struct {
 	unsigned int version; /**< version for the struct */
 
@@ -84,11 +112,25 @@ typedef struct {
 #define GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT \
 	{ GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION, 0, -1 }
 
+/**
+ * Initialize git_odb_backend_loose_options structure
+ *
+ * Initialize a `git_odb_backend_loose_options` with default values.
+ * Equivalent to creating an instance with
+ * GIT_ODB_BACKEND_LOOSE_OPTIONS_INIT.
+ *
+ * @param opts The `git_odb_backend_loose_options` struct to initialize.
+ * @param version The struct version; pass
+ *                `GIT_ODB_BACKEND_LOOSE_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_odb_backend_loose_options_init(
+	git_odb_backend_loose_options *opts,
+	unsigned int version);
+
 /*
  * Constructors for in-box ODB backends.
  */
-
-#ifdef GIT_EXPERIMENTAL_SHA256
 
 /**
  * Create a backend for a directory containing packfiles.
@@ -130,54 +172,6 @@ GIT_EXTERN(int) git_odb_backend_loose(
 	const char *objects_dir,
 	git_odb_backend_loose_options *opts);
 
-#else
-
-/**
- * Create a backend for a directory containing packfiles.
- *
- * @param[out] out location to store the odb backend pointer
- * @param objects_dir the Git repository's objects directory
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_backend_pack(
-	git_odb_backend **out,
-	const char *objects_dir);
-
-/**
- * Create a backend out of a single packfile
- *
- * This can be useful for inspecting the contents of a single
- * packfile.
- *
- * @param[out] out location to store the odb backend pointer
- * @param index_file path to the packfile's .idx file
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_backend_one_pack(
-	git_odb_backend **out,
-	const char *index_file);
-
-/**
- * Create a backend for loose objects
- *
- * @param[out] out location to store the odb backend pointer
- * @param objects_dir the Git repository's objects directory
- * @param compression_level zlib compression level (0-9), or -1 for the default
- * @param do_fsync if non-zero, perform an fsync on write
- * @param dir_mode permission to use when creating directories, or 0 for default
- * @param file_mode permission to use when creating directories, or 0 for default
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_backend_loose(
-	git_odb_backend **out,
-	const char *objects_dir,
-	int compression_level,
-	int do_fsync,
-	unsigned int dir_mode,
-	unsigned int file_mode);
-
-#endif
-
 /** Streaming mode */
 typedef enum {
 	GIT_STREAM_RDONLY = (1 << 1),
@@ -198,9 +192,7 @@ struct git_odb_stream {
 	unsigned int mode;
 	void *hash_ctx;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_oid_t oid_type;
-#endif
 
 	git_object_size_t declared_size;
 	git_object_size_t received_bytes;

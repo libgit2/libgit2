@@ -40,6 +40,10 @@ typedef enum {
 
 /**
  * Options for controlling the formatting of the generated e-mail.
+ *
+ * @options[version] GIT_EMAIL_CREATE_OPTIONS_VERSION
+ * @options[init_macro] GIT_EMAIL_CREATE_OPTIONS_INIT
+ * @options[init_function] git_email_create_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -86,6 +90,20 @@ typedef struct {
 	{ GIT_DIFF_OPTIONS_VERSION, GIT_DIFF_SHOW_BINARY, GIT_SUBMODULE_IGNORE_UNSPECIFIED, {NULL,0}, NULL, NULL, NULL, 3 }, \
 	GIT_DIFF_FIND_OPTIONS_INIT \
 }
+
+/**
+ * Initialize a `git_email_create_options` with default values.
+ * Equivalent to creating an instance with
+ * GIT_EMAIL_CREATE_OPTIONS_INIT.
+ *
+ * @param opts The `git_email_create_options` struct to initialize.
+ * @param version The struct version; pass
+ *                `GIT_EMAIL_CREATE_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
+ */
+GIT_EXTERN(int) git_email_create_options_init(
+	git_email_create_options *opts,
+	unsigned int version);
 
 /**
  * Create a diff for a commit in mbox format for sending via email.

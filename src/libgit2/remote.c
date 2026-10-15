@@ -1041,12 +1041,7 @@ int git_remote_oid_type(git_oid_t *out, git_remote *remote)
 		return -1;
 	}
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	return remote->transport->oid_type(out, remote->transport);
-#else
-	*out = GIT_OID_SHA1;
-	return 0;
-#endif
 }
 
 static int lookup_config(char **out, git_config *cfg, const char *name)
@@ -1557,7 +1552,7 @@ static int git_remote_write_fetchhead(git_remote *remote, git_refspec *spec, git
 
 	/* Determine what to merge: if refspec was a wildcard, just use HEAD */
 	if (git_refspec_is_wildcard(spec)) {
-		if ((error = git_reference_lookup(&head_ref, remote->repo, GIT_HEAD_FILE)) < 0 ||
+		if ((error = git_reference_lookup(&head_ref, remote->repo, GIT_HEAD_REF)) < 0 ||
 			(error = remote_head_for_ref(&merge_remote_ref, remote, spec, update_heads, head_ref)) < 0)
 				goto cleanup;
 	} else {
@@ -1962,7 +1957,7 @@ static int update_tips_for_spec(
 	if (git_oid__is_hexstr(spec->src, remote->repo->oid_type)) {
 		git_oid id;
 
-		if ((error = git_oid__fromstr(&id, spec->src, remote->repo->oid_type)) < 0)
+		if ((error = git_oid_from_string(&id, spec->src, remote->repo->oid_type)) < 0)
 			goto on_error;
 
 		if (spec->dst &&
@@ -2092,7 +2087,9 @@ cleanup:
 	return error;
 }
 
-static int truncate_fetch_head(const char *gitdir)
+static int truncate_fetch_head(
+	const char *gitdir,
+	unsigned int update_flags)
 {
 	git_str path = GIT_STR_INIT;
 	int error;
@@ -2100,9 +2097,15 @@ static int truncate_fetch_head(const char *gitdir)
 	if ((error = git_str_joinpath(&path, gitdir, GIT_FETCH_HEAD_FILE)) < 0)
 		return error;
 
-	error = git_futils_truncate(path.ptr, GIT_REFS_FILE_MODE);
-	git_str_dispose(&path);
+	/* When update suppressed, skip truncate when file doesn't exist to prevent creating empty file */
+	if (!(update_flags & GIT_REMOTE_UPDATE_FETCHHEAD) &&
+	    !git_fs_path_exists(path.ptr))
+		goto out;
 
+	error = git_futils_truncate(path.ptr, GIT_REFS_FILE_MODE);
+
+out:
+	git_str_dispose(&path);
 	return error;
 }
 
@@ -2136,7 +2139,7 @@ int git_remote_update_tips(
 	else
 		tagopt = download_tags;
 
-	if ((error = truncate_fetch_head(git_repository_path(remote->repo))) < 0)
+	if ((error = truncate_fetch_head(git_repository_path(remote->repo), update_flags)) < 0)
 		goto out;
 
 	if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_ALL) {
@@ -2915,7 +2918,7 @@ int git_remote__default_branch(git_str *out, git_remote *remote)
 	if ((error = git_remote_ls(&heads, &heads_len, remote)) < 0)
 		goto done;
 
-	if (heads_len == 0 || strcmp(heads[0]->name, GIT_HEAD_FILE)) {
+	if (heads_len == 0 || strcmp(heads[0]->name, GIT_HEAD_REF)) {
 		error = GIT_ENOTFOUND;
 		goto done;
 	}

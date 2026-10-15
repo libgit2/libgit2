@@ -621,6 +621,7 @@ int git_apply_to_tree(
 {
 	git_index *postimage = NULL;
 	git_reader *pre_reader = NULL, *post_reader = NULL;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
 	const git_diff_delta *delta;
 	size_t i;
@@ -643,7 +644,7 @@ int git_apply_to_tree(
 	 * put the current tree into the postimage as-is - the diff will
 	 * replace any entries contained therein
 	 */
-	if ((error = git_index__new(&postimage, repo->oid_type)) < 0 ||
+	if ((error = git_index_new_ext(&postimage, &index_opts)) < 0 ||
 		(error = git_index_read_tree(postimage, preimage)) < 0 ||
 		(error = git_reader_for_index(&post_reader, repo, postimage)) < 0)
 		goto done;
@@ -809,6 +810,7 @@ int git_apply(
 	git_index *index = NULL, *preimage = NULL, *postimage = NULL;
 	git_reader *pre_reader = NULL, *post_reader = NULL;
 	git_apply_options opts = GIT_APPLY_OPTIONS_INIT;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	int error = GIT_EINVALID;
 
 	GIT_ASSERT_ARG(repo);
@@ -849,8 +851,8 @@ int git_apply(
 	 * having the full repo index, so we will limit our checkout
 	 * to only write these files that were affected by the diff.
 	 */
-	if ((error = git_index__new(&preimage, repo->oid_type)) < 0 ||
-	    (error = git_index__new(&postimage, repo->oid_type)) < 0 ||
+	if ((error = git_index_new_ext(&preimage, &index_opts)) < 0 ||
+	    (error = git_index_new_ext(&postimage, &index_opts)) < 0 ||
 	    (error = git_reader_for_index(&post_reader, repo, postimage)) < 0)
 		goto done;
 

@@ -144,8 +144,8 @@ typedef void GIT_CALLBACK(git_merge_driver_shutdown_fn)(git_merge_driver *self);
  * The `src` contains the data about the file to be merged.
  *
  * @param self the merge driver
- * @param path_out the resolved path
- * @param mode_out the resolved mode
+ * @param[out] path_out the resolved path
+ * @param[out] mode_out the resolved mode
  * @param merged_out the merged output contents
  * @param filter_name the filter that was invoked
  * @param src the data about the unmerged file

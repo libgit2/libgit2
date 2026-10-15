@@ -64,6 +64,13 @@ void test_clone_nonetwork__bad_urls(void)
 				"./foo", &g_options));
 }
 
+void test_clone_nonetwork__rejects_unknown_url_scheme(void)
+{
+	cl_git_fail(git_clone(&g_repo, "foo://example.com", "./foo", &g_options));
+	cl_assert_equal_s("unsupported URL protocol", git_error_last()->message);
+	cl_assert(!git_fs_path_exists("./foo"));
+}
+
 void test_clone_nonetwork__do_not_clean_existing_directory(void)
 {
 	/* Clone should not remove the directory if it already exists, but
@@ -265,13 +272,17 @@ void test_clone_nonetwork__clone_tag_to_tree(void)
 	git_tree *tree;
 	git_reference *tag;
 	git_tree_entry *tentry;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
+
 	const char *file_path = "some/deep/path.txt";
 	const char *file_content = "some content\n";
 	const char *tag_name = "refs/tags/tree-tag";
 
+	index_opts.oid_type = GIT_OID_SHA1;
+
 	stage = cl_git_sandbox_init("testrepo.git");
 	cl_git_pass(git_repository_odb(&odb, stage));
-	cl_git_pass(git_index__new(&index, GIT_OID_SHA1));
+	cl_git_pass(git_index_new_ext(&index, &index_opts));
 
 	memset(&entry, 0, sizeof(git_index_entry));
 	entry.path = file_path;

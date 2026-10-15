@@ -46,14 +46,14 @@ static void assert_graft_contains(git_grafts *grafts, const char *graft, size_t 
 	va_list ap;
 	size_t i = 0;
 
-	cl_git_pass(git_oid__fromstr(&oid, graft, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&oid, graft, GIT_OID_SHA1));
 	cl_git_pass(git_grafts_get(&commit, grafts, &oid));
 	cl_assert_equal_oid(&commit->oid, &oid);
 	cl_assert_equal_i(commit->parents.size, n);
 
 	va_start(ap, n);
 	while (i < n) {
-		cl_git_pass(git_oid__fromstr(&oid, va_arg(ap, const char *), GIT_OID_SHA1));
+		cl_git_pass(git_oid_from_string(&oid, va_arg(ap, const char *), GIT_OID_SHA1));
 		cl_assert_equal_oid(&commit->parents.ptr[i], &oid);
 		i++;
 	}

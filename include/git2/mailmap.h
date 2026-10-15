@@ -31,7 +31,7 @@ GIT_BEGIN_DECL
  * This object is empty, so you'll have to add a mailmap file before you can do
  * anything with it. The mailmap must be freed with 'git_mailmap_free'.
  *
- * @param out pointer to store the new mailmap
+ * @param[out] out pointer to store the new mailmap
  * @return 0 on success, or an error code
  */
 GIT_EXTERN(int) git_mailmap_new(git_mailmap **out);
@@ -61,7 +61,7 @@ GIT_EXTERN(int) git_mailmap_add_entry(
 /**
  * Create a new mailmap instance containing a single mailmap file
  *
- * @param out pointer to store the new mailmap
+ * @param[out] out pointer to store the new mailmap
  * @param buf buffer to parse the mailmap from
  * @param len the length of the input buffer
  * @return 0 on success, or an error code
@@ -79,7 +79,7 @@ GIT_EXTERN(int) git_mailmap_from_buffer(
  * 	   [NOTE: 'mailmap.blob' defaults to 'HEAD:.mailmap' in bare repositories]
  *  3. The path in the 'mailmap.file' config entry, if set.
  *
- * @param out pointer to store the new mailmap
+ * @param[out] out pointer to store the new mailmap
  * @param repo repository to load mailmap information from
  * @return 0 on success, or an error code
  */
@@ -91,8 +91,8 @@ GIT_EXTERN(int) git_mailmap_from_repository(
  *
  * The lifetime of the strings are tied to `mm`, `name`, and `email` parameters.
  *
- * @param real_name pointer to store the real name
- * @param real_email pointer to store the real email
+ * @param[out] real_name pointer to store the real name
+ * @param[out] real_email pointer to store the real email
  * @param mm the mailmap to perform a lookup with (may be NULL)
  * @param name the name to look up
  * @param email the email to look up
@@ -107,7 +107,7 @@ GIT_EXTERN(int) git_mailmap_resolve(
  *
  * Call `git_signature_free()` to free the data.
  *
- * @param out new signature
+ * @param[out] out new signature
  * @param mm mailmap to resolve with
  * @param sig signature to resolve
  * @return 0 or an error code

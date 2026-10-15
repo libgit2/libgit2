@@ -1,0 +1,11 @@
+[core]
+	repositoryformatversion = 1
+	filemode = true
+	bare = false
+	logallrefupdates = true
+	ignorecase = true
+[branch "master"]
+	remote = origin
+	merge = refs/heads/master
+[extensions]
+	refstorage = reftable

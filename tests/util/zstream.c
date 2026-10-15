@@ -76,6 +76,24 @@ void test_zstream__fails_on_trailing_garbage(void)
 	git_str_dispose(&inflated);
 }
 
+void test_zstream__fails_on_truncated_input(void)
+{
+	git_str deflated = GIT_STR_INIT, inflated = GIT_STR_INIT;
+
+	cl_git_pass(git_zstream_deflatebuf(&deflated, data, strlen(data) + 1));
+	cl_assert(deflated.size > 2);
+
+	/* only the two-byte zlib header survives */
+	cl_git_fail(git_zstream_inflatebuf(&inflated, deflated.ptr, 2));
+	git_str_dispose(&inflated);
+
+	/* the stream is cut off in the middle of the body */
+	cl_git_fail(git_zstream_inflatebuf(&inflated, deflated.ptr, deflated.size / 2));
+
+	git_str_dispose(&deflated);
+	git_str_dispose(&inflated);
+}
+
 void test_zstream__buffer(void)
 {
 	git_str out = GIT_STR_INIT;

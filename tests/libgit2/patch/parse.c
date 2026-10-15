@@ -219,3 +219,47 @@ void test_patch_parse__line_number_overflow(void)
 	cl_git_fail(git_patch_from_buffer(&patch, PATCH_INTMAX_NEW_LINES, strlen(PATCH_INTMAX_NEW_LINES), NULL));
 	git_patch_free(patch);
 }
+
+/*
+ * A newly added, empty (zero-byte) file produces a diff with a `diff --git`
+ * line, a `new file mode` line, and an `index` line -- and nothing else,
+ * since there is no content to show. Confirm this parses successfully
+ * instead of failing with "unexpected header line" (#6778).
+ */
+void test_patch_parse__issue_6778_added_empty_file(void)
+{
+	git_patch *patch;
+	const git_diff_delta *delta;
+
+	cl_git_pass(git_patch_from_buffer(&patch, PATCH_ADD_EMPTY_FILE,
+		strlen(PATCH_ADD_EMPTY_FILE), NULL));
+
+	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
+	cl_assert_equal_i(GIT_DELTA_ADDED, delta->status);
+	cl_assert_equal_s("file", delta->new_file.path);
+	cl_assert(delta->new_file.mode == GIT_FILEMODE_BLOB);
+	cl_assert_equal_i(0, (int)git_patch_num_hunks(patch));
+
+	git_patch_free(patch);
+}
+
+/*
+ * An empty-file add followed immediately by another file's `diff --git`
+ * header (no `---`/`+++`/hunk in between) must not be mistaken for an
+ * invalid header (#6778).
+ */
+void test_patch_parse__issue_6778_added_empty_file_multiple(void)
+{
+	git_patch *patch;
+	const git_diff_delta *delta;
+
+	cl_git_pass(git_patch_from_buffer(&patch, PATCH_ADD_EMPTY_FILE_MULTIPLE,
+		strlen(PATCH_ADD_EMPTY_FILE_MULTIPLE), NULL));
+
+	cl_assert((delta = git_patch_get_delta(patch)) != NULL);
+	cl_assert_equal_i(GIT_DELTA_ADDED, delta->status);
+	cl_assert_equal_s("file", delta->new_file.path);
+	cl_assert_equal_i(0, (int)git_patch_num_hunks(patch));
+
+	git_patch_free(patch);
+}

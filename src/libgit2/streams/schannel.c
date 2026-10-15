@@ -7,7 +7,7 @@
 
 #include "streams/schannel.h"
 
-#ifdef GIT_SCHANNEL
+#ifdef GIT_HTTPS_SCHANNEL
 
 #define SECURITY_WIN32
 

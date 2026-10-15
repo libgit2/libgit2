@@ -38,7 +38,7 @@ GIT_BEGIN_DECL
  * The branch name will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
  *
- * @param out Pointer where to store the underlying reference.
+ * @param[out] out Pointer where to store the underlying reference.
  * @param repo the repository to create the branch in.
  * @param branch_name Name for the branch; this name is
  *   validated for consistency. It should also not conflict with
@@ -99,7 +99,7 @@ typedef struct git_branch_iterator git_branch_iterator;
 /**
  * Create an iterator which loops over the requested branches.
  *
- * @param out the iterator
+ * @param[out] out the iterator
  * @param repo Repository where to find the branches.
  * @param list_flags Filtering flags for the branch
  * listing. Valid values are GIT_BRANCH_LOCAL, GIT_BRANCH_REMOTE
@@ -115,12 +115,15 @@ GIT_EXTERN(int) git_branch_iterator_new(
 /**
  * Retrieve the next branch from the iterator
  *
- * @param out the reference
+ * @param[out] out the reference
  * @param out_type the type of branch (local or remote-tracking)
  * @param iter the branch iterator
  * @return 0 on success, GIT_ITEROVER if there are no more branches or an error code.
  */
-GIT_EXTERN(int) git_branch_next(git_reference **out, git_branch_t *out_type, git_branch_iterator *iter);
+GIT_EXTERN(int) git_branch_next(
+	git_reference **out,
+	git_branch_t *out_type,
+	git_branch_iterator *iter);
 
 /**
  * Free a branch iterator
@@ -139,15 +142,11 @@ GIT_EXTERN(void) git_branch_iterator_free(git_branch_iterator *iter);
  * be valid anymore, and should be freed immediately by the user using
  * `git_reference_free()`.
  *
- * @param out New reference object for the updated name.
- *
+ * @param[out] out New reference object for the updated name.
  * @param branch Current underlying reference of the branch.
- *
  * @param new_branch_name Target name of the branch once the move
- * is performed; this name is validated for consistency.
- *
+ *        is performed; this name is validated for consistency.
  * @param force Overwrite existing branch.
- *
  * @return 0 on success, GIT_EINVALIDSPEC or an error code.
  */
 GIT_EXTERN(int) git_branch_move(
@@ -164,7 +163,7 @@ GIT_EXTERN(int) git_branch_move(
  *
  * @see git_tag_create for rules about valid names.
  *
- * @param out pointer to the looked-up branch reference
+ * @param[out] out pointer to the looked-up branch reference
  * @param repo the repository to look up the branch
  * @param branch_name Name of the branch to be looked-up;
  * this name is validated for consistency.
@@ -187,13 +186,11 @@ GIT_EXTERN(int) git_branch_lookup(
  * it lives under "refs/heads/" or "refs/remotes/"), and return the branch part
  * of it.
  *
- * @param out Pointer to the abbreviated reference name.
+ * @param[out] out Pointer to the abbreviated reference name.
  *        Owned by ref, do not free.
- *
  * @param ref A reference object, ideally pointing to a branch
- *
- * @return 0 on success; GIT_EINVALID if the reference isn't either a local or
- *         remote branch, otherwise an error code.
+ * @return 0 on success; GIT_EINVALID if the reference isn't either a
+ *         local or remote branch, otherwise an error code.
  */
 GIT_EXTERN(int) git_branch_name(
 		const char **out,
@@ -207,9 +204,8 @@ GIT_EXTERN(int) git_branch_name(
  *
  * @see git_branch_upstream_name for details on the resolution.
  *
- * @param out Pointer where to store the retrieved reference.
+ * @param[out] out Pointer where to store the retrieved reference.
  * @param branch Current underlying reference of the branch.
- *
  * @return 0 on success; GIT_ENOTFOUND when no remote tracking
  *         reference exists, otherwise an error code.
  */

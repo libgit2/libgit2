@@ -11,7 +11,7 @@
 
 #include "git2/sys/stream.h"
 
-#ifdef GIT_SCHANNEL
+#ifdef GIT_HTTPS_SCHANNEL
 
 extern int git_schannel_stream_new(
 	git_stream **out,

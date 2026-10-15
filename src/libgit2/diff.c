@@ -138,6 +138,7 @@ int git_diff_foreach(
 
 	git_vector_foreach(&diff->deltas, idx, delta) {
 		git_patch *patch;
+		float progress;
 
 		/* check flags against patch status */
 		if (git_diff_delta__should_skip(&diff->opts, delta))
@@ -146,8 +147,10 @@ int git_diff_foreach(
 		if ((error = git_patch_from_diff(&patch, diff, idx)) != 0)
 			break;
 
+		progress = (float)idx / (float)git_diff_num_deltas(diff);
+
 		error = git_patch__invoke_callbacks(patch, file_cb, binary_cb,
-						    hunk_cb, data_cb, payload);
+						    hunk_cb, data_cb, progress, payload);
 		git_patch_free(patch);
 
 		if (error)
@@ -390,9 +393,7 @@ int git_diff_patchid(git_oid *out, git_diff *diff, git_diff_patchid_options *opt
 	if ((error = (flush_hunk(&args.result, &args))) < 0)
 		goto out;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	args.result.type = diff->opts.oid_type;
-#endif
 
 	git_oid_cpy(out, &args.result);
 

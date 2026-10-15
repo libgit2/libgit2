@@ -259,21 +259,6 @@ done:
 }
 #endif /* WIN32 */
 
-static int git_sysdir_guess_programdata_dirs(git_str *out)
-{
-#ifdef GIT_WIN32
-	static const wchar_t *programdata_tmpls[2] = {
-		L"%PROGRAMDATA%\\Git",
-		NULL,
-	};
-
-	return find_win32_dirs(out, programdata_tmpls);
-#else
-	git_str_clear(out);
-	return 0;
-#endif
-}
-
 static int git_sysdir_guess_system_dirs(git_str *out)
 {
 #ifdef GIT_WIN32
@@ -437,7 +422,6 @@ static struct git_sysdir__dir git_sysdir__dirs[] = {
 	{ GIT_STR_INIT, git_sysdir_guess_system_dirs },
 	{ GIT_STR_INIT, git_sysdir_guess_global_dirs },
 	{ GIT_STR_INIT, git_sysdir_guess_xdg_dirs },
-	{ GIT_STR_INIT, git_sysdir_guess_programdata_dirs },
 	{ GIT_STR_INIT, git_sysdir_guess_template_dirs },
 	{ GIT_STR_INIT, git_sysdir_guess_home_dirs }
 };
@@ -605,12 +589,6 @@ int git_sysdir_find_xdg_file(git_str *path, const char *filename)
 {
 	return git_sysdir_find_in_dirlist(
 		path, filename, GIT_SYSDIR_XDG, "global/xdg");
-}
-
-int git_sysdir_find_programdata_file(git_str *path, const char *filename)
-{
-	return git_sysdir_find_in_dirlist(
-		path, filename, GIT_SYSDIR_PROGRAMDATA, "ProgramData");
 }
 
 int git_sysdir_find_template_dir(git_str *path)

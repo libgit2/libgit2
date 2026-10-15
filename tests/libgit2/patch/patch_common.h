@@ -942,6 +942,21 @@
 	"@@ -1 +0,0 @@\n" \
 	"-a\n"
 
+/* a newly added, empty (zero-byte) file has no hunk at all: see #6778 */
+#define PATCH_ADD_EMPTY_FILE \
+	"diff --git a/file b/file\n" \
+	"new file mode 100644\n" \
+	"index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\n"
+
+/* an added empty file immediately followed by another file's header: see #6778 */
+#define PATCH_ADD_EMPTY_FILE_MULTIPLE \
+	"diff --git a/file b/file\n" \
+	"new file mode 100644\n" \
+	"index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\n" \
+	"diff --git a/other b/other\n" \
+	"new file mode 100644\n" \
+	"index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391\n"
+
 #define PATCH_CRLF \
 	"diff --git a/test-file b/test-file\r\n" \
 	"new file mode 100644\r\n" \

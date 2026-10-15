@@ -1,8 +1,6 @@
 #include "clar_libgit2.h"
 #include "index.h"
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 static const size_t index_entry_count = 4344;
 #define TEST_INDEX_PATH cl_fixture("git-sha256.index")
 
@@ -64,47 +62,44 @@ static void files_are_equal(const char *a, const char *b)
 	git_str_dispose(&buf_b);
 }
 
-#endif
-
 /* Fixture setup and teardown */
 void test_index_tests256__initialize(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	repo_init_opts.flags |= GIT_REPOSITORY_INIT_MKPATH;
 	repo_init_opts.oid_type = GIT_OID_SHA256;
-#endif
 }
 
 void test_index_tests256__cleanup(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	cl_git_pass(git_libgit2_opts(GIT_OPT_ENABLE_UNSAVED_INDEX_SAFETY, 0));
-#endif
 }
 
 void test_index_tests256__empty_index(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
    git_index *index;
+   git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-   cl_git_pass(git_index__open(&index, "in-memory-index", GIT_OID_SHA256));
+   index_opts.oid_type = GIT_OID_SHA256;
+
+   cl_git_pass(git_index_open_ext(&index, "in-memory-index", &index_opts));
    cl_assert(index->on_disk == 0);
 
    cl_assert(git_index_entrycount(index) == 0);
    cl_assert(git_vector_is_sorted(&index->entries));
 
    git_index_free(index);
-#endif
 }
 
 void test_index_tests256__default_test_index(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
    git_index *index;
    unsigned int i;
    git_index_entry **entries;
+   git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-   cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA256));
+   index_opts.oid_type = GIT_OID_SHA256;
+
+   cl_git_pass(git_index_open_ext(&index, TEST_INDEX_PATH, &index_opts));
    cl_assert(index->on_disk);
 
    cl_assert_equal_sz(git_index_entrycount(index), index_entry_count);
@@ -121,16 +116,17 @@ void test_index_tests256__default_test_index(void)
    }
 
    git_index_free(index);
-#endif
 }
 
 void test_index_tests256__find_in_existing(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
    git_index *index;
    unsigned int i;
+   git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-   cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA256));
+   index_opts.oid_type = GIT_OID_SHA256;
+
+   cl_git_pass(git_index_open_ext(&index, TEST_INDEX_PATH, &index_opts));
 
    for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
 		size_t idx;
@@ -140,33 +136,35 @@ void test_index_tests256__find_in_existing(void)
    }
 
    git_index_free(index);
-#endif
 }
 
 void test_index_tests256__find_in_empty(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
    git_index *index;
    unsigned int i;
+   git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-   cl_git_pass(git_index__open(&index, "fake-index", GIT_OID_SHA256));
+   index_opts.oid_type = GIT_OID_SHA256;
+
+   cl_git_pass(git_index_open_ext(&index, "fake-index", &index_opts));
 
    for (i = 0; i < ARRAY_SIZE(test_entries); ++i) {
 		cl_assert(GIT_ENOTFOUND == git_index_find(NULL, index, test_entries[i].path));
    }
 
    git_index_free(index);
-#endif
 }
 
 void test_index_tests256__find_prefix(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
    git_index *index;
    const git_index_entry *entry;
    size_t pos;
+   git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-   cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA256));
+   index_opts.oid_type = GIT_OID_SHA256;
+
+   cl_git_pass(git_index_open_ext(&index, TEST_INDEX_PATH, &index_opts));
 
    cl_git_pass(git_index_find_prefix(&pos, index, "Documentation"));
    entry = git_index_get_byindex(index, pos);
@@ -179,17 +177,18 @@ void test_index_tests256__find_prefix(void)
    cl_assert(GIT_ENOTFOUND == git_index_find_prefix(NULL, index, "blah"));
 
    git_index_free(index);
-#endif
 }
 
 void test_index_tests256__write(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
    git_index *index;
+   git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
+
+   index_opts.oid_type = GIT_OID_SHA256;
 
    copy_file(TEST_INDEX_PATH, "index_rewrite");
 
-   cl_git_pass(git_index__open(&index, "index_rewrite", GIT_OID_SHA256));
+   cl_git_pass(git_index_open_ext(&index, "index_rewrite", &index_opts));
    cl_assert(index->on_disk);
 
    cl_git_pass(git_index_write(index));
@@ -198,35 +197,32 @@ void test_index_tests256__write(void)
    git_index_free(index);
 
    p_unlink("index_rewrite");
-#endif
 }
 
 void test_index_tests256__sort1(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
    /* sort the entries in an empty index */
    git_index *index;
+   git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-   cl_git_pass(git_index__open(&index, "fake-index", GIT_OID_SHA256));
+   index_opts.oid_type = GIT_OID_SHA256;
+
+   cl_git_pass(git_index_open_ext(&index, "fake-index", &index_opts));
 
    /* FIXME: this test is slightly dumb */
    cl_assert(git_vector_is_sorted(&index->entries));
 
    git_index_free(index);
-#endif
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 static void cleanup_myrepo(void *opaque)
 {
 	GIT_UNUSED(opaque);
 	cl_fixture_cleanup("myrepo");
 }
-#endif
 
 void test_index_tests256__add(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_index *index;
 	git_filebuf file = GIT_FILEBUF_INIT;
 	git_repository *repo;
@@ -252,7 +248,7 @@ void test_index_tests256__add(void)
 	 * This has been generated by executing the following
 	 * $ echo "hey there" | git hash-object --stdin
 	 */
-	cl_git_pass(git_oid__fromstr(&id1, "aea29dc305d40e362df25c3fdeed5502fd56b182af01b7740d297a24459333c5", GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&id1, "aea29dc305d40e362df25c3fdeed5502fd56b182af01b7740d297a24459333c5", GIT_OID_SHA256));
 
 	/* Add the new file to the index */
 	cl_git_pass(git_index_add_bypath(index, "test.txt"));
@@ -270,12 +266,10 @@ void test_index_tests256__add(void)
 
 	git_index_free(index);
 	git_repository_free(repo);
-#endif
 }
 
 void test_index_tests256__add_frombuffer(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_index *index;
 	git_repository *repo;
         git_index_entry entry;
@@ -299,7 +293,7 @@ void test_index_tests256__add_frombuffer(void)
 	 * This has been generated by executing the following
 	 * $ echo "hey there" | git hash-object --stdin
 	 */
-	cl_git_pass(git_oid__fromstr(&id1, "aea29dc305d40e362df25c3fdeed5502fd56b182af01b7740d297a24459333c5", GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&id1, "aea29dc305d40e362df25c3fdeed5502fd56b182af01b7740d297a24459333c5", GIT_OID_SHA256));
 
 	/* Add the new file to the index */
 	memset(&entry, 0x0, sizeof(git_index_entry));
@@ -329,12 +323,10 @@ void test_index_tests256__add_frombuffer(void)
 
 	git_index_free(index);
 	git_repository_free(repo);
-#endif
 }
 
 void test_index_tests256__dirty_and_clean(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *index;
 	git_index_entry entry = {{0}};
@@ -384,12 +376,10 @@ void test_index_tests256__dirty_and_clean(void)
 
 	git_index_free(index);
 	git_repository_free(repo);
-#endif
 }
 
 void test_index_tests256__dirty_fails_optionally(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *index;
 	git_index_entry entry = {{0}};
@@ -417,12 +407,10 @@ void test_index_tests256__dirty_fails_optionally(void)
 
 	git_index_free(index);
 	cl_git_sandbox_cleanup();
-#endif
 }
 
 void test_index_tests256__add_frombuffer_reset_entry(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_index *index;
 	git_repository *repo;
         git_index_entry entry;
@@ -448,7 +436,7 @@ void test_index_tests256__add_frombuffer_reset_entry(void)
 	 * This has been generated by executing the following
 	 * $ echo "hey there" | git hash-object --stdin
 	 */
-	cl_git_pass(git_oid__fromstr(&id1, "aea29dc305d40e362df25c3fdeed5502fd56b182af01b7740d297a24459333c5", GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&id1, "aea29dc305d40e362df25c3fdeed5502fd56b182af01b7740d297a24459333c5", GIT_OID_SHA256));
 
 	cl_git_pass(git_index_add_bypath(index, "test.txt"));
 
@@ -484,12 +472,10 @@ void test_index_tests256__add_frombuffer_reset_entry(void)
 
 	git_index_free(index);
 	git_repository_free(repo);
-#endif
 }
 
 void test_index_tests256__add_bypath_to_a_bare_repository_returns_EBAREPO(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *bare_repo;
 	git_index *index;
 
@@ -500,10 +486,8 @@ void test_index_tests256__add_bypath_to_a_bare_repository_returns_EBAREPO(void)
 
 	git_index_free(index);
 	git_repository_free(bare_repo);
-#endif
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 static void assert_add_bypath_fails(git_repository *repo, const char *fn)
 {
 	git_index *index;
@@ -523,12 +507,10 @@ static void assert_add_bypath_fails(git_repository *repo, const char *fn)
 	git_str_dispose(&path);
 	git_index_free(index);
 }
-#endif
 
 /* Test that writing an invalid filename fails */
 void test_index_tests256__cannot_add_invalid_filename(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 
 	cl_must_pass(p_mkdir("invalid", 0700));
@@ -552,10 +534,8 @@ void test_index_tests256__cannot_add_invalid_filename(void)
 	git_repository_free(repo);
 
 	cl_fixture_cleanup("invalid");
-#endif
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 static void assert_add_fails(git_repository *repo, const char *fn)
 {
 	git_index *index;
@@ -567,7 +547,7 @@ static void assert_add_fails(git_repository *repo, const char *fn)
 
 	entry.path = fn;
 	entry.mode = GIT_FILEMODE_BLOB;
-	cl_git_pass(git_oid__fromstr(&entry.id, "aea29dc305d40e362df25c3fdeed5502fd56b182af01b7740d297a24459333c5", GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&entry.id, "aea29dc305d40e362df25c3fdeed5502fd56b182af01b7740d297a24459333c5", GIT_OID_SHA256));
 
 	cl_git_fail(git_index_add(index, &entry));
 
@@ -576,7 +556,6 @@ static void assert_add_fails(git_repository *repo, const char *fn)
 	git_str_dispose(&path);
 	git_index_free(index);
 }
-#endif
 
 /*
  * Test that writing an invalid filename fails on filesystem
@@ -584,7 +563,6 @@ static void assert_add_fails(git_repository *repo, const char *fn)
  */
 void test_index_tests256__cannot_add_protected_invalid_filename(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *index;
 
@@ -612,10 +590,8 @@ void test_index_tests256__cannot_add_protected_invalid_filename(void)
 	git_repository_free(repo);
 
 	cl_fixture_cleanup("invalid");
-#endif
 }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 static void replace_char(char *str, char in, char out)
 {
 	char *c = str;
@@ -666,20 +642,21 @@ static void assert_write_fails(git_repository *repo, const char *fn_orig)
 	git_index_free(index);
 	git__free(fn);
 }
-#endif
 
 void test_index_tests256__write_tree_invalid_unowned_index(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_index *idx;
 	git_repository *repo;
 	git_index_entry entry = {{0}};
 	git_oid tree_id;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-	cl_git_pass(git_index__new(&idx, GIT_OID_SHA256));
+	index_opts.oid_type = GIT_OID_SHA256;
+
+	cl_git_pass(git_index_new_ext(&idx, &index_opts));
 
 	/* TODO: this one is failing */
-	cl_git_pass(git_oid__fromstr(&entry.id, "a8c2e0a89a9cbab77c732b6bc39b51a783e3a318a847f46cba7614cac9814291", GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&entry.id, "a8c2e0a89a9cbab77c732b6bc39b51a783e3a318a847f46cba7614cac9814291", GIT_OID_SHA256));
 	entry.path = "foo";
 	entry.mode = GIT_FILEMODE_BLOB;
 	cl_git_pass(git_index_add(idx, &entry));
@@ -692,13 +669,11 @@ void test_index_tests256__write_tree_invalid_unowned_index(void)
 	git_repository_free(repo);
 
 	cl_fixture_cleanup("invalid-id");
-#endif
 }
 
 /* Test that writing an invalid filename fails */
 void test_index_tests256__write_invalid_filename(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 
 	p_mkdir("invalid", 0700);
@@ -716,12 +691,10 @@ void test_index_tests256__write_invalid_filename(void)
 	git_repository_free(repo);
 
 	cl_fixture_cleanup("invalid");
-#endif
 }
 
 void test_index_tests256__honors_protect_filesystems(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 
 	p_mkdir("invalid", 0700);
@@ -740,12 +713,10 @@ void test_index_tests256__honors_protect_filesystems(void)
 	git_repository_free(repo);
 
 	cl_fixture_cleanup("invalid");
-#endif
 }
 
 void test_index_tests256__protectntfs_on_by_default(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 
 	p_mkdir("invalid", 0700);
@@ -757,12 +728,10 @@ void test_index_tests256__protectntfs_on_by_default(void)
 	git_repository_free(repo);
 
 	cl_fixture_cleanup("invalid");
-#endif
 }
 
 void test_index_tests256__can_disable_protectntfs(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *index;
 
@@ -779,12 +748,10 @@ void test_index_tests256__can_disable_protectntfs(void)
 	git_repository_free(repo);
 
 	cl_fixture_cleanup("valid");
-#endif
 }
 
 void test_index_tests256__remove_entry(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *index;
 
@@ -812,12 +779,10 @@ void test_index_tests256__remove_entry(void)
 	git_index_free(index);
 	git_repository_free(repo);
 	cl_fixture_cleanup("index_test");
-#endif
 }
 
 void test_index_tests256__remove_directory(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *index;
 
@@ -866,12 +831,10 @@ void test_index_tests256__remove_directory(void)
 	git_index_free(index);
 	git_repository_free(repo);
 	cl_fixture_cleanup("index_test");
-#endif
 }
 
 void test_index_tests256__preserves_case(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *index;
 	const git_index_entry *entry;
@@ -910,12 +873,10 @@ void test_index_tests256__preserves_case(void)
 
 	git_index_free(index);
 	git_repository_free(repo);
-#endif
 }
 
 void test_index_tests256__elocked(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *index;
 	git_filebuf file = GIT_FILEBUF_INIT;
@@ -938,15 +899,16 @@ void test_index_tests256__elocked(void)
 	git_filebuf_cleanup(&file);
 	git_index_free(index);
 	git_repository_free(repo);
-#endif
 }
 
 void test_index_tests256__reload_from_disk(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *read_index;
 	git_index *write_index;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
+
+	index_opts.oid_type = GIT_OID_SHA256;
 
 	cl_set_cleanup(&cleanup_myrepo, NULL);
 
@@ -958,7 +920,7 @@ void test_index_tests256__reload_from_disk(void)
 	cl_git_pass(git_repository_index(&write_index, repo));
 	cl_assert_equal_i(false, write_index->on_disk);
 
-	cl_git_pass(git_index__open(&read_index, write_index->index_file_path, GIT_OID_SHA256));
+	cl_git_pass(git_index_open_ext(&read_index, write_index->index_file_path, &index_opts));
 	cl_assert_equal_i(false, read_index->on_disk);
 
 	/* Stage two new files against the write_index */
@@ -990,16 +952,17 @@ void test_index_tests256__reload_from_disk(void)
 	git_index_free(read_index);
 	git_index_free(write_index);
 	git_repository_free(repo);
-#endif
 }
 
 void test_index_tests256__reload_while_ignoring_case(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_index *index;
 	unsigned int caps;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-	cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA256));
+	index_opts.oid_type = GIT_OID_SHA256;
+
+	cl_git_pass(git_index_open_ext(&index, TEST_INDEX_PATH, &index_opts));
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 
 	caps = git_index_caps(index);
@@ -1016,17 +979,18 @@ void test_index_tests256__reload_while_ignoring_case(void)
 	cl_assert(git_index_get_bypath(index, "CONTRIB/readme", 0));
 
 	git_index_free(index);
-#endif
 }
 
 void test_index_tests256__change_icase_on_instance(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_index *index;
 	unsigned int caps;
 	const git_index_entry *e;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-	cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA256));
+	index_opts.oid_type = GIT_OID_SHA256;
+
+	cl_git_pass(git_index_open_ext(&index, TEST_INDEX_PATH, &index_opts));
 	cl_git_pass(git_vector_verify_sorted(&index->entries));
 
 	caps = git_index_caps(index);
@@ -1047,12 +1011,10 @@ void test_index_tests256__change_icase_on_instance(void)
 	cl_assert_equal_s("config.h", e->path);
 
 	git_index_free(index);
-#endif
 }
 
 void test_index_tests256__can_lock_index(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_repository *repo;
 	git_index *index;
 	git_indexwriter one = GIT_INDEXWRITER_INIT,
@@ -1074,19 +1036,20 @@ void test_index_tests256__can_lock_index(void)
 	git_indexwriter_cleanup(&two);
 	git_index_free(index);
 	cl_git_sandbox_cleanup();
-#endif
 }
 
 void test_index_tests256__can_iterate(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_index *index;
 	git_index_iterator *iterator;
 	const git_index_entry *entry;
 	size_t i, iterator_idx = 0, found = 0;
 	int ret;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-	cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA256));
+	index_opts.oid_type = GIT_OID_SHA256;
+
+	cl_git_pass(git_index_open_ext(&index, TEST_INDEX_PATH, &index_opts));
 	cl_git_pass(git_index_iterator_new(&iterator, index));
 
 	cl_assert(git_vector_is_sorted(&iterator->snap));
@@ -1118,20 +1081,21 @@ void test_index_tests256__can_iterate(void)
 
 	git_index_iterator_free(iterator);
 	git_index_free(index);
-#endif
 }
 
 void test_index_tests256__can_modify_while_iterating(void)
 {
-#ifdef GIT_EXPERIMENTAL_SHA256
 	git_index *index;
 	git_index_iterator *iterator;
 	const git_index_entry *entry;
 	git_index_entry new_entry = {{0}};
 	size_t expected = 0, seen = 0;
 	int ret;
+	git_index_options index_opts = GIT_INDEX_OPTIONS_INIT;
 
-	cl_git_pass(git_index__open(&index, TEST_INDEX_PATH, GIT_OID_SHA256));
+	index_opts.oid_type = GIT_OID_SHA256;
+
+	cl_git_pass(git_index_open_ext(&index, TEST_INDEX_PATH, &index_opts));
 	cl_git_pass(git_index_iterator_new(&iterator, index));
 
 	expected = git_index_entrycount(index);
@@ -1142,12 +1106,12 @@ void test_index_tests256__can_modify_while_iterating(void)
 	 * ensure that our iterator is backed by a snapshot and thus returns
 	 * the number of entries from when the iterator was created.
 	 */
-	cl_git_pass(git_oid__fromstr(&new_entry.id, "8312e0a89a9cbab77c732b6bc39b51a783e3a318a847f46cba7614cac9814291", GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&new_entry.id, "8312e0a89a9cbab77c732b6bc39b51a783e3a318a847f46cba7614cac9814291", GIT_OID_SHA256));
 	new_entry.path = "newfile";
 	new_entry.mode = GIT_FILEMODE_BLOB;
 	cl_git_pass(git_index_add(index, &new_entry));
 
-	cl_git_pass(git_oid__fromstr(&new_entry.id, "4141414141414141414141414141414141414141414141414141414141414141", GIT_OID_SHA256));
+	cl_git_pass(git_oid_from_string(&new_entry.id, "4141414141414141414141414141414141414141414141414141414141414141", GIT_OID_SHA256));
 	new_entry.path = "Makefile";
 	new_entry.mode = GIT_FILEMODE_BLOB;
 	cl_git_pass(git_index_add(index, &new_entry));
@@ -1165,5 +1129,4 @@ void test_index_tests256__can_modify_while_iterating(void)
 
 	git_index_iterator_free(iterator);
 	git_index_free(index);
-#endif
 }

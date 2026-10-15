@@ -45,8 +45,6 @@ typedef struct {
 static repo_template_item repo_template[] = {
 	{ GIT_OBJECTS_INFO_DIR, GIT_OBJECT_DIR_MODE, NULL }, /* '/objects/info/' */
 	{ GIT_OBJECTS_PACK_DIR, GIT_OBJECT_DIR_MODE, NULL }, /* '/objects/pack/' */
-	{ GIT_REFS_HEADS_DIR, GIT_REFS_DIR_MODE, NULL },     /* '/refs/heads/' */
-	{ GIT_REFS_TAGS_DIR, GIT_REFS_DIR_MODE, NULL },      /* '/refs/tags/' */
 	{ GIT_HOOKS_DIR, GIT_HOOKS_DIR_MODE, NULL },         /* '/hooks/' */
 	{ GIT_INFO_DIR, GIT_INFO_DIR_MODE, NULL },           /* '/info/' */
 	{ GIT_DESC_FILE, GIT_DESC_MODE, GIT_DESC_CONTENT },

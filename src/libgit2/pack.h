@@ -33,6 +33,10 @@ typedef int git_pack_foreach_entry_offset_cb(
 #define PACK_SIGNATURE 0x5041434b	/* "PACK" */
 #define PACK_VERSION 2
 #define pack_version_ok(v) ((v) == htonl(2))
+
+#define GIT_PACKFILE_OFS_DELTA 6
+#define GIT_PACKFILE_REF_DELTA 7
+
 struct git_pack_header {
 	uint32_t hdr_signature;
 	uint32_t hdr_version;

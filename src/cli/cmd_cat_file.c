@@ -91,7 +91,7 @@ static int print_odb(git_object *object, display_t display)
 			ret = cli_error_os();
 		break;
 	default:
-		GIT_ASSERT(0);
+		CLI_ASSERT(!"invalid display type");
 	}
 
 done:

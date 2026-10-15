@@ -54,7 +54,7 @@ void test_submodule_escape__from_gitdir(void)
 	cl_git_pass(git_submodule_foreach(g_repo, find_evil, &foundit));
 	cl_assert_equal_i(0, foundit);
 
-	cl_git_fail_with(GIT_ENOTFOUND, git_submodule_lookup(&sm, g_repo, EVIL_SM_NAME));
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_submodule_lookup(&sm, g_repo, EVIL_SM_NAME));
 
 	/*
 	 * We do know about this as it's in the index and HEAD, but the data is
@@ -90,7 +90,7 @@ void test_submodule_escape__from_gitdir_windows(void)
 	cl_git_pass(git_submodule_foreach(g_repo, find_evil, &foundit));
 	cl_assert_equal_i(0, foundit);
 
-	cl_git_fail_with(GIT_ENOTFOUND, git_submodule_lookup(&sm, g_repo, EVIL_SM_NAME_WINDOWS_UNESC));
+	cl_git_fail_with(GIT_EINVALIDSPEC, git_submodule_lookup(&sm, g_repo, EVIL_SM_NAME_WINDOWS_UNESC));
 
 	/*
 	 * We do know about this as it's in the index and HEAD, but the data is

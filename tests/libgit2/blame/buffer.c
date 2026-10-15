@@ -418,3 +418,19 @@ def\n";
 	check_blame_hunk_index(g_repo, g_bufferblame, 3, 11, 5, 0, "aa06ecca", "b.txt");
 	check_blame_hunk_index(g_repo, g_bufferblame, 4, 16, 2, 0, "00000000", "b.txt");
 }
+
+void test_blame_buffer__reblame_buffer_result(void)
+{
+	git_blame *reblame = NULL;
+	const char *buffer = "abc\ndef\n";
+
+	/*
+	 * Hunks introduced by blaming a buffer have no associated commit, so
+	 * their summary stays NULL. Blaming again against that result must
+	 * duplicate those hunks without dereferencing the NULL summary.
+	 */
+	cl_git_pass(git_blame_buffer(&g_bufferblame, g_fileblame, buffer, strlen(buffer)));
+	cl_git_pass(git_blame_buffer(&reblame, g_bufferblame, buffer, strlen(buffer)));
+
+	git_blame_free(reblame);
+}

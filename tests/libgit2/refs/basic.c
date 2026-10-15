@@ -53,7 +53,7 @@ void test_refs_basic__longpaths(void)
 	git_reference *one = NULL, *two = NULL;
 	git_oid id;
 
-	cl_git_pass(git_oid__fromstr(&id, "099fabac3a9ea935598528c27f866e34089c2eff", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id, "099fabac3a9ea935598528c27f866e34089c2eff", GIT_OID_SHA1));
 
 	base = git_repository_path(g_repo);
 	base_len = git_utf8_char_length(base, strlen(base));
@@ -76,7 +76,10 @@ void test_refs_basic__longpaths(void)
 
 	/* Adding one more character gives us a path that is too long. */
 	cl_git_pass(git_str_putc(&refname, 'z'));
-	cl_git_fail(git_reference_create(&two, g_repo, refname.ptr, &id, 0, NULL));
+	if (cl_repo_has_ref_format(g_repo, "files"))
+		cl_git_fail(git_reference_create(&two, g_repo, refname.ptr, &id, 0, NULL));
+	else
+		cl_git_pass(git_reference_create(&two, g_repo, refname.ptr, &id, 0, NULL));
 
 	git_reference_free(one);
 	git_reference_free(two);

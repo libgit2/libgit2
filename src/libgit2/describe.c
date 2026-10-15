@@ -731,7 +731,7 @@ int git_describe_workdir(
 	git_describe_result *result = NULL;
 	git_object *commit;
 
-	if ((error = git_reference_name_to_id(&current_id, repo, GIT_HEAD_FILE)) < 0)
+	if ((error = git_reference_name_to_id(&current_id, repo, GIT_HEAD_REF)) < 0)
 		return error;
 
 	if ((error = git_object_lookup(&commit, repo, &current_id, GIT_OBJECT_COMMIT)) < 0)

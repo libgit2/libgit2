@@ -1015,7 +1015,7 @@ bool git_fs_path_has_non_ascii(const char *path, size_t pathlen)
 	return false;
 }
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 
 int git_fs_path_iconv_init_precompose(git_fs_path_iconv_t *ic)
 {
@@ -1167,7 +1167,7 @@ int git_fs_path_direach(
 	DIR *dir;
 	struct dirent *de;
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	git_fs_path_iconv_t ic = GIT_PATH_ICONV_INIT;
 #endif
 
@@ -1186,7 +1186,7 @@ int git_fs_path_direach(
 		return -1;
 	}
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	if ((flags & GIT_FS_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
 		(void)git_fs_path_iconv_init_precompose(&ic);
 #endif
@@ -1198,7 +1198,7 @@ int git_fs_path_direach(
 		if (git_fs_path_is_dot_or_dotdot(de_path))
 			continue;
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 		if ((error = git_fs_path_iconv(&ic, &de_path, &de_len)) < 0)
 			break;
 #endif
@@ -1222,7 +1222,7 @@ int git_fs_path_direach(
 
 	closedir(dir);
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	git_fs_path_iconv_clear(&ic);
 #endif
 
@@ -1409,6 +1409,10 @@ int git_fs_path_diriter_init(
 
 	memset(diriter, 0, sizeof(git_fs_path_diriter));
 
+#ifdef GIT_I18N_ICONV
+	diriter->ic.map = (iconv_t)-1;
+#endif
+
 	if (git_str_puts(&diriter->path, path) < 0)
 		return -1;
 
@@ -1426,7 +1430,7 @@ int git_fs_path_diriter_init(
 		return -1;
 	}
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	if ((flags & GIT_FS_PATH_DIR_PRECOMPOSE_UNICODE) != 0)
 		(void)git_fs_path_iconv_init_precompose(&diriter->ic);
 #endif
@@ -1463,7 +1467,7 @@ int git_fs_path_diriter_next(git_fs_path_diriter *diriter)
 	filename = de->d_name;
 	filename_len = strlen(filename);
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	if ((diriter->flags & GIT_FS_PATH_DIR_PRECOMPOSE_UNICODE) != 0 &&
 		(error = git_fs_path_iconv(&diriter->ic, &filename, &filename_len)) < 0)
 		return error;
@@ -1530,7 +1534,7 @@ void git_fs_path_diriter_free(git_fs_path_diriter *diriter)
 		diriter->dir = NULL;
 	}
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	git_fs_path_iconv_clear(&diriter->ic);
 #endif
 
@@ -1853,12 +1857,14 @@ static PSID *sid_dup(PSID sid)
 	return dup;
 }
 
-static int current_user_sid(PSID *out)
+static int current_user_sid(PSID *sid, HANDLE *linked_token)
 {
 	TOKEN_USER *info = NULL;
 	HANDLE token = NULL;
 	DWORD len = 0;
 	int error = -1;
+	TOKEN_ELEVATION_TYPE elevation_type;
+	DWORD size;
 
 	if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) {
 		git_error_set(GIT_ERROR_OS, "could not lookup process information");
@@ -1879,7 +1885,19 @@ static int current_user_sid(PSID *out)
 		goto done;
 	}
 
-	if ((*out = sid_dup(info->User.Sid)))
+	if (GetTokenInformation(token, TokenElevationType, &elevation_type, sizeof(elevation_type), &size) &&
+	    elevation_type == TokenElevationTypeLimited) {
+		/*
+		 * The current process is run by a member of the Administrators group
+		 * but is not running elevated.
+		 */
+		if (!GetTokenInformation(token, TokenLinkedToken, linked_token, sizeof(HANDLE), &size)) {
+			CloseHandle(*linked_token);
+			*linked_token = NULL;
+		}
+	}
+
+	if ((*sid = sid_dup(info->User.Sid)))
 		error = 0;
 
 done:
@@ -1926,6 +1944,7 @@ int git_fs_path_owner_is(
 	git_fs_path_owner_t owner_type)
 {
 	PSID owner_sid = NULL, user_sid = NULL;
+	HANDLE linked_token = NULL;
 	BOOL is_admin, admin_owned;
 	int error;
 
@@ -1934,17 +1953,14 @@ int git_fs_path_owner_is(
 		return 0;
 	}
 
-	if ((error = file_owner_sid(&owner_sid, path)) < 0)
+	if ((error = file_owner_sid(&owner_sid, path)) < 0 ||
+	    (error = current_user_sid(&user_sid, &linked_token)) < 0)
 		goto done;
 
-	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0) {
-		if ((error = current_user_sid(&user_sid)) < 0)
-			goto done;
-
-		if (EqualSid(owner_sid, user_sid)) {
-			*out = true;
-			goto done;
-		}
+	if ((owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0 &&
+	    EqualSid(owner_sid, user_sid)) {
+		*out = true;
+		goto done;
 	}
 
 	admin_owned =
@@ -1960,6 +1976,7 @@ int git_fs_path_owner_is(
 	if (admin_owned &&
 	    (owner_type & GIT_FS_PATH_USER_IS_ADMINISTRATOR) != 0 &&
 	    CheckTokenMembership(NULL, owner_sid, &is_admin) &&
+	    CheckTokenMembership(linked_token, owner_sid, &is_admin) &&
 	    is_admin) {
 		*out = true;
 		goto done;
@@ -1968,6 +1985,9 @@ int git_fs_path_owner_is(
 	*out = false;
 
 done:
+	if (linked_token)
+	    CloseHandle(linked_token);
+
 	git__free(owner_sid);
 	git__free(user_sid);
 	return error;

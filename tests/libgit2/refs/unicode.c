@@ -36,7 +36,7 @@ void test_refs_unicode__create_and_lookup(void)
 	cl_assert_equal_s(REFNAME, git_reference_name(ref2));
 	git_reference_free(ref2);
 
-#if GIT_USE_ICONV
+#if GIT_I18N_ICONV
 	/* Lookup reference by decomposed unicode name */
 
 #define REFNAME_DECOMPOSED "refs/heads/" "A" "\314\212" "ngstro" "\314\210" "m"

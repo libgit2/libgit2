@@ -270,7 +270,9 @@ static cli_opt_status_t parse_short(cli_opt *opt, cli_opt_parser *parser)
 	}
 
 	/* Required argument was not provided */
-	if (spec->type == CLI_OPT_TYPE_VALUE && !opt->value)
+	if (spec->type == CLI_OPT_TYPE_VALUE &&
+	    !opt->value &&
+	    !(spec->usage & CLI_OPT_USAGE_VALUE_OPTIONAL))
 		opt->status = CLI_OPT_STATUS_MISSING_VALUE;
 	else
 		opt->status = CLI_OPT_STATUS_OK;

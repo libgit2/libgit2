@@ -1,7 +1,7 @@
 #include "clar_libgit2.h"
 #include "fs_path.h"
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 static git_fs_path_iconv_t ic;
 static char *nfc = "\xC3\x85\x73\x74\x72\xC3\xB6\x6D";
 static char *nfd = "\x41\xCC\x8A\x73\x74\x72\x6F\xCC\x88\x6D";
@@ -9,21 +9,21 @@ static char *nfd = "\x41\xCC\x8A\x73\x74\x72\x6F\xCC\x88\x6D";
 
 void test_iconv__initialize(void)
 {
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	cl_git_pass(git_fs_path_iconv_init_precompose(&ic));
 #endif
 }
 
 void test_iconv__cleanup(void)
 {
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	git_fs_path_iconv_clear(&ic);
 #endif
 }
 
 void test_iconv__unchanged(void)
 {
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	const char *data = "Ascii data", *original = data;
 	size_t datalen = strlen(data);
 
@@ -37,7 +37,7 @@ void test_iconv__unchanged(void)
 
 void test_iconv__decomposed_to_precomposed(void)
 {
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	const char *data = nfd;
 	size_t datalen, nfdlen = strlen(nfd);
 
@@ -63,7 +63,7 @@ void test_iconv__decomposed_to_precomposed(void)
 
 void test_iconv__precomposed_is_unmodified(void)
 {
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	const char *data = nfc;
 	size_t datalen = strlen(nfc);
 

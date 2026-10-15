@@ -306,7 +306,27 @@ typedef int (*git_commit_signing_cb)(
 /** @deprecated use git_cvar_map */
 typedef git_configmap git_cvar_map;
 
+/**
+ * This was used for system-wide configuration for compatibility with
+ * "Portable Git", however this setting was removed.
+ *
+ * @deprecated this option is ignored
+ */
+#define GIT_CONFIG_LEVEL_PROGRAMDATA 1
+
 /**@}*/
+
+/**
+ * Locate the path to the configuration file in ProgramData
+ *
+ * Look for the file in `%PROGRAMDATA%\Git\config` used by portable git.
+ *
+ * @param out Pointer to a user-allocated git_buf in which to store the path
+ * @return 0 if a ProgramData configuration file has been
+ *	found. Its path will be stored in `out`.
+ * @deprecated Don't use this any more as this is not supported by Git >= 2.24
+ */
+GIT_EXTERN(int) git_config_find_programdata(git_buf *out);
 
 /** @name Deprecated Diff Functions and Constants
  *
@@ -334,6 +354,10 @@ typedef enum {
  * Options for controlling the formatting of the generated e-mail.
  *
  * @deprecated use `git_email_create_options`
+ *
+ * @options[version] GIT_DIFF_FORMAT_EMAIL_OPTIONS_VERSION
+ * @options[init_macro] GIT_DIFF_FORMAT_EMAIL_OPTIONS_INIT
+ * @options[init_function] git_diff_format_email_options_init
  */
 typedef struct {
 	unsigned int version;
@@ -665,6 +689,66 @@ GIT_EXTERN(int) git_index_add_frombuffer(
  */
 GIT_EXTERN(size_t) git_object__size(git_object_t type);
 
+/**
+ * Determine if the given git_object_t is a valid object type.
+ *
+ * @deprecated use `git_object_type_is_valid`
+ *
+ * @param type object type to test.
+ * @return 1 if the type represents a valid object type, 0 otherwise
+ */
+GIT_EXTERN(int) git_object_typeisloose(git_object_t type);
+
+/**@}*/
+
+/** @name Deprecated Object Database Functions
+ *
+ * These functions are retained for backward compatibility.  The newer
+ * versions of these functions should be preferred in all new code.
+ *
+ * There is no plan to remove these backward compatibility functions at
+ * this time.
+ */
+/**@{*/
+
+/**
+ * Generate the SHA1 object ID for a given data buffer.
+ *
+ * @deprecated use `git_object_id_from_buffer`
+ *
+ * @param[out] oid the resulting object ID.
+ * @param data data to hash
+ * @param len size of the data
+ * @param object_type of the data to hash
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_hash(
+	git_oid *oid,
+	const void *data,
+	size_t len,
+	git_object_t object_type);
+
+/**
+ * Read a file from disk and fill a git_oid with the object id
+ * that the file would have if it were written to the Object
+ * Database as an object of the given type (w/o applying filters).
+ * Similar functionality to git.git's `git hash-object` without
+ * the `-w` flag, however, with the --no-filters flag.
+ * If you need filters, see `git_repository_hashfile` or
+ * `git_object_id_from_file.
+ *
+ * @deprecated use `git_object_id_from_file`
+ *
+ * @param[out] oid oid structure the result is written into.
+ * @param path file to read and determine object id for
+ * @param object_type of the data to hash
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_hashfile(
+	git_oid *oid,
+	const char *path,
+	git_object_t object_type);
+
 /**@}*/
 
 /** @name Deprecated Remote Functions
@@ -747,6 +831,17 @@ GIT_EXTERN(int) git_tag_create_frombuffer(
 	int force);
 
 /**@}*/
+
+/** @name Deprecated Repository Constants
+ *
+ * These enumeration values are retained for backward compatibility.
+ */
+
+/**
+ * @deprecated This option is deprecated; it is now implied when
+ * a separate working directory is specified to `git_repository_init`.
+ */
+#define GIT_REPOSITORY_INIT_NO_DOTGIT_DIR 0
 
 /** @name Deprecated Revspec Constants
  *
@@ -886,14 +981,12 @@ typedef git_trace_cb git_trace_callback;
  */
 /**@{*/
 
-#ifndef GIT_EXPERIMENTAL_SHA256
 /** Deprecated OID "raw size" definition */
-# define GIT_OID_RAWSZ    GIT_OID_SHA1_SIZE
+#define GIT_OID_RAWSZ    GIT_OID_SHA1_SIZE
 /** Deprecated OID "hex size" definition */
-# define GIT_OID_HEXSZ    GIT_OID_SHA1_HEXSIZE
+#define GIT_OID_HEXSZ    GIT_OID_SHA1_HEXSIZE
 /** Deprecated OID "hex zero" definition */
-# define GIT_OID_HEX_ZERO GIT_OID_SHA1_HEXZERO
-#endif
+#define GIT_OID_HEX_ZERO GIT_OID_SHA1_HEXZERO
 
 GIT_EXTERN(int) git_oid_iszero(const git_oid *id);
 

@@ -109,7 +109,7 @@ int git_parse_advance_oid(git_oid *out, git_parse_ctx *ctx, git_oid_t oid_type)
 
 	if (ctx->line_len < oid_hexsize)
 		return -1;
-	if ((git_oid__fromstrn(out, ctx->line, oid_hexsize, oid_type)) < 0)
+	if ((git_oid_from_prefix(out, ctx->line, oid_hexsize, oid_type)) < 0)
 		return -1;
 	git_parse_advance_chars(ctx, oid_hexsize);
 	return 0;

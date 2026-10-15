@@ -359,7 +359,7 @@ int git_futils_mv_withpath(const char *from, const char *to, const mode_t dirmod
 
 int git_futils_mmap_ro(git_map *out, git_file fd, off64_t begin, size_t len)
 {
-	return p_mmap(out, len, GIT_PROT_READ, GIT_MAP_SHARED, fd, begin);
+	return p_mmap(out, len, GIT_PROT_READ, GIT_MAP_PRIVATE, fd, begin);
 }
 
 int git_futils_mmap_ro_file(git_map *out, const char *path)
@@ -1158,7 +1158,7 @@ int git_futils_filestamp_check(
 		return GIT_ENOTFOUND;
 
 	if (stamp->mtime.tv_sec == st.st_mtime &&
-#if defined(GIT_USE_NSEC)
+#if defined(GIT_NSEC)
 		stamp->mtime.tv_nsec == st.st_mtime_nsec &&
 #endif
 		stamp->size  == (uint64_t)st.st_size   &&
@@ -1166,7 +1166,7 @@ int git_futils_filestamp_check(
 		return 0;
 
 	stamp->mtime.tv_sec = st.st_mtime;
-#if defined(GIT_USE_NSEC)
+#if defined(GIT_NSEC)
 	stamp->mtime.tv_nsec = st.st_mtime_nsec;
 #endif
 	stamp->size  = (uint64_t)st.st_size;
@@ -1190,7 +1190,7 @@ void git_futils_filestamp_set_from_stat(
 {
 	if (st) {
 		stamp->mtime.tv_sec = st->st_mtime;
-#if defined(GIT_USE_NSEC)
+#if defined(GIT_NSEC)
 		stamp->mtime.tv_nsec = st->st_mtime_nsec;
 #else
 		stamp->mtime.tv_nsec = 0;

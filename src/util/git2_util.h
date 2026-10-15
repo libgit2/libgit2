@@ -19,12 +19,13 @@ typedef struct git_str git_str;
 
 /** Declare a function as always inlined. */
 #if defined(_MSC_VER)
-# define GIT_INLINE(type) static __inline type
+# define GIT_INLINE_KEYWORD __inline
 #elif defined(__GNUC__)
-# define GIT_INLINE(type) static __inline__ type
+# define GIT_INLINE_KEYWORD __inline__
 #else
-# define GIT_INLINE(type) static type
+# define GIT_INLINE_KEYWORD
 #endif
+#define GIT_INLINE(type) static GIT_INLINE_KEYWORD type
 
 /** Support for gcc/clang __has_builtin intrinsic */
 #ifndef __has_builtin

@@ -1,0 +1,4 @@
+[extensions]
+	refstorage = reftable
+[core]
+	repositoryformatversion = 1

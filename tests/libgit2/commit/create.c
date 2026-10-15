@@ -110,3 +110,41 @@ void test_commit_create__from_stage_newrepo(void)
 	git_repository_free(newrepo);
 	cl_fixture_cleanup("newrepo");
 }
+
+void test_commit_create__from_tree(void)
+{
+	git_commit_create_options opts = GIT_COMMIT_CREATE_OPTIONS_INIT;
+	git_index *index;
+	git_oid commit_id;
+	git_oid tree_id;
+	git_tree *tree, *lookedup;
+
+	opts.author = g_author;
+	opts.committer = g_committer;
+
+	cl_git_rewritefile("testrepo2/newfile.txt", "This is a new file.\n");
+	cl_git_rewritefile("testrepo2/newfile2.txt", "This is a new file.\n");
+	cl_git_rewritefile("testrepo2/README", "hello, world.\n");
+	cl_git_rewritefile("testrepo2/new.txt", "hi there.\n");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_bypath(index, "newfile2.txt"));
+	cl_git_pass(git_index_add_bypath(index, "README"));
+	cl_git_pass(git_index_write(index));
+	cl_git_pass(git_index_write_tree(&tree_id, index));
+
+	cl_assert_equal_oidstr("b27210772d0633870b4f486d04ed3eb5ebbef5e7", &tree_id);
+
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+
+	cl_git_pass(git_commit_create_from_tree(&commit_id, g_repo, tree, "This is the message.", &opts));
+
+	cl_git_pass(git_repository_head_tree(&lookedup, g_repo));
+
+	cl_assert_equal_oidstr("241b5b04e847bc38dd7b4b9f49f21e55da40f3a6", &commit_id);
+	cl_assert_equal_oidstr("b27210772d0633870b4f486d04ed3eb5ebbef5e7", git_tree_id(lookedup));
+
+	git_index_free(index);
+	git_tree_free(tree);
+	git_tree_free(lookedup);
+}

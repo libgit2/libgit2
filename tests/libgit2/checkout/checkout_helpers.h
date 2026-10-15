@@ -1,5 +1,6 @@
 #include "git2/object.h"
 #include "git2/repository.h"
+#include "git2_features.h"
 
 extern void assert_on_branch(git_repository *repo, const char *branch);
 extern void reset_index_to_treeish(git_object *treeish);

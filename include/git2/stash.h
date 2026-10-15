@@ -82,6 +82,9 @@ GIT_EXTERN(int) git_stash_save(
  * Initialize with `GIT_STASH_SAVE_OPTIONS_INIT`. Alternatively, you can
  * use `git_stash_save_options_init`.
  *
+ * @options[version] GIT_STASH_SAVE_OPTIONS_VERSION
+ * @options[init_macro] GIT_STASH_SAVE_OPTIONS_INIT
+ * @options[init_function] git_stash_save_options_init
  */
 typedef struct git_stash_save_options {
 	unsigned int version;
@@ -188,6 +191,9 @@ typedef int GIT_CALLBACK(git_stash_apply_progress_cb)(
  * Initialize with `GIT_STASH_APPLY_OPTIONS_INIT`. Alternatively, you can
  * use `git_stash_apply_options_init`.
  *
+ * @options[version] GIT_STASH_APPLY_OPTIONS_VERSION
+ * @options[init_macro] GIT_STASH_APPLY_OPTIONS_INIT
+ * @options[init_function] git_stash_apply_options_init
  */
 typedef struct git_stash_apply_options {
 	unsigned int version;

@@ -66,7 +66,6 @@ static int parse_options(
 	struct log_state *s, struct log_options *opt, int argc, char **argv);
 static void print_time(const git_time *intime, const char *prefix);
 static void print_commit(git_commit *commit, struct log_options *opts);
-static int match_with_parent(git_commit *commit, int i, git_diff_options *);
 
 /** utility functions for filtering */
 static int signature_matches(const git_signature *sig, const char *filter);
@@ -74,7 +73,7 @@ static int log_message_matches(const git_commit *commit, const char *filter);
 
 int lg2_log(git_repository *repo, int argc, char *argv[])
 {
-	int i, count = 0, printed = 0, parents, last_arg;
+	int count = 0, printed = 0, parents, last_arg;
 	struct log_state s;
 	struct log_options opt;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
@@ -90,14 +89,16 @@ int lg2_log(git_repository *repo, int argc, char *argv[])
 
 	diffopts.pathspec.strings = &argv[last_arg];
 	diffopts.pathspec.count	  = argc - last_arg;
-	if (diffopts.pathspec.count > 0)
-		check_lg2(git_pathspec_new(&ps, &diffopts.pathspec),
-			"Building pathspec", NULL);
 
 	if (!s.revisions)
 		add_revision(&s, NULL);
 
 	/** Use the revwalker to traverse the history. */
+	if (diffopts.pathspec.count > 0) {
+		check_lg2(git_pathspec_new(&ps, &diffopts.pathspec),
+			"Building pathspec", NULL);
+		check_lg2(git_revwalk_pathspec(s.walker, ps), "Applying pathspec", NULL);
+	}
 
 	printed = count = 0;
 
@@ -110,29 +111,6 @@ int lg2_log(git_repository *repo, int argc, char *argv[])
 			continue;
 		if (opt.max_parents > 0 && parents > opt.max_parents)
 			continue;
-
-		if (diffopts.pathspec.count > 0) {
-			int unmatched = parents;
-
-			if (parents == 0) {
-				git_tree *tree;
-				check_lg2(git_commit_tree(&tree, commit), "Get tree", NULL);
-				if (git_pathspec_match_tree(
-						NULL, tree, GIT_PATHSPEC_NO_MATCH_ERROR, ps) != 0)
-					unmatched = 1;
-				git_tree_free(tree);
-			} else if (parents == 1) {
-				unmatched = match_with_parent(commit, 0, &diffopts) ? 0 : 1;
-			} else {
-				for (i = 0; i < parents; ++i) {
-					if (match_with_parent(commit, i, &diffopts))
-						unmatched--;
-				}
-			}
-
-			if (unmatched > 0)
-				continue;
-		}
 
 		if (!signature_matches(git_commit_author(commit), opt.author))
 			continue;
@@ -377,32 +355,6 @@ static void print_commit(git_commit *commit, struct log_options *opts)
 	}
 	if (!opts->show_oneline)
 		printf("\n");
-}
-
-/** Helper to find how many files in a commit changed from its nth parent. */
-static int match_with_parent(git_commit *commit, int i, git_diff_options *opts)
-{
-	git_commit *parent;
-	git_tree *a, *b;
-	git_diff *diff;
-	int ndeltas;
-
-	check_lg2(
-		git_commit_parent(&parent, commit, (size_t)i), "Get parent", NULL);
-	check_lg2(git_commit_tree(&a, parent), "Tree for parent", NULL);
-	check_lg2(git_commit_tree(&b, commit), "Tree for commit", NULL);
-	check_lg2(
-		git_diff_tree_to_tree(&diff, git_commit_owner(commit), a, b, opts),
-		"Checking diff between parent and commit", NULL);
-
-	ndeltas = (int)git_diff_num_deltas(diff);
-
-	git_diff_free(diff);
-	git_tree_free(a);
-	git_tree_free(b);
-	git_commit_free(parent);
-
-	return ndeltas > 0;
 }
 
 /** Print a usage message for the program. */

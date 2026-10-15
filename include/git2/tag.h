@@ -25,7 +25,7 @@ GIT_BEGIN_DECL
 /**
  * Lookup a tag object from the repository.
  *
- * @param out pointer to the looked up tag
+ * @param[out] out pointer to the looked up tag
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
  * @return 0 or an error code
@@ -39,7 +39,7 @@ GIT_EXTERN(int) git_tag_lookup(
  *
  * @see git_object_lookup_prefix
  *
- * @param out pointer to the looked up tag
+ * @param[out] out pointer to the looked up tag
  * @param repo the repo to use when locating the tag.
  * @param id identity of the tag to locate.
  * @param len the length of the short identifier
@@ -361,7 +361,7 @@ GIT_EXTERN(int) git_tag_peel(
  * Create an in-memory copy of a tag. The copy must be explicitly
  * free'd or it will leak.
  *
- * @param out Pointer to store the copy of the tag
+ * @param[out] out Pointer to store the copy of the tag
  * @param source Original tag to copy
  * @return 0
  */

@@ -632,6 +632,7 @@ int git_diff__oid_for_entry(
 	uint16_t mode,
 	const git_oid *update_match)
 {
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
 	git_diff_generated *diff;
 	git_str full_path = GIT_STR_INIT;
 	git_index_entry entry = *src;
@@ -642,6 +643,9 @@ int git_diff__oid_for_entry(
 	diff = (git_diff_generated *)d;
 
 	git_oid_clear(out, diff->base.opts.oid_type);
+
+	id_opts.object_type = GIT_OBJECT_BLOB;
+	id_opts.oid_type = diff->base.opts.oid_type;
 
 	if (git_repository_workdir_path(&full_path, diff->base.repo, entry.path) < 0)
 		return -1;
@@ -677,8 +681,8 @@ int git_diff__oid_for_entry(
 			git_error_clear();
 		}
 	} else if (S_ISLNK(mode)) {
-		error = git_odb__hashlink(out, full_path.ptr,
-			diff->base.opts.oid_type);
+		error = git_object_id_from_symlink(out, full_path.ptr,
+			&id_opts);
 		diff->base.perf.oid_calculations++;
 	} else if (!git__is_sizet(entry.file_size)) {
 		git_error_set(GIT_ERROR_NOMEMORY, "file size overflow (for 32-bits) on '%s'",
@@ -689,13 +693,14 @@ int git_diff__oid_for_entry(
 		GIT_FILTER_TO_ODB, GIT_FILTER_ALLOW_UNSAFE)))
 	{
 		int fd = git_futils_open_ro(full_path.ptr);
-		if (fd < 0)
+
+		id_opts.filters = fl;
+
+		if (fd < 0) {
 			error = fd;
-		else {
-			error = git_odb__hashfd_filtered(
-				out, fd, (size_t)entry.file_size,
-				GIT_OBJECT_BLOB, diff->base.opts.oid_type,
-				fl);
+		} else {
+			error = git_object_id_from_fd(out,
+				fd, (size_t)entry.file_size, &id_opts);
 			p_close(fd);
 			diff->base.perf.oid_calculations++;
 		}

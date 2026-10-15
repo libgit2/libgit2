@@ -294,7 +294,7 @@ Here are the bindings to libgit2 that are currently available:
 * GObject
     * libgit2-glib <https://wiki.gnome.org/Projects/Libgit2-glib>
 * Guile
-	* Guile-Git <https://gitlab.com/guile-git/guile-git>
+	* Guile-Git <https://codeberg.org/guile-git/guile-git>
 * Haskell
     * hgit2 <https://github.com/jwiegley/gitlib>
 * Java

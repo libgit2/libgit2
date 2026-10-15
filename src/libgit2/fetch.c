@@ -80,7 +80,7 @@ static int maybe_want_oid(git_remote *remote, git_refspec *spec)
 	oid_head = git__calloc(1, sizeof(git_remote_head));
 	GIT_ERROR_CHECK_ALLOC(oid_head);
 
-	git_oid__fromstr(&oid_head->oid, spec->src, remote->repo->oid_type);
+	git_oid_from_string(&oid_head->oid, spec->src, remote->repo->oid_type);
 
 	if (spec->dst) {
 		oid_head->name = git__strdup(spec->dst);
@@ -101,8 +101,6 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 	int error = 0;
 	size_t i, heads_len;
 	unsigned int remote_caps;
-	unsigned int oid_mask = GIT_REMOTE_CAPABILITY_TIP_OID |
-	                        GIT_REMOTE_CAPABILITY_REACHABLE_OID;
 	git_remote_autotag_option_t tagopt = remote->download_tags;
 
 	if (opts && opts->download_tags != GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED)
@@ -144,11 +142,6 @@ static int filter_wants(git_remote *remote, const git_fetch_options *opts)
 		if (!git_oid__is_hexstr(spec->src, remote->repo->oid_type))
 			continue;
 
-		if (!(remote_caps & oid_mask)) {
-			git_error_set(GIT_ERROR_INVALID, "cannot fetch a specific object from the remote repository");
-			error = -1;
-			goto cleanup;
-		}
 
 		if ((error = maybe_want_oid(remote, spec)) < 0)
 			goto cleanup;
@@ -170,6 +163,7 @@ cleanup:
 int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 {
 	git_transport *t = remote->transport;
+	git_oid_t remote_oid_type, repo_oid_type;
 	int error;
 
 	remote->need_pack = 0;
@@ -177,6 +171,19 @@ int git_fetch_negotiate(git_remote *remote, const git_fetch_options *opts)
 	if (opts) {
 		GIT_ASSERT_ARG(opts->depth >= 0);
 		remote->nego.depth = opts->depth;
+	}
+
+	if ((error = git_remote_oid_type(&remote_oid_type, remote)) < 0)
+		return error;
+
+	repo_oid_type = git_repository_oid_type(remote->repo);
+
+	if (remote_oid_type != repo_oid_type) {
+		git_error_set(GIT_ERROR_NET,
+			"the remote uses %s object ids, but the repository uses %s",
+			git_oid_type_name(remote_oid_type),
+			git_oid_type_name(repo_oid_type));
+		return -1;
 	}
 
 	if (filter_wants(remote, opts) < 0)

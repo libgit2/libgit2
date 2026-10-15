@@ -371,7 +371,7 @@ void test_online_fetch__reachable_commit(void)
 	refspecs.strings = &refspec;
 	refspecs.count = 1;
 
-	git_oid__fromstr(&expected_id, "2c349335b7f797072cf729c4f3bb0914ecb6dec9", GIT_OID_SHA1);
+	git_oid_from_string(&expected_id, "2c349335b7f797072cf729c4f3bb0914ecb6dec9", GIT_OID_SHA1);
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test",
 		"https://github.com/libgit2/TestGitRepository"));
@@ -401,7 +401,7 @@ void test_online_fetch__reachable_commit_without_destination(void)
 	refspecs.strings = &refspec;
 	refspecs.count = 1;
 
-	git_oid__fromstr(&expected_id, "2c349335b7f797072cf729c4f3bb0914ecb6dec9", GIT_OID_SHA1);
+	git_oid_from_string(&expected_id, "2c349335b7f797072cf729c4f3bb0914ecb6dec9", GIT_OID_SHA1);
 
 	cl_git_pass(git_remote_create(&remote, _repo, "test",
 		"https://github.com/libgit2/TestGitRepository"));

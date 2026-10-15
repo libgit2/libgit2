@@ -302,7 +302,7 @@ int cli_progress_fetch_transfer(const git_indexer_progress *stats, void *payload
 
 	default:
 		/* should not be reached */
-		GIT_ASSERT(!"unexpected progress state");
+		CLI_ASSERT(!"unexpected progress state");
 	}
 
 	return error;
@@ -337,7 +337,7 @@ int cli_progress_indexer(
 
 	default:
 		/* should not be reached */
-		GIT_ASSERT(!"unexpected progress state");
+		CLI_ASSERT(!"unexpected progress state");
 	}
 
 	return error;

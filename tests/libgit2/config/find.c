@@ -7,5 +7,4 @@ void test_config_find__one(void)
 	cl_git_fail_with(GIT_ENOTFOUND, git_config_find_global(&buf));
 	cl_git_fail_with(GIT_ENOTFOUND, git_config_find_xdg(&buf));
 	cl_git_fail_with(GIT_ENOTFOUND, git_config_find_system(&buf));
-	cl_git_fail_with(GIT_ENOTFOUND, git_config_find_programdata(&buf));
 }

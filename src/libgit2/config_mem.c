@@ -285,6 +285,18 @@ static void config_memory_free(git_config_backend *_backend)
 	git__free(backend);
 }
 
+int git_config_backend_memory_options_init(
+	git_config_backend_memory_options *opts,
+	unsigned int version)
+{
+	GIT_ASSERT_ARG(opts);
+
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(
+		opts, version, git_config_backend_memory_options,
+		GIT_CONFIG_BACKEND_MEMORY_OPTIONS_INIT);
+	return 0;
+}
+
 static config_memory_backend *config_backend_new(
 	git_config_backend_memory_options *opts)
 {

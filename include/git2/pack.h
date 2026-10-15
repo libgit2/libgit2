@@ -57,7 +57,7 @@ typedef enum {
 /**
  * Initialize a new packbuilder
  *
- * @param out The new packbuilder object
+ * @param[out] out The new packbuilder object
  * @param repo The repository
  *
  * @return 0 or an error code

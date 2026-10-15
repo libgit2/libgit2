@@ -332,6 +332,7 @@ int git_submodule__lookup_with_cache(
 {
 	git_submodule *sm;
 	unsigned int location;
+	bool valid_name = false;
 	int error;
 
 	GIT_ASSERT_ARG(repo);
@@ -362,6 +363,7 @@ int git_submodule__lookup_with_cache(
 	if (git_submodule_name_is_valid(sm->repo, name, 0) <= 0) {
 		error = GIT_ENOTFOUND;
 	} else {
+		valid_name = true;
 		error = git_submodule_reload(sm, false);
 	}
 
@@ -425,7 +427,7 @@ int git_submodule__lookup_with_cache(
 	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
 		git_submodule_free(sm);
 		git_error_set(GIT_ERROR_SUBMODULE, "invalid submodule name: '%s'", name);
-		error = GIT_ENOTFOUND;
+		error = valid_name ? GIT_ENOTFOUND : GIT_EINVALIDSPEC;
 
 		/* If it's not configured, we still check if there's a repo at the path */
 		if (git_repository_workdir(repo)) {
@@ -800,7 +802,6 @@ static int submodule_repo_init(
 
 		initopt.workdir_path = workdir.ptr;
 		initopt.flags |=
-			GIT_REPOSITORY_INIT_NO_DOTGIT_DIR |
 			GIT_REPOSITORY_INIT_RELATIVE_GITLINK;
 
 		error = git_repository_init_ext(&subrepo, repodir.ptr, &initopt);
@@ -1339,7 +1340,6 @@ static int submodule_repo_create(
 	initopt.flags =
 		GIT_REPOSITORY_INIT_MKPATH |
 		GIT_REPOSITORY_INIT_NO_REINIT |
-		GIT_REPOSITORY_INIT_NO_DOTGIT_DIR |
 		GIT_REPOSITORY_INIT_RELATIVE_GITLINK;
 
 	/* Workdir: path to sub-repo working directory */
@@ -1662,7 +1662,7 @@ static int git_submodule__open(
 		sm->flags |= GIT_SUBMODULE_STATUS_IN_WD |
 			GIT_SUBMODULE_STATUS__WD_SCANNED;
 
-		if (!git_reference_name_to_id(&sm->wd_oid, *subrepo, GIT_HEAD_FILE))
+		if (!git_reference_name_to_id(&sm->wd_oid, *subrepo, GIT_HEAD_REF))
 			sm->flags |= GIT_SUBMODULE_STATUS__WD_OID_VALID;
 		else
 			git_error_clear();

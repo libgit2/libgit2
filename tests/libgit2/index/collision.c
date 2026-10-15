@@ -96,6 +96,64 @@ void test_index_collision__add_blob_with_conflicting_dir(void)
 	git_tree_free(tree);
 }
 
+/*
+ * The two tests above only ever have a single pre-existing entry in the
+ * index at the time of the collision, so the correct sorted insertion
+ * position for the new path happens to be position zero anyway.  That
+ * masks issue #7160: index_existing_and_best() discarded the insertion
+ * position it had just computed and reported position zero whenever the
+ * new path did not already exist in the index, so the directory/file
+ * collision scan started from the wrong spot and walked off the first
+ * unrelated entry instead of ever reaching the real conflict.  Seed the
+ * index with sibling entries that sort before the conflicting path so the
+ * true insertion position is non-zero, which is what actually exercises
+ * the bug.
+ */
+void test_index_collision__add_blob_with_conflicting_dir_not_at_start(void)
+{
+	git_index_entry entry;
+	git_tree_entry *tentry;
+	git_oid tree_id;
+	git_tree *tree;
+
+	memset(&entry, 0, sizeof(entry));
+	entry.ctime.seconds = 12346789;
+	entry.mtime.seconds = 12346789;
+	entry.mode  = 0100644;
+	entry.file_size = 0;
+	git_oid_cpy(&entry.id, &g_empty_id);
+
+	entry.path = "another blob";
+	cl_git_pass(git_index_add(g_index, &entry));
+
+	entry.path = "blobtree/conflict";
+	cl_git_pass(git_index_add(g_index, &entry));
+
+	entry.path = "some blob";
+	cl_git_pass(git_index_add(g_index, &entry));
+
+	/* Check blobtree/conflict exists here */
+	cl_git_pass(git_index_write_tree(&tree_id, g_index));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	cl_git_pass(git_tree_entry_bypath(&tentry, tree, "blobtree/conflict"));
+	git_tree_entry_free(tentry);
+	git_tree_free(tree);
+
+	/* create a blob/tree collision; "blobtree"'s correct sorted position
+	 * is between "another blob" and "blobtree/conflict", not position 0
+	 */
+	entry.path = "blobtree";
+	cl_git_pass(git_index_add(g_index, &entry));
+
+	/* blobtree should now be a blob, blobtree/conflict should be gone */
+	cl_git_pass(git_index_write_tree(&tree_id, g_index));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+	cl_git_pass(git_tree_entry_bypath(&tentry, tree, "blobtree"));
+	cl_git_fail(git_tree_entry_bypath(&tentry, tree, "blobtree/conflict"));
+	git_tree_entry_free(tentry);
+	git_tree_free(tree);
+}
+
 void test_index_collision__add_with_highstage_1(void)
 {
 	git_index_entry entry;

@@ -224,7 +224,7 @@ void test_worktree_refs__renaming_reference_updates_worktree_heads(void)
 		    "testrepo-worktree", GIT_BRANCH_LOCAL));
 	cl_git_pass(git_reference_rename(&renamed, branch, "refs/heads/renamed", 0, NULL));
 
-	cl_git_pass(git_reference_lookup(&head, fixture.worktree, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&head, fixture.worktree, GIT_HEAD_REF));
 	cl_assert_equal_i(git_reference_type(head), GIT_REFERENCE_SYMBOLIC);
 	cl_assert_equal_s(git_reference_symbolic_target(head), "refs/heads/renamed");
 
@@ -248,7 +248,8 @@ void test_worktree_refs__creating_refs_uses_commondir(void)
 	   cl_git_pass(git_branch_create(&branch, fixture.worktree, "testbranch", commit, 0));
 	   cl_git_pass(git_branch_lookup(&lookup, fixture.worktree, "testbranch", GIT_BRANCH_LOCAL));
 	   cl_assert(git_reference_cmp(branch, lookup) == 0);
-	   cl_assert(git_fs_path_exists(refpath.ptr));
+	   if (cl_repo_has_ref_format(fixture.worktree, "files"))
+		   cl_assert(git_fs_path_exists(refpath.ptr));
 
 	   git_reference_free(lookup);
 	   git_reference_free(branch);

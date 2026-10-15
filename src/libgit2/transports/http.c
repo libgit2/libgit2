@@ -6,14 +6,16 @@
  */
 
 #include "common.h"
+#include "http.h"
 
-#ifndef GIT_WINHTTP
+bool git_http__expect_continue = false;
+
+#if defined(GIT_HTTP) && !defined(GIT_HTTPS_WINHTTP)
 
 #include "net.h"
 #include "remote.h"
 #include "smart.h"
 #include "auth.h"
-#include "http.h"
 #include "auth_negotiate.h"
 #include "auth_ntlm.h"
 #include "trace.h"
@@ -21,8 +23,6 @@
 #include "streams/socket.h"
 #include "httpclient.h"
 #include "git2/sys/credential.h"
-
-bool git_http__expect_continue = false;
 
 typedef enum {
 	HTTP_STATE_NONE = 0,
@@ -729,14 +729,16 @@ static int http_close(git_smart_subtransport *t)
 	git_net_url_dispose(&transport->server.url);
 	git_net_url_dispose(&transport->proxy.url);
 
+	/* The call below closes associated file descriptors.  */
+	git_http_client_free(transport->http_client);
+	transport->http_client = NULL;
+
 	return 0;
 }
 
 static void http_free(git_smart_subtransport *t)
 {
 	http_subtransport *transport = GIT_CONTAINER_OF(t, http_subtransport, parent);
-
-	git_http_client_free(transport->http_client);
 
 	http_close(t);
 	git__free(transport);
@@ -762,4 +764,18 @@ int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *own
 	return 0;
 }
 
-#endif /* !GIT_WINHTTP */
+#elif !defined(GIT_HTTP)
+
+#include "git2/sys/transport.h"
+
+int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *owner, void *param)
+{
+	GIT_UNUSED(out);
+	GIT_UNUSED(owner);
+	GIT_UNUSED(param);
+
+	git_error_set(GIT_ERROR_INVALID, "cannot create HTTP transport; library was built without HTTP support");
+	return -1;
+}
+
+#endif /* GIT_HTTP && !GIT_HTTPS_WINHTTP */

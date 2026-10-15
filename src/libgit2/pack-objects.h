@@ -94,6 +94,7 @@ struct git_packbuilder {
 	size_t cache_max_small_delta_size;
 	size_t big_file_threshold;
 	size_t window_memory_limit;
+	size_t window_size;
 
 	unsigned int nr_threads; /* nr of threads to use */
 

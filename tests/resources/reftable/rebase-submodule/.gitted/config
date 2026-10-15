@@ -1,0 +1,11 @@
+[core]
+	repositoryformatversion = 1
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[branch "asparagus"]
+	rebase = true
+[branch "master"]
+	rebase = true
+[extensions]
+	refstorage = reftable

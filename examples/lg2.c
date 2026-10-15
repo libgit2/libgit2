@@ -29,6 +29,7 @@ struct {
 	{ "ls-remote",    lg2_ls_remote,    1 },
 	{ "merge",        lg2_merge,        1 },
 	{ "push",         lg2_push,        1  },
+	{ "rebase",       lg2_rebase,       0 },
 	{ "remote",       lg2_remote,       1 },
 	{ "rev-list",     lg2_rev_list,     1 },
 	{ "rev-parse",    lg2_rev_parse,    1 },

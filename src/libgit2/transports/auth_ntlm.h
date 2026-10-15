@@ -13,15 +13,7 @@
 /* NTLM requires a full request/challenge/response */
 #define GIT_AUTH_STEPS_NTLM 2
 
-#if defined(GIT_NTLM) || defined(GIT_WIN32)
-
-#if defined(GIT_OPENSSL)
-# define CRYPT_OPENSSL
-#elif defined(GIT_MBEDTLS)
-# define CRYPT_MBEDTLS
-#elif defined(GIT_SECURE_TRANSPORT)
-# define CRYPT_COMMONCRYPTO
-#endif
+#if defined(GIT_AUTH_NTLM)
 
 extern int git_http_auth_ntlm(
 	git_http_auth_context **out,
@@ -31,7 +23,7 @@ extern int git_http_auth_ntlm(
 
 #define git_http_auth_ntlm git_http_auth_dummy
 
-#endif /* GIT_NTLM */
+#endif /* GIT_AUTH_NTLM */
 
 #endif
 

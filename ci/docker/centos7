@@ -1,22 +1,39 @@
 ARG BASE=centos:7
 
-FROM ${BASE} AS yum
+FROM ${BASE} AS vault
+RUN sed -i 's/mirror\.centos\.org/vault.centos.org/g' /etc/yum.repos.d/CentOS-*.repo && \
+	sed -i 's/^#.*baseurl=http/baseurl=http/g' /etc/yum.repos.d/CentOS-*.repo && \
+	sed -i 's/^mirrorlist=http/#mirrorlist=http/g' /etc/yum.repos.d/CentOS-*.repo
+
+FROM vault AS yum
 RUN yum install -y \
 	which \
 	bzip2 \
-	git \
 	libarchive \
+	libcurl-devel \
+	expat-devel \
+	gettext \
 	gcc \
 	gcc-c++ \
 	make \
 	openssl-devel \
 	openssh-server \
-	git-daemon \
 	java-1.8.0-openjdk-headless \
 	sudo \
-	python
+	python \
+	perl
 
-FROM yum AS libssh2
+FROM yum AS git
+RUN cd /tmp && \
+    curl --location --silent --show-error https://github.com/git/git/archive/refs/tags/v2.34.1.tar.gz | \
+        tar -xz && \
+    cd git-2.34.1 && \
+    make && \
+    make prefix=/usr install && \
+    cd .. && \
+    rm -rf git-2.34.1
+
+FROM git AS libssh2
 RUN cd /tmp && \
     curl --location --silent --show-error https://www.libssh2.org/download/libssh2-1.11.0.tar.gz | tar -xz && \
     cd libssh2-1.11.0 && \
@@ -58,3 +75,6 @@ RUN if [ "${UID}" != "" ]; then USER_ARG="--uid ${UID}"; fi && \
 FROM adduser AS configure
 ENV PKG_CONFIG_PATH /usr/local/lib/pkgconfig
 RUN mkdir /var/run/sshd
+
+FROM configure AS bonus
+RUN yum install -y openssh-clients

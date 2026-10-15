@@ -1,0 +1,9 @@
+#!/bin/bash -e
+
+. "$(dirname "$0")/benchmark_helpers.sh"
+
+needs_admin
+
+gitbench --prepare "create_text_file text_1kb 1024 &&
+                    flush_disk_cache" \
+         hash-object "text_1kb"

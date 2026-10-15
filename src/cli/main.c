@@ -33,11 +33,13 @@ const cli_cmd_spec cli_cmds[] = {
 	{ "blame",       cmd_blame,       "Show the origin of each line of a file" },
 	{ "cat-file",    cmd_cat_file,    "Display an object in the repository" },
 	{ "clone",       cmd_clone,       "Clone a repository into a new directory" },
+	{ "commit",      cmd_commit,      "Commit the current contents of the index" },
 	{ "config",      cmd_config,      "View or set configuration values " },
 	{ "hash-object", cmd_hash_object, "Hash a raw object and product its object ID" },
 	{ "help",        cmd_help,        "Display help information" },
 	{ "index-pack",  cmd_index_pack,  "Create an index for a packfile" },
 	{ "init",        cmd_init,        "Create a new git repository" },
+	{ "version",     cmd_version,     "Show application version information" },
 	{ NULL }
 };
 
@@ -76,6 +78,12 @@ static void help_args(int *argc, char **argv)
 	*argc = 1;
 }
 
+static void version_args(int *argc, char **argv)
+{
+	argv[0] = "version";
+	*argc = 1;
+}
+
 int main(int argc, char **argv)
 {
 	const cli_cmd_spec *cmd;
@@ -110,7 +118,8 @@ int main(int argc, char **argv)
 	}
 
 	if (show_version) {
-		printf("%s version %s\n", PROGRAM_NAME, LIBGIT2_VERSION);
+		version_args(&argc, argv);
+		ret = cmd_version(argc, argv);
 		goto done;
 	}
 

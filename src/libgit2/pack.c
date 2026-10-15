@@ -390,7 +390,7 @@ int git_packfile__object_header(size_t *out, unsigned char *hdr, size_t size, gi
 	unsigned char *hdr_base;
 	unsigned char c;
 
-	GIT_ASSERT_ARG(type >= GIT_OBJECT_COMMIT && type <= GIT_OBJECT_REF_DELTA);
+	GIT_ASSERT_ARG(type >= GIT_OBJECT_COMMIT && type <= GIT_PACKFILE_REF_DELTA);
 
 	/* TODO: add support for chunked objects; see git.git 6c0d19b1 */
 
@@ -532,7 +532,7 @@ int git_packfile_resolve_header(
 	if (error < 0)
 		return error;
 
-	if (type == GIT_OBJECT_OFS_DELTA || type == GIT_OBJECT_REF_DELTA) {
+	if (type == GIT_PACKFILE_OFS_DELTA || type == GIT_PACKFILE_REF_DELTA) {
 		size_t base_size;
 		git_packfile_stream stream;
 
@@ -553,12 +553,12 @@ int git_packfile_resolve_header(
 		base_offset = 0;
 	}
 
-	while (type == GIT_OBJECT_OFS_DELTA || type == GIT_OBJECT_REF_DELTA) {
+	while (type == GIT_PACKFILE_OFS_DELTA || type == GIT_PACKFILE_REF_DELTA) {
 		curpos = base_offset;
 		error = git_packfile_unpack_header(&size, &type, p, &w_curs, &curpos);
 		if (error < 0)
 			return error;
-		if (type != GIT_OBJECT_OFS_DELTA && type != GIT_OBJECT_REF_DELTA)
+		if (type != GIT_PACKFILE_OFS_DELTA && type != GIT_PACKFILE_REF_DELTA)
 			break;
 
 		error = get_delta_base(&base_offset, p, &w_curs, &curpos, type, base_offset);
@@ -635,7 +635,7 @@ static int pack_dependency_chain(git_dependency_chain *chain_out,
 		elem->type = type;
 		elem->base_key = obj_offset;
 
-		if (type != GIT_OBJECT_OFS_DELTA && type != GIT_OBJECT_REF_DELTA)
+		if (type != GIT_PACKFILE_OFS_DELTA && type != GIT_PACKFILE_REF_DELTA)
 			break;
 
 		error = get_delta_base(&base_offset, p, &w_curs, &curpos, type, obj_offset);
@@ -675,7 +675,7 @@ int git_packfile_unpack(
 	git_pack_cache_entry *cached = NULL;
 	struct pack_chain_elem small_stack[SMALL_STACK_SIZE];
 	size_t stack_size = 0, elem_pos, alloclen;
-	git_object_t base_type;
+	int base_type;
 
 	error = git_mutex_lock(&p->lock);
 	if (error < 0) {
@@ -735,8 +735,8 @@ int git_packfile_unpack(
 		if (error < 0)
 			goto cleanup;
 		break;
-	case GIT_OBJECT_OFS_DELTA:
-	case GIT_OBJECT_REF_DELTA:
+	case GIT_PACKFILE_OFS_DELTA:
+	case GIT_PACKFILE_REF_DELTA:
 		error = packfile_error("dependency chain ends in a delta");
 		goto cleanup;
 	default:
@@ -986,7 +986,7 @@ int get_delta_base(
 	 * than the hash size is stupid, as then a REF_DELTA would be
 	 * smaller to store.
 	 */
-	if (type == GIT_OBJECT_OFS_DELTA) {
+	if (type == GIT_PACKFILE_OFS_DELTA) {
 		unsigned used = 0;
 		unsigned char c = base_info[used++];
 		size_t unsigned_base_offset = c & 127;
@@ -1003,9 +1003,9 @@ int get_delta_base(
 			return packfile_error("out of bounds");
 		base_offset = delta_obj_offset - unsigned_base_offset;
 		*curpos += used;
-	} else if (type == GIT_OBJECT_REF_DELTA) {
+	} else if (type == GIT_PACKFILE_REF_DELTA) {
 		git_oid base_oid;
-		git_oid__fromraw(&base_oid, base_info, p->oid_type);
+		git_oid_from_raw(&base_oid, base_info, p->oid_type);
 
 		/* If we have the cooperative cache, search in it first */
 		if (p->has_cache) {
@@ -1375,7 +1375,7 @@ int git_pack_foreach_entry(
 			git_array_clear(oids);
 			GIT_ERROR_CHECK_ALLOC(oid);
 		}
-		git_oid__fromraw(oid, p->ids[i], p->oid_type);
+		git_oid_from_raw(oid, p->ids[i], p->oid_type);
 	}
 
 	git_mutex_unlock(&p->lock);
@@ -1444,7 +1444,7 @@ int git_pack_foreach_entry_offset(
 						ntohl(*((uint32_t *)(large_offset_ptr + 4)));
 			}
 
-			git_oid__fromraw(&current_oid, (index + p->oid_size * i), p->oid_type);
+			git_oid_from_raw(&current_oid, (index + p->oid_size * i), p->oid_type);
 			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
@@ -1453,7 +1453,7 @@ int git_pack_foreach_entry_offset(
 	} else {
 		for (i = 0; i < p->num_objects; i++) {
 			current_offset = ntohl(*(const uint32_t *)(index + (p->oid_size + 4) * i));
-			git_oid__fromraw(&current_oid, (index + (p->oid_size + 4) * i + 4), p->oid_type);
+			git_oid_from_raw(&current_oid, (index + (p->oid_size + 4) * i + 4), p->oid_type);
 			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
 				goto cleanup;
@@ -1598,7 +1598,7 @@ static int pack_entry_find_offset(
 	}
 
 	*offset_out = offset;
-	git_oid__fromraw(found_oid, current, p->oid_type);
+	git_oid_from_raw(found_oid, current, p->oid_type);
 
 #ifdef INDEX_DEBUG_LOOKUP
 	{

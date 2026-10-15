@@ -9,7 +9,7 @@ static git_oid g_shallow_oid;
 
 void test_grafts_shallow__initialize(void)
 {
-	cl_git_pass(git_oid__fromstr(&g_shallow_oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&g_shallow_oid, "be3563ae3f795b2b4353bcce3a527ad0a4f7f644", GIT_OID_SHA1));
 }
 
 void test_grafts_shallow__cleanup(void)
@@ -61,7 +61,7 @@ void test_grafts_shallow__cache_clearing(void)
 	git_grafts *grafts;
 	git_oid tmp_oid;
 
-	cl_git_pass(git_oid__fromstr(&tmp_oid, "0000000000000000000000000000000000000000", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&tmp_oid, "0000000000000000000000000000000000000000", GIT_OID_SHA1));
 	g_repo = cl_git_sandbox_init("shallow.git");
 	cl_git_pass(git_repository_shallow_grafts__weakptr(&grafts, g_repo));
 

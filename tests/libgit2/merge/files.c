@@ -149,15 +149,15 @@ void test_merge_files__automerge_from_index(void)
 	git_merge_file_result result = {0};
 	git_index_entry ancestor, ours, theirs;
 
-	git_oid__fromstr(&ancestor.id, "6212c31dab5e482247d7977e4f0dd3601decf13b", GIT_OID_SHA1);
+	git_oid_from_string(&ancestor.id, "6212c31dab5e482247d7977e4f0dd3601decf13b", GIT_OID_SHA1);
 	ancestor.path = "automergeable.txt";
 	ancestor.mode = 0100644;
 
-	git_oid__fromstr(&ours.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
+	git_oid_from_string(&ours.id, "ee3fa1b8c00aff7fe02065fdb50864bb0d932ccf", GIT_OID_SHA1);
 	ours.path = "automergeable.txt";
 	ours.mode = 0100755;
 
-	git_oid__fromstr(&theirs.id, "058541fc37114bfc1dddf6bd6bffc7fae5c2e6fe", GIT_OID_SHA1);
+	git_oid_from_string(&theirs.id, "058541fc37114bfc1dddf6bd6bffc7fae5c2e6fe", GIT_OID_SHA1);
 	theirs.path = "newname.txt";
 	theirs.mode = 0100644;
 
@@ -180,15 +180,15 @@ void test_merge_files__automerge_zero_byte(void)
 	git_merge_file_result result = {0};
 	git_index_entry ancestor, theirs, ours;
 
-	git_oid__fromstr(&ancestor.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	git_oid_from_string(&ancestor.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
 	ancestor.path = "automergeable.txt";
 	ancestor.mode = GIT_FILEMODE_BLOB;
 
-	git_oid__fromstr(&ours.id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", GIT_OID_SHA1);
+	git_oid_from_string(&ours.id, "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391", GIT_OID_SHA1);
 	ours.path = "empty.txt";
 	ours.mode = GIT_FILEMODE_BLOB;
 
-	git_oid__fromstr(&theirs.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	git_oid_from_string(&theirs.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
 	theirs.path = "automergeable.txt";
 	theirs.mode = GIT_FILEMODE_BLOB;
 
@@ -210,11 +210,11 @@ void test_merge_files__automerge_from_index_delete_file(void)
 	git_merge_file_result result = {0};
 	git_index_entry ancestor, theirs, *ours = NULL;
 
-	git_oid__fromstr(&ancestor.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	git_oid_from_string(&ancestor.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
 	ancestor.path = "automergeable.txt";
 	ancestor.mode = GIT_FILEMODE_BLOB;
 
-	git_oid__fromstr(&theirs.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	git_oid_from_string(&theirs.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
 	theirs.path = "automergeable.txt";
 	theirs.mode = GIT_FILEMODE_BLOB;
 
@@ -236,7 +236,7 @@ void test_merge_files__automerge_from_index_add_file(void)
 	git_merge_file_result result = {0};
 	git_index_entry *ancestor = NULL, ours, *theirs = NULL;
 
-	git_oid__fromstr(&ours.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
+	git_oid_from_string(&ours.id, "d427e0b2e138501a3d15cc376077a3631e15bd46", GIT_OID_SHA1);
 	ours.path = "automergeable.txt";
 	ours.mode = GIT_FILEMODE_BLOB;
 

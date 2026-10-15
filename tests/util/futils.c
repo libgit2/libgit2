@@ -1,6 +1,10 @@
 #include "clar_libgit2.h"
 #include "futils.h"
 
+#if !defined(GIT_WIN32) && !defined(NO_MMAP)
+#include <sys/mman.h>
+#endif
+
 /* Fixture setup and teardown */
 void test_futils__initialize(void)
 {
@@ -35,6 +39,30 @@ void test_futils__writebuffer(void)
 
 	git_str_dispose(&out);
 	git_str_dispose(&append);
+}
+
+void test_futils__mmap_ro_uses_map_private(void)
+{
+#if defined(GIT_WIN32) || defined(NO_MMAP)
+	cl_skip();
+#else
+	const char content[] = "mapped data";
+	const char *path = "futils/mmap-file";
+	git_map map = { 0 };
+	git_file fd;
+
+	cl_git_mkfile(path, content);
+	cl_assert((fd = p_open(path, O_RDWR)) >= 0);
+	cl_git_pass(git_futils_mmap_ro(&map, fd, 0, sizeof(content) - 1));
+
+	/* A private mapping must not propagate changes back to the file. */
+	cl_must_pass(mprotect(map.data, map.len, PROT_READ | PROT_WRITE));
+	((char *)map.data)[0] = 'M';
+	cl_assert_equal_file(content, sizeof(content) - 1, path);
+
+	git_futils_mmap_free(&map);
+	p_close(fd);
+#endif
 }
 
 void test_futils__write_hidden_file(void)

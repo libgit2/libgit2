@@ -1,0 +1,61 @@
+include(SanitizeInput)
+
+find_package(GSSAPI)
+
+if(CMAKE_SYSTEM_NAME MATCHES "Darwin" OR CMAKE_SYSTEM_NAME MATCHES "iOS")
+	include(FindGSSFramework)
+endif()
+
+if(USE_AUTH_NEGOTIATE STREQUAL "" AND NOT USE_GSSAPI STREQUAL "")
+        sanitizeinput(USE_GSSAPI)
+	set(USE_AUTH_NEGOTIATE "${USE_GSSAPI}")
+endif()
+
+sanitizeinput(USE_AUTH_NEGOTIATE)
+
+if((USE_AUTH_NEGOTIATE STREQUAL ON OR USE_AUTH_NEGOTIATE STREQUAL "") AND GSSFRAMEWORK_FOUND)
+	set(USE_AUTH_NEGOTIATE "gssframework")
+elseif((USE_AUTH_NEGOTIATE STREQUAL ON OR USE_AUTH_NEGOTIATE STREQUAL "") AND GSSAPI_FOUND)
+	set(USE_AUTH_NEGOTIATE "gssapi")
+elseif((USE_AUTH_NEGOTIATE STREQUAL ON OR USE_AUTH_NEGOTIATE STREQUAL "") AND WIN32)
+	set(USE_AUTH_NEGOTIATE "sspi")
+elseif(USE_AUTH_NEGOTIATE STREQUAL "")
+	set(USE_AUTH_NEGOTIATE OFF)
+elseif(USE_AUTH_NEGOTIATE STREQUAL ON)
+	message(FATAL_ERROR "negotiate support was requested but no backend is available")
+endif()
+
+if(USE_AUTH_NEGOTIATE STREQUAL "gssframework")
+	if(NOT GSSFRAMEWORK_FOUND)
+		message(FATAL_ERROR "GSS.framework could not be found")
+	endif()
+
+	list(APPEND LIBGIT2_SYSTEM_LIBS ${GSSFRAMEWORK_LIBRARIES})
+
+	set(GIT_AUTH_NEGOTIATE 1)
+	set(GIT_AUTH_NEGOTIATE_GSSFRAMEWORK 1)
+	add_feature_info("Negotiate authentication" ON "using GSS.framework")
+elseif(USE_AUTH_NEGOTIATE STREQUAL "gssapi")
+	if(NOT GSSAPI_FOUND)
+		message(FATAL_ERROR "GSSAPI could not be found")
+	endif()
+
+	list(APPEND LIBGIT2_SYSTEM_LIBS ${GSSAPI_LIBRARIES})
+
+	set(GIT_AUTH_NEGOTIATE 1)
+	set(GIT_AUTH_NEGOTIATE_GSSAPI 1)
+	add_feature_info("Negotiate authentication" ON "using GSSAPI")
+elseif(USE_AUTH_NEGOTIATE STREQUAL "sspi")
+        if(NOT WIN32)
+                message(FATAL_ERROR "SSPI is only available on Win32")
+        endif()
+
+	set(GIT_AUTH_NEGOTIATE 1)
+	set(GIT_AUTH_NEGOTIATE_SSPI 1)
+	add_feature_info("Negotiate authentication" ON "using Win32 SSPI")
+elseif(USE_AUTH_NEGOTIATE STREQUAL OFF)
+	set(GIT_AUTH_NEGOTIATE 0)
+        add_feature_info("Negotiate authentication" OFF "SPNEGO support is disabled")
+else()
+        message(FATAL_ERROR "unknown negotiate option: ${USE_AUTH_NEGOTIATE}")
+endif()

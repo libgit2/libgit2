@@ -115,8 +115,9 @@ static int packbuilder_config(git_packbuilder *pb)
 		   GIT_PACK_DELTA_CACHE_SIZE);
 	config_get("pack.deltaCacheLimit", pb->cache_max_small_delta_size,
 		   GIT_PACK_DELTA_CACHE_LIMIT);
-	config_get("pack.deltaCacheSize", pb->big_file_threshold,
+	config_get("core.bigFileThreshold", pb->big_file_threshold,
 		   GIT_PACK_BIG_FILE_THRESHOLD);
+	config_get("pack.window", pb->window_size, GIT_PACK_WINDOW);
 	config_get("pack.windowMemory", pb->window_memory_limit, 0);
 
 #undef config_get
@@ -338,7 +339,7 @@ static int write_object(
 				goto done;
 
 		data_len = po->delta_size;
-		type = GIT_OBJECT_REF_DELTA;
+		type = GIT_PACKFILE_REF_DELTA;
 	} else {
 		if ((error = git_odb_read(&obj, pb->odb, &po->id)) < 0)
 			goto done;
@@ -354,7 +355,7 @@ static int write_object(
 	    (error = git_hash_update(&pb->ctx, hdr, hdr_len)) < 0)
 		goto done;
 
-	if (type == GIT_OBJECT_REF_DELTA) {
+	if (type == GIT_PACKFILE_REF_DELTA) {
 		if ((error = write_cb(po->delta->id.id, oid_size, cb_data)) < 0 ||
 		    (error = git_hash_update(&pb->ctx, po->delta->id.id, oid_size)) < 0)
 			goto done;
@@ -672,6 +673,8 @@ static int write_pack(git_packbuilder *pb,
 
 		pb->nr_remaining -= pb->nr_written;
 	} while (pb->nr_remaining && i < pb->nr_objects);
+
+	memset(&entry_oid, 0, sizeof(git_oid));
 
 	if ((error = git_hash_final(entry_oid.id, &pb->ctx)) < 0)
 		goto done;
@@ -1339,7 +1342,7 @@ int git_packbuilder__prepare(git_packbuilder *pb)
 	size_t i, n = 0;
 	int error;
 
-	if (pb->nr_objects == 0 || pb->done)
+	if (pb->nr_objects == 0 || pb->done || pb->window_size == 0)
 		return 0; /* nothing to do */
 
 	/*
@@ -1367,7 +1370,7 @@ int git_packbuilder__prepare(git_packbuilder *pb)
 	if (n > 1) {
 		git__tsort((void **)delta_list, n, type_size_sort);
 		if ((error = ll_find_deltas(pb, delta_list, n,
-				   GIT_PACK_WINDOW + 1,
+				   pb->window_size + 1,
 				   GIT_PACK_DEPTH)) < 0) {
 			git__free(delta_list);
 			return error;
@@ -1437,15 +1440,11 @@ int git_packbuilder_write(
 	opts.progress_cb = progress_cb;
 	opts.progress_cb_payload = progress_cb_payload;
 
-#ifdef GIT_EXPERIMENTAL_SHA256
 	opts.mode = mode;
 	opts.odb = pb->odb;
 	opts.oid_type = pb->oid_type;
 
 	error = git_indexer_new(&indexer, path, &opts);
-#else
-	error = git_indexer_new(&indexer, path, mode, pb->odb, &opts);
-#endif
 
 	if (error < 0)
 		goto cleanup;

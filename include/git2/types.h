@@ -76,9 +76,7 @@ typedef enum {
 	GIT_OBJECT_COMMIT =    1, /**< A commit object. */
 	GIT_OBJECT_TREE =      2, /**< A tree (directory listing) object. */
 	GIT_OBJECT_BLOB =      3, /**< A file revision object. */
-	GIT_OBJECT_TAG =       4, /**< An annotated tag object. */
-	GIT_OBJECT_OFS_DELTA = 6, /**< A delta, base is given by an offset. */
-	GIT_OBJECT_REF_DELTA = 7  /**< A delta, base is given by object id. */
+	GIT_OBJECT_TAG =       4  /**< An annotated tag object. */
 } git_object_t;
 
 /**

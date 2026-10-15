@@ -28,13 +28,14 @@ int git_tls_stream_new(git_stream **out, const char *host, const char *port)
 	if ((error = git_stream_registry_lookup(&custom, GIT_STREAM_TLS)) == 0) {
 		init = custom.init;
 	} else if (error == GIT_ENOTFOUND) {
-#ifdef GIT_SECURE_TRANSPORT
+#if defined(GIT_HTTPS_SECURETRANSPORT)
 		init = git_stransport_stream_new;
-#elif defined(GIT_OPENSSL)
+#elif defined(GIT_HTTPS_OPENSSL) || \
+      defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 		init = git_openssl_stream_new;
-#elif defined(GIT_MBEDTLS)
+#elif defined(GIT_HTTPS_MBEDTLS)
 		init = git_mbedtls_stream_new;
-#elif defined(GIT_SCHANNEL)
+#elif defined(GIT_HTTPS_SCHANNEL)
 		init = git_schannel_stream_new;
 #endif
 	} else {
@@ -60,13 +61,14 @@ int git_tls_stream_wrap(git_stream **out, git_stream *in, const char *host)
 	if (git_stream_registry_lookup(&custom, GIT_STREAM_TLS) == 0) {
 		wrap = custom.wrap;
 	} else {
-#ifdef GIT_SECURE_TRANSPORT
+#if defined(GIT_HTTPS_SECURETRANSPORT)
 		wrap = git_stransport_stream_wrap;
-#elif defined(GIT_OPENSSL)
+#elif defined(GIT_HTTPS_OPENSSL) || \
+      defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 		wrap = git_openssl_stream_wrap;
-#elif defined(GIT_MBEDTLS)
+#elif defined(GIT_HTTPS_MBEDTLS)
 		wrap = git_mbedtls_stream_wrap;
-#elif defined(GIT_SCHANNEL)
+#elif defined(GIT_HTTPS_SCHANNEL)
 		wrap = git_schannel_stream_wrap;
 #endif
 	}

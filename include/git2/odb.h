@@ -42,7 +42,13 @@ typedef enum {
  */
 typedef int GIT_CALLBACK(git_odb_foreach_cb)(const git_oid *id, void *payload);
 
-/** Options for configuring a loose object backend. */
+/**
+ * Options for configuring a loose object backend.
+ *
+ * @options[version] GIT_ODB_OPTIONS_VERSION
+ * @options[init_macro] GIT_ODB_OPTIONS_INIT
+ * @options[init_function] git_odb_options_init
+ */
 typedef struct {
 	unsigned int version; /**< version for the struct */
 
@@ -62,33 +68,19 @@ typedef struct {
  */
 #define GIT_ODB_OPTIONS_INIT { GIT_ODB_OPTIONS_VERSION }
 
-#ifdef GIT_EXPERIMENTAL_SHA256
-
 /**
- * Create a new object database with no backends.
+ * Initialize git_odb_options_options structure
  *
- * @param[out] odb location to store the database pointer, if opened.
- * @param opts the options for this object database or NULL for defaults
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_new(git_odb **odb, const git_odb_options *opts);
-
-/**
- * Create a new object database and automatically add loose and packed
- * backends.
+ * Initialize a `git_odb_options` with default values. Equivalent to
+ * creating an instance with GIT_ODB_OPTIONS_INIT.
  *
- * @param[out] odb_out location to store the database pointer, if opened.
- *			Set to NULL if the open failed.
- * @param objects_dir path of the backends' "objects" directory.
- * @param opts the options for this object database or NULL for defaults
- * @return 0 or an error code
+ * @param opts The `git_odb_options` struct to initialize.
+ * @param version The struct version; pass `GIT_ODB_OPTIONS_VERSION`
+ * @return 0 on success or -1 on failure.
  */
-GIT_EXTERN(int) git_odb_open(
-	git_odb **odb_out,
-	const char *objects_dir,
-	const git_odb_options *opts);
-
-#else
+GIT_EXTERN(int) git_odb_options_init(
+	git_odb_options *opts,
+	unsigned int version);
 
 /**
  * Create a new object database with no backends.
@@ -96,10 +88,24 @@ GIT_EXTERN(int) git_odb_open(
  * Before the ODB can be used for read/writing, a custom database
  * backend must be manually added using `git_odb_add_backend()`
  *
+ * @note This API only supports SHA1 object databases
+ * @see git_odb_new_ext
+ *
  * @param[out] odb location to store the database pointer, if opened.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_new(git_odb **odb);
+
+/**
+ * Create a new object database with no backends.
+ *
+ * @param[out] odb location to store the database pointer, if opened.
+ * @param opts the options for this object database or NULL for defaults
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_new_ext(
+	git_odb **odb,
+	const git_odb_options *opts);
 
 /**
  * Create a new object database and automatically add
@@ -112,13 +118,30 @@ GIT_EXTERN(int) git_odb_new(git_odb **odb);
  *		assuming `objects_dir` as the Objects folder which
  *		contains a 'pack/' folder with the corresponding data
  *
+ * @note This API only supports SHA1 object databases
+ * @see git_odb_open_ext
+ *
  * @param[out] odb_out location to store the database pointer, if opened.
  *			Set to NULL if the open failed.
  * @param objects_dir path of the backends' "objects" directory.
  * @return 0 or an error code
  */
 GIT_EXTERN(int) git_odb_open(git_odb **odb_out, const char *objects_dir);
-#endif
+
+/**
+ * Create a new object database and automatically add loose and packed
+ * backends.
+ *
+ * @param[out] odb_out location to store the database pointer, if opened.
+ *			Set to NULL if the open failed.
+ * @param objects_dir path of the backends' "objects" directory.
+ * @param opts the options for this object database or NULL for defaults
+ * @return 0 or an error code
+ */
+GIT_EXTERN(int) git_odb_open_ext(
+	git_odb **odb_out,
+	const char *objects_dir,
+	const git_odb_options *opts);
 
 /**
  * Add an on-disk alternate to an existing Object DB.
@@ -361,13 +384,17 @@ GIT_EXTERN(int) git_odb_write(git_oid *out, git_odb *odb, const void *data, size
  *
  * @see git_odb_stream
  *
- * @param out pointer where to store the stream
+ * @param[out] out pointer where to store the stream
  * @param db object database where the stream will write
  * @param size final size of the object that will be written
  * @param type type of the object that will be written
  * @return 0 if the stream was created; error code otherwise
  */
-GIT_EXTERN(int) git_odb_open_wstream(git_odb_stream **out, git_odb *db, git_object_size_t size, git_object_t type);
+GIT_EXTERN(int) git_odb_open_wstream(
+	git_odb_stream **out,
+	git_odb *db,
+	git_object_size_t size,
+	git_object_t type);
 
 /**
  * Write to an odb stream
@@ -435,8 +462,8 @@ GIT_EXTERN(void) git_odb_stream_free(git_odb_stream *stream);
  *
  * @see git_odb_stream
  *
- * @param out pointer where to store the stream
- * @param len pointer where to store the length of the object
+ * @param[out] out pointer where to store the stream
+ * @param[out] len pointer where to store the length of the object
  * @param type pointer where to store the type of the object
  * @param db object database where the stream will read from
  * @param oid oid of the object the stream will read from
@@ -460,7 +487,7 @@ GIT_EXTERN(int) git_odb_open_rstream(
  *
  * @see git_odb_writepack
  *
- * @param out pointer to the writepack functions
+ * @param[out] out pointer to the writepack functions
  * @param db object database where the stream will read from
  * @param progress_cb function to call with progress information.
  * Be aware that this is called inline with network and indexing operations,
@@ -488,72 +515,6 @@ GIT_EXTERN(int) git_odb_write_pack(
  */
 GIT_EXTERN(int) git_odb_write_multi_pack_index(
 	git_odb *db);
-
-#ifdef GIT_EXPERIMENTAL_SHA256
-
-/**
- * Generate the object ID (in SHA1 or SHA256 format) for a given data buffer.
- *
- * @param[out] oid the resulting object ID.
- * @param data data to hash
- * @param len size of the data
- * @param object_type of the data to hash
- * @param oid_type the oid type to hash to
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_hash(
-	git_oid *oid,
-	const void *data,
-	size_t len,
-	git_object_t object_type,
-	git_oid_t oid_type);
-
-/**
- * Determine the object ID of a file on disk.
- *
- * @param[out] oid oid structure the result is written into.
- * @param path file to read and determine object id for
- * @param object_type of the data to hash
- * @param oid_type the oid type to hash to
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_hashfile(
-	git_oid *oid,
-	const char *path,
-	git_object_t object_type,
-	git_oid_t oid_type);
-#else
-
-/**
- * Determine the object-ID (sha1 or sha256 hash) of a data buffer
- *
- * The resulting OID will be the identifier for the data buffer as if
- * the data buffer it were to written to the ODB.
- *
- * @param[out] oid the resulting object-ID.
- * @param data data to hash
- * @param len size of the data
- * @param object_type of the data to hash
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_hash(git_oid *oid, const void *data, size_t len, git_object_t object_type);
-
-/**
- * Read a file from disk and fill a git_oid with the object id
- * that the file would have if it were written to the Object
- * Database as an object of the given type (w/o applying filters).
- * Similar functionality to git.git's `git hash-object` without
- * the `-w` flag, however, with the --no-filters flag.
- * If you need filters, see git_repository_hashfile.
- *
- * @param[out] oid oid structure the result is written into.
- * @param path file to read and determine object id for
- * @param object_type of the data to hash
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_odb_hashfile(git_oid *oid, const char *path, git_object_t object_type);
-
-#endif
 
 /**
  * Create a copy of an odb_object
@@ -668,7 +629,7 @@ GIT_EXTERN(size_t) git_odb_num_backends(git_odb *odb);
 /**
  * Lookup an ODB backend object by index
  *
- * @param out output pointer to ODB backend at pos
+ * @param[out] out output pointer to ODB backend at pos
  * @param odb object database
  * @param pos index into object database backend list
  * @return 0 on success, GIT_ENOTFOUND if pos is invalid, other errors < 0

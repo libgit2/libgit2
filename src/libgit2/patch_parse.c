@@ -178,7 +178,7 @@ static int parse_header_oid(
 	}
 
 	if (len < GIT_OID_MINPREFIXLEN || len > hexsize ||
-		git_oid__fromstrn(oid, ctx->parse_ctx.line, len, ctx->opts.oid_type) < 0)
+		git_oid_from_prefix(oid, ctx->parse_ctx.line, len, ctx->opts.oid_type) < 0)
 		return git_parse_err("invalid hex formatted object id at line %"PRIuZ,
 			ctx->parse_ctx.line_num);
 
@@ -428,6 +428,7 @@ static const parse_header_transition transitions[] = {
 
 	/* Next patch */
 	{ "diff --git "         , STATE_END,        0,                NULL },
+	{ "diff --git "         , STATE_INDEX,      0,                NULL },
 	{ "@@ -"                , STATE_END,        0,                NULL },
 	{ "-- "                 , STATE_INDEX,      0,                NULL },
 	{ "-- "                 , STATE_END,        0,                NULL },
@@ -486,7 +487,7 @@ static int parse_header_git(
 		}
 	}
 
-	if (state != STATE_END) {
+	if (state != STATE_END && state != STATE_INDEX) {
 		error = git_parse_err("unexpected header line %"PRIuZ, ctx->parse_ctx.line_num);
 		goto done;
 	}

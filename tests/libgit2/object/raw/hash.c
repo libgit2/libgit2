@@ -8,11 +8,19 @@
 
 static void hash_object_pass(git_oid *oid, git_rawobj *obj)
 {
-	cl_git_pass(git_odb__hash(oid, obj->data, obj->len, obj->type, GIT_OID_SHA1));
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
+
+	id_opts.object_type = obj->type;
+
+	cl_git_pass(git_object_id_from_buffer(oid, obj->data, obj->len, &id_opts));
 }
 static void hash_object_fail(git_oid *oid, git_rawobj *obj)
 {
-	cl_git_fail(git_odb__hash(oid, obj->data, obj->len, obj->type, GIT_OID_SHA1));
+	git_object_id_options id_opts = GIT_OBJECT_ID_OPTIONS_INIT;
+
+	id_opts.object_type = obj->type;
+
+	cl_git_fail(git_object_id_from_buffer(oid, obj->data, obj->len, &id_opts));
 }
 
 static char *hello_id = "22596363b3de40b06f981fb85d82312e8c0ed511";
@@ -32,16 +40,16 @@ void test_object_raw_hash__hash_by_blocks(void)
 	/* should already be init'd */
 	cl_git_pass(git_hash_update(&ctx, hello_text, strlen(hello_text)));
 	cl_git_pass(git_hash_final(hash, &ctx));
-	cl_git_pass(git_oid__fromraw(&id2, hash, GIT_OID_SHA1));
-	cl_git_pass(git_oid__fromstr(&id1, hello_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_raw(&id2, hash, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, hello_id, GIT_OID_SHA1));
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 
 	/* reinit should permit reuse */
 	cl_git_pass(git_hash_init(&ctx));
 	cl_git_pass(git_hash_update(&ctx, bye_text, strlen(bye_text)));
 	cl_git_pass(git_hash_final(hash, &ctx));
-	cl_git_pass(git_oid__fromraw(&id2, hash, GIT_OID_SHA1));
-	cl_git_pass(git_oid__fromstr(&id1, bye_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_raw(&id2, hash, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, bye_id, GIT_OID_SHA1));
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 
 	git_hash_ctx_cleanup(&ctx);
@@ -52,9 +60,9 @@ void test_object_raw_hash__hash_buffer_in_single_call(void)
 	git_oid id1, id2;
 	unsigned char hash[GIT_HASH_SHA1_SIZE];
 
-	cl_git_pass(git_oid__fromstr(&id1, hello_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, hello_id, GIT_OID_SHA1));
 	cl_git_pass(git_hash_buf(hash, hello_text, strlen(hello_text), GIT_HASH_ALGORITHM_SHA1));
-	cl_git_pass(git_oid__fromraw(&id2, hash, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_raw(&id2, hash, GIT_OID_SHA1));
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
 
@@ -64,7 +72,7 @@ void test_object_raw_hash__hash_vector(void)
 	git_str_vec vec[2];
 	unsigned char hash[GIT_HASH_SHA1_SIZE];
 
-	cl_git_pass(git_oid__fromstr(&id1, hello_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, hello_id, GIT_OID_SHA1));
 
 	vec[0].data = hello_text;
 	vec[0].len  = 4;
@@ -72,7 +80,7 @@ void test_object_raw_hash__hash_vector(void)
 	vec[1].len  = strlen(hello_text)-4;
 
 	git_hash_vec(hash, vec, 2, GIT_HASH_ALGORITHM_SHA1);
-	git_oid__fromraw(&id2, hash, GIT_OID_SHA1);
+	git_oid_from_raw(&id2, hash, GIT_OID_SHA1);
 
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
@@ -81,22 +89,19 @@ void test_object_raw_hash__hash_junk_data(void)
 {
 	git_oid id, id_zero;
 
-	cl_git_pass(git_oid__fromstr(&id_zero, zero_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id_zero, zero_id, GIT_OID_SHA1));
 
 	/* invalid types: */
 	junk_obj.data = some_data;
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = 0; /* EXT1 */
+	junk_obj.type = 5; /* unused */
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = 5; /* EXT2 */
+	junk_obj.type = 6; /* packfile offset delta */
 	hash_object_fail(&id, &junk_obj);
 
-	junk_obj.type = GIT_OBJECT_OFS_DELTA;
-	hash_object_fail(&id, &junk_obj);
-
-	junk_obj.type = GIT_OBJECT_REF_DELTA;
+	junk_obj.type = 7; /* packfile ref delta */
 	hash_object_fail(&id, &junk_obj);
 
 	junk_obj.type = 42;
@@ -116,7 +121,7 @@ void test_object_raw_hash__hash_commit_object(void)
 {
 	git_oid id1, id2;
 
-	cl_git_pass(git_oid__fromstr(&id1, commit_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, commit_id, GIT_OID_SHA1));
 	hash_object_pass(&id2, &commit_obj);
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
@@ -125,7 +130,7 @@ void test_object_raw_hash__hash_tree_object(void)
 {
 	git_oid id1, id2;
 
-	cl_git_pass(git_oid__fromstr(&id1, tree_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, tree_id, GIT_OID_SHA1));
 	hash_object_pass(&id2, &tree_obj);
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
@@ -134,7 +139,7 @@ void test_object_raw_hash__hash_tag_object(void)
 {
 	git_oid id1, id2;
 
-	cl_git_pass(git_oid__fromstr(&id1, tag_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, tag_id, GIT_OID_SHA1));
 	hash_object_pass(&id2, &tag_obj);
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
@@ -143,7 +148,7 @@ void test_object_raw_hash__hash_zero_length_object(void)
 {
 	git_oid id1, id2;
 
-	cl_git_pass(git_oid__fromstr(&id1, zero_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, zero_id, GIT_OID_SHA1));
 	hash_object_pass(&id2, &zero_obj);
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
@@ -152,7 +157,7 @@ void test_object_raw_hash__hash_one_byte_object(void)
 {
 	git_oid id1, id2;
 
-	cl_git_pass(git_oid__fromstr(&id1, one_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, one_id, GIT_OID_SHA1));
 	hash_object_pass(&id2, &one_obj);
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
@@ -161,7 +166,7 @@ void test_object_raw_hash__hash_two_byte_object(void)
 {
 	git_oid id1, id2;
 
-	cl_git_pass(git_oid__fromstr(&id1, two_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, two_id, GIT_OID_SHA1));
 	hash_object_pass(&id2, &two_obj);
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }
@@ -170,7 +175,7 @@ void test_object_raw_hash__hash_multi_byte_object(void)
 {
 	git_oid id1, id2;
 
-	cl_git_pass(git_oid__fromstr(&id1, some_id, GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&id1, some_id, GIT_OID_SHA1));
 	hash_object_pass(&id2, &some_obj);
 	cl_assert(git_oid_cmp(&id1, &id2) == 0);
 }

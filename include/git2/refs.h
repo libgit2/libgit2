@@ -60,12 +60,15 @@ GIT_EXTERN(int) git_reference_name_to_id(
  * Apply the git precedence rules to the given shorthand to determine
  * which reference the user is referring to.
  *
- * @param out pointer in which to store the reference
+ * @param[out] out pointer in which to store the reference
  * @param repo the repository in which to look
  * @param shorthand the short name for the reference
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, const char *shorthand);
+GIT_EXTERN(int) git_reference_dwim(
+	git_reference **out,
+	git_repository *repo,
+	const char *shorthand);
 
 /**
  * Conditionally create a new symbolic reference.
@@ -100,7 +103,7 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
  * If `current_value` is all zeros, this function will return GIT_EMODIFIED
  * if the ref already exists.
  *
- * @param out Pointer to the newly created reference
+ * @param[out] out Pointer to the newly created reference
  * @param repo Repository where that reference will live
  * @param name The name of the reference
  * @param target The target of the reference
@@ -109,7 +112,14 @@ GIT_EXTERN(int) git_reference_dwim(git_reference **out, git_repository *repo, co
  * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC, GIT_EMODIFIED or an error code
  */
-GIT_EXTERN(int) git_reference_symbolic_create_matching(git_reference **out, git_repository *repo, const char *name, const char *target, int force, const char *current_value, const char *log_message);
+GIT_EXTERN(int) git_reference_symbolic_create_matching(
+	git_reference **out,
+	git_repository *repo,
+	const char *name,
+	const char *target,
+	int force,
+	const char *current_value,
+	const char *log_message);
 
 /**
  * Create a new symbolic reference.
@@ -137,7 +147,7 @@ GIT_EXTERN(int) git_reference_symbolic_create_matching(git_reference **out, git_
  * not belong in the standard set (HEAD, branches and remote-tracking
  * branches) and it does not have a reflog.
  *
- * @param out Pointer to the newly created reference
+ * @param[out] out Pointer to the newly created reference
  * @param repo Repository where that reference will live
  * @param name The name of the reference
  * @param target The target of the reference
@@ -145,7 +155,13 @@ GIT_EXTERN(int) git_reference_symbolic_create_matching(git_reference **out, git_
  * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repository *repo, const char *name, const char *target, int force, const char *log_message);
+GIT_EXTERN(int) git_reference_symbolic_create(
+	git_reference **out,
+	git_repository *repo,
+	const char *name,
+	const char *target,
+	int force,
+	const char *log_message);
 
 /**
  * Create a new direct reference.
@@ -174,7 +190,7 @@ GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repositor
  * not belong in the standard set (HEAD, branches and remote-tracking
  * branches) and it does not have a reflog.
  *
- * @param out Pointer to the newly created reference
+ * @param[out] out Pointer to the newly created reference
  * @param repo Repository where that reference will live
  * @param name The name of the reference
  * @param id The object id pointed to by the reference.
@@ -182,7 +198,13 @@ GIT_EXTERN(int) git_reference_symbolic_create(git_reference **out, git_repositor
  * @param log_message The one line long message to be appended to the reflog
  * @return 0 on success, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force, const char *log_message);
+GIT_EXTERN(int) git_reference_create(
+	git_reference **out,
+	git_repository *repo,
+	const char *name,
+	const git_oid *id,
+	int force,
+	const char *log_message);
 
 /**
  * Conditionally create new direct reference
@@ -215,7 +237,7 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
  * of updating does not match the one passed through `current_id`
  * (i.e. if the ref has changed since the user read it).
  *
- * @param out Pointer to the newly created reference
+ * @param[out] out Pointer to the newly created reference
  * @param repo Repository where that reference will live
  * @param name The name of the reference
  * @param id The object id pointed to by the reference.
@@ -225,7 +247,14 @@ GIT_EXTERN(int) git_reference_create(git_reference **out, git_repository *repo, 
  * @return 0 on success, GIT_EMODIFIED if the value of the reference
  * has changed, GIT_EEXISTS, GIT_EINVALIDSPEC or an error code
  */
-GIT_EXTERN(int) git_reference_create_matching(git_reference **out, git_repository *repo, const char *name, const git_oid *id, int force, const git_oid *current_id, const char *log_message);
+GIT_EXTERN(int) git_reference_create_matching(
+	git_reference **out,
+	git_repository *repo,
+	const char *name,
+	const git_oid *id,
+	int force,
+	const git_oid *current_id,
+	const char *log_message);
 
 /**
  * Get the OID pointed to by a direct reference.
@@ -295,11 +324,13 @@ GIT_EXTERN(const char *) git_reference_name(const git_reference *ref);
  * If a direct reference is passed as an argument, a copy of that
  * reference is returned. This copy must be manually freed too.
  *
- * @param out Pointer to the peeled reference
+ * @param[out] out Pointer to the peeled reference
  * @param ref The reference
  * @return 0 or an error code
  */
-GIT_EXTERN(int) git_reference_resolve(git_reference **out, const git_reference *ref);
+GIT_EXTERN(int) git_reference_resolve(
+	git_reference **out,
+	const git_reference *ref);
 
 /**
  * Get the repository where a reference resides.
@@ -323,7 +354,7 @@ GIT_EXTERN(git_repository *) git_reference_owner(const git_reference *ref);
  * not belong in the standard set (HEAD, branches and remote-tracking
  * branches) and it does not have a reflog.
  *
- * @param out Pointer to the newly created reference
+ * @param[out] out Pointer to the newly created reference
  * @param ref The reference
  * @param target The new target for the reference
  * @param log_message The one line long message to be appended to the reflog
@@ -342,7 +373,7 @@ GIT_EXTERN(int) git_reference_symbolic_set_target(
  *
  * The new reference will be written to disk, overwriting the given reference.
  *
- * @param out Pointer to the newly created reference
+ * @param[out] out Pointer to the newly created reference
  * @param ref The reference
  * @param id The new target OID for the reference
  * @param log_message The one line long message to be appended to the reflog
@@ -532,7 +563,7 @@ GIT_EXTERN(int) git_reference_iterator_new(
  * Create an iterator for the repo's references that match the
  * specified glob
  *
- * @param out pointer in which to store the iterator
+ * @param[out] out pointer in which to store the iterator
  * @param repo the repository
  * @param glob the glob to match against the reference names
  * @return 0 or an error code
@@ -549,7 +580,9 @@ GIT_EXTERN(int) git_reference_iterator_glob_new(
  * @param iter the iterator
  * @return 0, GIT_ITEROVER if there are no more; or an error code
  */
-GIT_EXTERN(int) git_reference_next(git_reference **out, git_reference_iterator *iter);
+GIT_EXTERN(int) git_reference_next(
+	git_reference **out,
+	git_reference_iterator *iter);
 
 /**
  * Get the next reference's name

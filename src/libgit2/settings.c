@@ -81,9 +81,6 @@ static int config_level_to_sysdir(int *out, int config_level)
 	case GIT_CONFIG_LEVEL_GLOBAL:
 		*out = GIT_SYSDIR_GLOBAL;
 		return 0;
-	case GIT_CONFIG_LEVEL_PROGRAMDATA:
-		*out = GIT_SYSDIR_PROGRAMDATA;
-		return 0;
 	default:
 		break;
 	}
@@ -181,7 +178,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_GET_CACHED_MEMORY:
-		*(va_arg(ap, ssize_t *)) = git_cache__current_storage.val;
+		*(va_arg(ap, ssize_t *)) = git_atomic_ssize_get(&git_cache__current_storage);
 		*(va_arg(ap, ssize_t *)) = git_cache__max_storage;
 		break;
 
@@ -205,13 +202,13 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_SSL_CERT_LOCATIONS:
-#ifdef GIT_OPENSSL
+#if defined(GIT_HTTPS_OPENSSL) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 		{
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
 			error = git_openssl__set_cert_location(file, path);
 		}
-#elif defined(GIT_MBEDTLS)
+#elif defined(GIT_HTTPS_MBEDTLS)
 		{
 			const char *file = va_arg(ap, const char *);
 			const char *path = va_arg(ap, const char *);
@@ -224,7 +221,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_ADD_SSL_X509_CERT:
-#ifdef GIT_OPENSSL
+#if defined(GIT_HTTPS_OPENSSL) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 		{
 			X509 *cert = va_arg(ap, X509 *);
 			error = git_openssl__add_x509_cert(cert);
@@ -304,7 +301,9 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_SET_SSL_CIPHERS:
-#if (GIT_OPENSSL || GIT_MBEDTLS)
+#if defined(GIT_HTTPS_OPENSSL) || \
+    defined(GIT_HTTPS_OPENSSL_DYNAMIC) || \
+    defined(GIT_HTTPS_MBEDTLS)
 		{
 			git__free(git__ssl_ciphers);
 			git__ssl_ciphers = git__strdup(va_arg(ap, const char *));
@@ -474,4 +473,27 @@ int git_libgit2_opts(int key, ...)
 	va_end(ap);
 
 	return error;
+}
+
+const char *git_libgit2_buildinfo(git_buildinfo_t key)
+{
+	switch (key) {
+
+#ifdef GIT_BUILD_CPU
+	case GIT_BUILDINFO_CPU:
+		return GIT_BUILD_CPU;
+		break;
+#endif
+
+#ifdef GIT_BUILD_COMMIT
+	case GIT_BUILDINFO_COMMIT:
+		return GIT_BUILD_COMMIT;
+		break;
+#endif
+
+	default:
+		break;
+	}
+
+	return NULL;
 }

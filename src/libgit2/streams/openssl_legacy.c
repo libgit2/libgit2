@@ -11,14 +11,14 @@
 #include "runtime.h"
 #include "git2/sys/openssl.h"
 
-#if defined(GIT_OPENSSL) && !defined(GIT_OPENSSL_DYNAMIC)
+#if defined(GIT_HTTPS_OPENSSL) && !defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 # include <openssl/ssl.h>
 # include <openssl/err.h>
 # include <openssl/x509v3.h>
 # include <openssl/bio.h>
 #endif
 
-#if defined(GIT_OPENSSL_LEGACY) || defined(GIT_OPENSSL_DYNAMIC)
+#if defined(GIT_HTTPS_OPENSSL_LEGACY) || defined(GIT_HTTPS_OPENSSL_DYNAMIC)
 
 /*
  * OpenSSL 1.1 made BIO opaque so we have to use functions to interact with it
@@ -173,7 +173,7 @@ int git_openssl_set_locking(void)
 	return -1;
 #endif
 
-#ifdef GIT_OPENSSL_DYNAMIC
+#ifdef GIT_HTTPS_OPENSSL_DYNAMIC
 	/*
 	 * This function is required on legacy versions of OpenSSL; when building
 	 * with dynamically-loaded OpenSSL, we detect whether we loaded it or not.
@@ -200,4 +200,4 @@ int git_openssl_set_locking(void)
 }
 #endif /* GIT_THREADS */
 
-#endif /* GIT_OPENSSL_LEGACY || GIT_OPENSSL_DYNAMIC */
+#endif /* GIT_HTTPS_OPENSSL_LEGACY || GIT_HTTPS_OPENSSL_DYNAMIC */

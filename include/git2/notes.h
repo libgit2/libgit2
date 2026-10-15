@@ -8,6 +8,7 @@
 #define INCLUDE_git_note_h__
 
 #include "oid.h"
+#include "types.h"
 
 /**
  * @file git2/notes.h
@@ -41,7 +42,7 @@ typedef struct git_iterator git_note_iterator;
  *
  * The iterator must be freed manually by the user.
  *
- * @param out pointer to the iterator
+ * @param[out] out pointer to the iterator
  * @param repo repository where to look up the note
  * @param notes_ref canonical name of the reference to use (optional); defaults to
  *                  "refs/notes/commits"
@@ -58,7 +59,7 @@ GIT_EXTERN(int) git_note_iterator_new(
  *
  * The iterator must be freed manually by the user.
  *
- * @param out pointer to the iterator
+ * @param[out] out pointer to the iterator
  * @param notes_commit a pointer to the notes commit object
  *
  * @return 0 or an error code
@@ -96,7 +97,7 @@ GIT_EXTERN(int) git_note_next(
  *
  * The note must be freed manually by the user.
  *
- * @param out pointer to the read note; NULL in case of error
+ * @param[out] out pointer to the read note; NULL in case of error
  * @param repo repository where to look up the note
  * @param notes_ref canonical name of the reference to use (optional); defaults to
  *                  "refs/notes/commits"
@@ -116,7 +117,7 @@ GIT_EXTERN(int) git_note_read(
  *
  * The note must be freed manually by the user.
  *
- * @param out pointer to the read note; NULL in case of error
+ * @param[out] out pointer to the read note; NULL in case of error
  * @param repo repository where to look up the note
  * @param notes_commit a pointer to the notes commit object
  * @param oid OID of the git object to read the note from

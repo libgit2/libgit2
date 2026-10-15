@@ -70,10 +70,10 @@ void test_refs_read__symbolic(void)
 	git_object *object;
 	git_oid id;
 
-	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_REF));
 	cl_assert(git_reference_type(reference) & GIT_REFERENCE_SYMBOLIC);
 	cl_assert(reference_is_packed(reference) == 0);
-	cl_assert_equal_s(reference->name, GIT_HEAD_FILE);
+	cl_assert_equal_s(reference->name, GIT_HEAD_REF);
 
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
 	cl_assert(git_reference_type(resolved_ref) == GIT_REFERENCE_DIRECT);
@@ -82,7 +82,7 @@ void test_refs_read__symbolic(void)
 	cl_assert(object != NULL);
 	cl_assert(git_object_type(object) == GIT_OBJECT_COMMIT);
 
-	git_oid__fromstr(&id, current_master_tip, GIT_OID_SHA1);
+	git_oid_from_string(&id, current_master_tip, GIT_OID_SHA1);
 	cl_assert_equal_oid(&id, git_object_id(object));
 
 	git_object_free(object);
@@ -110,7 +110,7 @@ void test_refs_read__nested_symbolic(void)
 	cl_assert(object != NULL);
 	cl_assert(git_object_type(object) == GIT_OBJECT_COMMIT);
 
-	git_oid__fromstr(&id, current_master_tip, GIT_OID_SHA1);
+	git_oid_from_string(&id, current_master_tip, GIT_OID_SHA1);
 	cl_assert_equal_oid(&id, git_object_id(object));
 
 	git_object_free(object);
@@ -128,7 +128,7 @@ void test_refs_read__head_then_master(void)
 	cl_git_pass(git_reference_resolve(&comp_base_ref, reference));
 	git_reference_free(reference);
 
-	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_REF));
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
 	cl_assert_equal_oid(git_reference_target(comp_base_ref), git_reference_target(resolved_ref));
 	git_reference_free(reference);
@@ -149,7 +149,7 @@ void test_refs_read__master_then_head(void)
 	git_reference *reference, *master_ref, *resolved_ref;
 
 	cl_git_pass(git_reference_lookup(&master_ref, g_repo, current_head_target));
-	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_FILE));
+	cl_git_pass(git_reference_lookup(&reference, g_repo, GIT_HEAD_REF));
 
 	cl_git_pass(git_reference_resolve(&resolved_ref, reference));
 	cl_assert_equal_oid(git_reference_target(master_ref), git_reference_target(resolved_ref));

@@ -139,7 +139,7 @@ void test_revwalk_basic__sorting_modes(void)
 
 	revwalk_basic_setup_walk(NULL);
 
-	git_oid__fromstr(&id, commit_head, GIT_OID_SHA1);
+	git_oid_from_string(&id, commit_head, GIT_OID_SHA1);
 
 	cl_git_pass(test_walk(_walk, &id, GIT_SORT_TIME, commit_sorting_time, 1));
 	cl_git_pass(test_walk(_walk, &id, GIT_SORT_TOPOLOGICAL, commit_sorting_topo, 2));
@@ -170,6 +170,9 @@ void test_revwalk_basic__glob_heads_with_invalid(void)
 
 	revwalk_basic_setup_walk("testrepo");
 
+	if (!cl_repo_has_ref_format(_repo, "files"))
+		cl_skip();
+
 	cl_git_mkfile("testrepo/.git/refs/heads/garbage", "not-a-ref");
 	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
 
@@ -182,12 +185,13 @@ void test_revwalk_basic__glob_heads_with_invalid(void)
 
 void test_revwalk_basic__glob_invalid_symbolic_ref(void)
 {
+	git_reference *ref;
 	int i;
 	git_oid oid;
 
 	revwalk_basic_setup_walk("testrepo");
-
-	cl_git_mkfile("testrepo/.git/refs/heads/broken-sym-ref", "ref: refs/heads/does-not-exist");
+	cl_git_pass(git_reference_symbolic_create(&ref, _repo, "refs/heads/broken-sym-ref",
+						  "refs/heads/does-not-exist", 1, NULL));
 	cl_git_pass(git_revwalk_push_glob(_walk, "heads"));
 
 	for (i = 0; !git_revwalk_next(&oid, _walk); ++i)
@@ -195,6 +199,8 @@ void test_revwalk_basic__glob_invalid_symbolic_ref(void)
 
 	/* git log --branches --oneline | wc -l => 16 */
 	cl_assert_equal_i(20, i);
+
+	git_reference_free(ref);
 }
 
 void test_revwalk_basic__push_head(void)
@@ -221,7 +227,7 @@ void test_revwalk_basic__sorted_after_reset(void)
 
 	revwalk_basic_setup_walk(NULL);
 
-	git_oid__fromstr(&oid, commit_head, GIT_OID_SHA1);
+	git_oid_from_string(&oid, commit_head, GIT_OID_SHA1);
 
 	/* push, sort, and test the walk */
 	cl_git_pass(git_revwalk_push(_walk, &oid));
@@ -299,7 +305,7 @@ void test_revwalk_basic__multiple_push_1(void)
 
 	cl_git_pass(git_revwalk_hide_ref(_walk, "refs/heads/packed-test"));
 
-	cl_git_pass(git_oid__fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1));
 	cl_git_pass(git_revwalk_push(_walk, &oid));
 
 	while (git_revwalk_next(&oid, _walk) == 0)
@@ -333,7 +339,7 @@ void test_revwalk_basic__multiple_push_2(void)
 
 	revwalk_basic_setup_walk(NULL);
 
-	cl_git_pass(git_oid__fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1));
 	cl_git_pass(git_revwalk_push(_walk, &oid));
 
 	cl_git_pass(git_revwalk_hide_ref(_walk, "refs/heads/packed-test"));
@@ -352,7 +358,7 @@ void test_revwalk_basic__disallow_non_commit(void)
 
 	revwalk_basic_setup_walk(NULL);
 
-	cl_git_pass(git_oid__fromstr(&oid, "521d87c1ec3aef9824daf6d96cc0ae3710766d91", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&oid, "521d87c1ec3aef9824daf6d96cc0ae3710766d91", GIT_OID_SHA1));
 	cl_git_fail(git_revwalk_push(_walk, &oid));
 }
 
@@ -362,7 +368,7 @@ void test_revwalk_basic__hide_then_push(void)
 	int i = 0;
 
 	revwalk_basic_setup_walk(NULL);
-	cl_git_pass(git_oid__fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1));
 
 	cl_git_pass(git_revwalk_hide(_walk, &oid));
 	cl_git_pass(git_revwalk_push(_walk, &oid));
@@ -376,7 +382,7 @@ void test_revwalk_basic__hide_then_push(void)
 void test_revwalk_basic__topo_crash(void)
 {
 	git_oid oid;
-	git_oid__fromstr(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
+	git_oid_from_string(&oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1);
 
 	revwalk_basic_setup_walk(NULL);
 	git_revwalk_sorting(_walk, GIT_SORT_TOPOLOGICAL);
@@ -395,8 +401,8 @@ void test_revwalk_basic__from_new_to_old(void)
 	revwalk_basic_setup_walk(NULL);
 	git_revwalk_sorting(_walk, GIT_SORT_TIME);
 
-	cl_git_pass(git_oid__fromstr(&to_oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1));
-	cl_git_pass(git_oid__fromstr(&from_oid, "a4a7dce85cf63874e984719f4fdd239f5145052f", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&to_oid, "5b5b025afb0b4c913b4c338a42934a3863bf3644", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&from_oid, "a4a7dce85cf63874e984719f4fdd239f5145052f", GIT_OID_SHA1));
 
 	cl_git_pass(git_revwalk_push(_walk, &to_oid));
 	cl_git_pass(git_revwalk_hide(_walk, &from_oid));
@@ -496,7 +502,7 @@ void test_revwalk_basic__mimic_git_rev_list(void)
 
    cl_git_pass(git_revwalk_push_ref(_walk, "refs/heads/br2"));
    cl_git_pass(git_revwalk_push_ref(_walk, "refs/heads/master"));
-   cl_git_pass(git_oid__fromstr(&oid, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1));
+   cl_git_pass(git_oid_from_string(&oid, "e90810b8df3e80c413d903f631643c716887138d", GIT_OID_SHA1));
    cl_git_pass(git_revwalk_push(_walk, &oid));
 
    cl_git_pass(git_revwalk_next(&oid, _walk));
@@ -580,10 +586,10 @@ void test_revwalk_basic__old_hidden_commit_one(void)
 
 	revwalk_basic_setup_walk("testrepo.git");
 
-	cl_git_pass(git_oid__fromstr(&new_id, "bd758010071961f28336333bc41e9c64c9a64866", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&new_id, "bd758010071961f28336333bc41e9c64c9a64866", GIT_OID_SHA1));
 	cl_git_pass(git_revwalk_push(_walk, &new_id));
 
-	cl_git_pass(git_oid__fromstr(&old_id, "8e73b769e97678d684b809b163bebdae2911720f", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&old_id, "8e73b769e97678d684b809b163bebdae2911720f", GIT_OID_SHA1));
 	cl_git_pass(git_revwalk_hide(_walk, &old_id));
 
 	cl_git_pass(git_revwalk_next(&oid, _walk));
@@ -604,10 +610,10 @@ void test_revwalk_basic__old_hidden_commit_two(void)
 
 	revwalk_basic_setup_walk("testrepo.git");
 
-	cl_git_pass(git_oid__fromstr(&new_id, "bd758010071961f28336333bc41e9c64c9a64866", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&new_id, "bd758010071961f28336333bc41e9c64c9a64866", GIT_OID_SHA1));
 	cl_git_pass(git_revwalk_push(_walk, &new_id));
 
-	cl_git_pass(git_oid__fromstr(&old_id, "b91e763008b10db366442469339f90a2b8400d0a", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&old_id, "b91e763008b10db366442469339f90a2b8400d0a", GIT_OID_SHA1));
 	cl_git_pass(git_revwalk_hide(_walk, &old_id));
 
 	cl_git_pass(git_revwalk_next(&oid, _walk));

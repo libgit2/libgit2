@@ -122,6 +122,27 @@ static void interrupt_cleanup(void)
 	exit(130);
 }
 
+static int create_remote_cb(
+	git_remote **out,
+	git_repository *repo,
+	const char *name,
+	const char *url,
+	void *payload)
+{
+	const char *branch = payload;
+	git_str fetchspec = GIT_STR_INIT;
+	int ret;
+
+	git_str_printf(&fetchspec, "+refs/heads/%s:refs/remotes/%s/%s",
+				   branch, name, branch);
+
+	ret = git_remote_create_with_fetchspec(out, repo, name, url,
+		git_str_cstr(&fetchspec));
+
+	git_str_dispose(&fetchspec);
+	return ret;
+}
+
 int cmd_clone(int argc, char **argv)
 {
 	git_clone_options clone_opts = GIT_CLONE_OPTIONS_INIT;
@@ -146,6 +167,11 @@ int cmd_clone(int argc, char **argv)
 	clone_opts.bare = !!bare;
 	clone_opts.checkout_branch = branch;
 	clone_opts.fetch_opts.depth = compute_depth(depth);
+
+	if (depth && branch) {
+		clone_opts.remote_cb = create_remote_cb;
+		clone_opts.remote_cb_payload = branch;
+	}
 
 	if (!checkout)
 		clone_opts.checkout_opts.checkout_strategy = GIT_CHECKOUT_NONE;

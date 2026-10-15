@@ -343,7 +343,7 @@ void test_commit_parse__details0(void) {
 		unsigned int parents, p;
 		git_commit *parent = NULL, *old_parent = NULL;
 
-		git_oid__fromstr(&id, commit_ids[i], GIT_OID_SHA1);
+		git_oid_from_string(&id, commit_ids[i], GIT_OID_SHA1);
 
 		cl_git_pass(git_commit_lookup(&commit, g_repo, &id));
 
@@ -533,7 +533,7 @@ corrupt signature\n";
 	git_buf_dispose(&signed_data);
 
 	/* Try to parse a tree */
-	cl_git_pass(git_oid__fromstr(&commit_id, "45dd856fdd4d89b884c340ba0e047752d9b085d6", GIT_OID_SHA1));
+	cl_git_pass(git_oid_from_string(&commit_id, "45dd856fdd4d89b884c340ba0e047752d9b085d6", GIT_OID_SHA1));
 	cl_git_fail_with(GIT_ENOTFOUND, git_commit_extract_signature(&signature, &signed_data, g_repo, &commit_id, NULL));
 	cl_assert_equal_i(GIT_ERROR_INVALID, git_error_last()->klass);
 

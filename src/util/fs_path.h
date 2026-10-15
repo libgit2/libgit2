@@ -455,7 +455,7 @@ extern bool git_fs_path_has_non_ascii(const char *path, size_t pathlen);
 #define GIT_PATH_NATIVE_ENCODING "UTF-8"
 #endif
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 
 #include <iconv.h>
 
@@ -479,7 +479,7 @@ extern void git_fs_path_iconv_clear(git_fs_path_iconv_t *ic);
  */
 extern int git_fs_path_iconv(git_fs_path_iconv_t *ic, const char **in, size_t *inlen);
 
-#endif /* GIT_USE_ICONV */
+#endif /* GIT_I18N_ICONV */
 
 extern bool git_fs_path_does_decompose_unicode(const char *root);
 
@@ -517,12 +517,16 @@ struct git_fs_path_diriter
 
 	DIR *dir;
 
-#ifdef GIT_USE_ICONV
+#ifdef GIT_I18N_ICONV
 	git_fs_path_iconv_t ic;
 #endif
 };
 
+#ifdef GIT_I18N_ICONV
+#define GIT_FS_PATH_DIRITER_INIT { GIT_STR_INIT, 0, 0, NULL, GIT_PATH_ICONV_INIT }
+#else
 #define GIT_FS_PATH_DIRITER_INIT { GIT_STR_INIT }
+#endif
 
 #endif
 

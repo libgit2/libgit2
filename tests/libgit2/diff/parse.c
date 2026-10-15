@@ -366,6 +366,20 @@ void test_diff_parse__patch_roundtrip_succeeds(void)
 	git_buf_dispose(&diffbuf);
 }
 
+void test_diff_parse__binary_patch_roundtrip_succeeds(void)
+{
+	git_buf diffbuf = GIT_BUF_INIT;
+	git_diff *diff;
+
+	cl_git_pass(git_diff_from_buffer(&diff, PATCH_BINARY_LITERAL, strlen(PATCH_BINARY_LITERAL)));
+	cl_git_pass(git_diff_to_buf(&diffbuf, diff, GIT_DIFF_FORMAT_PATCH));
+
+	cl_assert_equal_s(PATCH_BINARY_LITERAL, diffbuf.ptr);
+
+	git_diff_free(diff);
+	git_buf_dispose(&diffbuf);
+}
+
 #define cl_assert_equal_i_src(i1,i2,file,func,line) clar__assert_equal(file,func,line,#i1 " != " #i2, 1, "%d", (int)(i1), (int)(i2))
 
 static void cl_git_assert_lineinfo_(int old_lineno, int new_lineno, int num_lines, git_patch *patch, size_t hunk_idx, size_t line_idx, const char *file, const char *func, int lineno)
