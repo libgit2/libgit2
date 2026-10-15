@@ -47,6 +47,7 @@ extern int git_blob__create_from_paths(
 	const char *full_path,
 	const char *hint_path,
 	mode_t hint_mode,
-	bool apply_filters);
+	bool apply_filters,
+	const struct stat *hint_st);
 
 #endif
