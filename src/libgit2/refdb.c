@@ -40,7 +40,7 @@ int git_refdb_new(git_refdb **out, git_repository *repo)
 int git_refdb_open(git_refdb **out, git_repository *repo)
 {
 	git_refdb_backend *backend;
-	git_refdb *db;
+	git_refdb *db = NULL;
 	int error;
 
 	GIT_ASSERT_ARG(out);
