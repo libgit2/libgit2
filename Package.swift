@@ -219,6 +219,30 @@ cSettings += [
   .headerSearchPath("deps/xdiff"),
 ]
 
+// MARK: - reftable
+
+targets += [
+
+  .target(
+    name: .name("reftable"),
+    path: ".",
+    exclude: [
+      "deps/reftable/CMakeLists.txt",
+      "deps/reftable/LICENSE",
+    ],
+    sources: ["deps/reftable"],
+    publicHeadersPath: "include"
+  )
+]
+
+targetDependencies += [
+  .target(name: .name("reftable"))
+]
+
+cSettings += [
+  .headerSearchPath("deps/reftable"),
+]
+
 // MARK: - llhttp
 
 targets += [
