@@ -1530,7 +1530,7 @@ int git_diff_tree_to_workdir(
 	*out = NULL;
 
 	if ((error = diff_prepare_iterator_opts(&prefix, &a_opts, 0,
-						&b_opts, GIT_ITERATOR_DONT_AUTOEXPAND, opts) < 0) ||
+						&b_opts, GIT_ITERATOR_DONT_AUTOEXPAND, opts)) < 0 ||
 	    (error = git_repository_index__weakptr(&index, repo)) < 0 ||
 	    (error = git_iterator_for_tree(&a, old_tree, &a_opts)) < 0 ||
 	    (error = git_iterator_for_workdir(&b, repo, index, old_tree, &b_opts)) < 0 ||
@@ -1602,7 +1602,7 @@ int git_diff_index_to_index(
 	*out = NULL;
 
 	if ((error = diff_prepare_iterator_opts(&prefix, &a_opts, GIT_ITERATOR_DONT_IGNORE_CASE,
-						&b_opts, GIT_ITERATOR_DONT_IGNORE_CASE, opts) < 0) ||
+						&b_opts, GIT_ITERATOR_DONT_IGNORE_CASE, opts)) < 0 ||
 	    (error = git_iterator_for_index(&a, repo, old_index, &a_opts)) < 0 ||
 	    (error = git_iterator_for_index(&b, repo, new_index, &b_opts)) < 0 ||
 	    (error = git_diff__from_iterators(&diff, repo, a, b, opts)) < 0)
