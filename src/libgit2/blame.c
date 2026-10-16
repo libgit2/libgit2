@@ -451,15 +451,18 @@ static int blame_internal(git_blame *blame)
 	ent = git__calloc(1, sizeof(git_blame__entry));
 	GIT_ERROR_CHECK_ALLOC(ent);
 
-	ent->num_lines = index_blob_lines(blame);
+	ent->suspect = o;
+	blame->ent = ent;
+
+	if ((error = index_blob_lines(blame)) < 0)
+		goto on_error;
+
+	ent->num_lines = error;
 	ent->lno = blame->options.min_line - 1;
 	ent->num_lines = ent->num_lines - blame->options.min_line + 1;
 	if (blame->options.max_line > 0)
 		ent->num_lines = blame->options.max_line - blame->options.min_line + 1;
 	ent->s_lno = ent->lno;
-	ent->suspect = o;
-
-	blame->ent = ent;
 
 	if ((error = git_blame__like_git(blame, blame->options.flags)) < 0)
 		goto on_error;
