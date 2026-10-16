@@ -640,6 +640,52 @@ void test_repo_open__can_allowlist_dirs_with_problematic_ownership(void)
 	git_str_dispose(&path);
 }
 
+void test_repo_open__safe_directory_ignores_drive_letter_case(void)
+{
+#ifdef GIT_WIN32
+	git_str path = GIT_STR_INIT;
+	char drive;
+
+	/*
+	 * Git compares Windows paths case-insensitively; the drive letter
+	 * is the most common mismatch. Configure the repository path with
+	 * the opposite drive-letter case and ensure the repository opens.
+	 */
+	cl_git_pass(git_str_printf(&path, "%s/%s",
+		clar_sandbox_path(), "empty_standard_repo"));
+
+	drive = path.ptr[0];
+	cl_assert(isalpha((unsigned char)drive) && path.ptr[1] == ':');
+	path.ptr[0] = (char)(isupper((unsigned char)drive) ?
+		tolower((unsigned char)drive) : toupper((unsigned char)drive));
+
+	cl_git_pass(test_safe_path(path.ptr));
+	git_str_dispose(&path);
+#endif
+}
+
+void test_repo_open__safe_directory_ignores_path_case(void)
+{
+#ifdef GIT_WIN32
+	git_str path = GIT_STR_INIT;
+	size_t i;
+
+	/*
+	 * Windows paths are case-insensitive for their whole length, not
+	 * just the drive letter. Configure the entire repository path in a
+	 * different case and ensure the repository still opens.
+	 */
+	cl_git_pass(git_str_printf(&path, "%s/%s",
+		clar_sandbox_path(), "empty_standard_repo"));
+
+	for (i = 0; i < path.size; i++)
+		path.ptr[i] = (char)toupper((unsigned char)path.ptr[i]);
+
+	cl_git_pass(test_safe_path(path.ptr));
+	git_str_dispose(&path);
+#endif
+}
+
 void test_repo_open__safe_directory_fails_with_trailing_slash(void)
 {
 	git_str path = GIT_STR_INIT;
