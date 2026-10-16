@@ -27,9 +27,10 @@ struct git_process {
 
 	wchar_t *cwd;
 
-	unsigned int capture_in  : 1,
-	             capture_out : 1,
-	             capture_err : 1;
+	unsigned int capture_in       : 1,
+	             capture_out      : 1,
+	             capture_err      : 1,
+	             create_no_window : 1;
 
 	PROCESS_INFORMATION process_info;
 
@@ -203,6 +204,7 @@ static int process_new(
 		process->capture_in = opts->capture_in;
 		process->capture_out = opts->capture_out;
 		process->capture_err = opts->capture_err;
+		process->create_no_window = opts->create_no_window;
 	}
 
 done:
@@ -260,6 +262,9 @@ int git_process_start(git_process *process)
 	HANDLE in[2]  = { NULL, NULL },
 	       out[2] = { NULL, NULL },
 	       err[2] = { NULL, NULL };
+
+	if (process->create_no_window)
+		flags |= CREATE_NO_WINDOW;
 
 	if (process->app_name) {
 		git_str cmd_path = GIT_STR_INIT;
