@@ -124,3 +124,28 @@ void test_worktree_open__open_from_nonworktree_fails(void)
 
 	cl_git_fail(git_worktree_open_from_repository(&wt, fixture.repo));
 }
+
+void test_worktree_open__gitdir_with_backslashes(void)
+{
+#ifdef GIT_WIN32
+	git_str gitdir_file = GIT_STR_INIT, workdir = GIT_STR_INIT;
+	git_repository *wt;
+
+	cl_git_pass(git_str_sets(&gitdir_file, cl_git_sandbox_path(0, COMMON_REPO,
+		".git", "worktrees", WORKTREE_REPO, "gitdir", NULL)));
+	cl_git_pass(git_str_sets(&workdir,
+		cl_git_sandbox_path(1, WORKTREE_REPO, NULL)));
+
+	/* The pointer the fixture ships, respelled with Win32 separators. */
+	cl_git_rewritefile(gitdir_file.ptr,
+		"..\\..\\..\\..\\" WORKTREE_REPO "\\.git");
+
+	cl_git_pass(git_repository_open(&wt, WORKTREE_REPO));
+	cl_assert(wt->is_worktree);
+	cl_assert_equal_s(workdir.ptr, wt->workdir);
+
+	git_repository_free(wt);
+	git_str_dispose(&gitdir_file);
+	git_str_dispose(&workdir);
+#endif
+}
