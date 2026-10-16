@@ -6,6 +6,9 @@
 #include "vector.h"
 #include "posix.h"
 
+/* This deprecated API is hidden from the test target by GIT_DEPRECATE_HARD. */
+extern const git_oid *git_indexer_hash(const git_indexer *idx);
+
 
 /*
  * This is a packfile with three objects. The second is a delta which
@@ -99,12 +102,18 @@ void test_pack_indexer__out_of_order(void)
 {
 	git_indexer *idx = 0;
 	git_indexer_progress stats = { 0 };
+	git_oid expected_hash;
 
 	cl_git_pass(git_indexer_new(&idx, ".", NULL));
 
 	cl_git_pass(git_indexer_append(
 		idx, out_of_order_pack, out_of_order_pack_len, &stats));
 	cl_git_pass(git_indexer_commit(idx, &stats));
+
+	cl_git_pass(git_oid_from_string(
+		&expected_hash, "de7daae41987588061099a33ca7a31926fae6675", GIT_OID_SHA1));
+	cl_assert_equal_i(GIT_OID_SHA1, git_indexer_hash(idx)->type);
+	cl_assert_equal_oid(&expected_hash, git_indexer_hash(idx));
 
 	cl_assert_equal_i(stats.total_objects, 3);
 	cl_assert_equal_i(stats.received_objects, 3);
