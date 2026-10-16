@@ -466,6 +466,9 @@ typedef struct {
 
 #define GIT_PATH_ICONV_INIT { (iconv_t)-1, GIT_STR_INIT }
 
+/* Set up the lock that serializes opening and closing iconv converters */
+extern int git_fs_path_iconv_global_init(void);
+
 /* Init iconv data for converting decomposed UTF-8 to precomposed */
 extern int git_fs_path_iconv_init_precompose(git_fs_path_iconv_t *ic);
 
