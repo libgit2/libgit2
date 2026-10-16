@@ -477,6 +477,9 @@ static int patch_generated_from_sources(
 	git_diff_file_content *ldata = &pd->patch.ofile, *rdata = &pd->patch.nfile;
 	git_diff_options *opts = &pd->patch.base.diff_opts;
 
+	/* set before anything can fail, so freeing the patch on error frees it */
+	pd->patch.base.free_fn = patch_generated_free;
+
 	if ((error = patch_generated_normalize_options(opts, given_opts, repo)) < 0)
 		return error;
 
