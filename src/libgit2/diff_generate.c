@@ -1047,6 +1047,98 @@ static int iterator_advance_over(
 	return error;
 }
 
+GIT_INLINE(bool) iterator_is_tree(git_iterator *iterator)
+{
+	return iterator->type == GIT_ITERATOR_TREE ||
+		iterator->type == GIT_ITERATOR_EMPTY;
+}
+
+GIT_INLINE(bool) iterator_returns_trees(git_iterator *iterator)
+{
+	return iterator->type == GIT_ITERATOR_TREE &&
+		(iterator->flags & GIT_ITERATOR_DONT_AUTOEXPAND) != 0;
+}
+
+/*
+ * Whether the tree sorts between the item `a` and the path `a/`, or is
+ * `a/` itself (eg, `a.txt/` or `a-b/`).
+ */
+static bool tree_sorts_before_subdir(
+	git_diff_generated *diff,
+	const git_index_entry *tree_item,
+	const git_index_entry *item)
+{
+	size_t len = strlen(item->path);
+
+	return diff->base.pfxcomp(tree_item->path, item->path) == 0 &&
+		(unsigned char)tree_item->path[len] <= '/';
+}
+
+/*
+ * Tree iterators that do not autoexpand return tree entries.  Skip a pair
+ * of trees that have the same path and the same id, since their contents
+ * cannot produce deltas.  Expand any other tree before the diff looks at
+ * it, so that the rest of the diff only sees the entries that an
+ * autoexpanding iterator would return.
+ */
+static int handle_tree_items(
+	git_diff_generated *diff, diff_in_progress *info)
+{
+	bool skip_unmodified =
+		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_INCLUDE_UNMODIFIED) &&
+		DIFF_FLAG_ISNT_SET(diff, GIT_DIFF_IGNORE_CASE);
+	bool typechange_trees =
+		DIFF_FLAG_IS_SET(diff, GIT_DIFF_INCLUDE_TYPECHANGE_TREES);
+	int error = 0;
+
+	while (true) {
+		const git_index_entry *oitem = info->oitem, *nitem = info->nitem;
+		bool old_is_tree = oitem && S_ISDIR(oitem->mode);
+		bool new_is_tree = nitem && S_ISDIR(nitem->mode);
+		bool expand_old, expand_new;
+		int cmp;
+
+		if (!old_is_tree && !new_is_tree)
+			break;
+
+		cmp = oitem ?
+			(nitem ? diff->base.entrycomp(oitem, nitem) : -1) : 1;
+
+		if (skip_unmodified && old_is_tree && new_is_tree && cmp == 0 &&
+		    git_oid_equal(&oitem->id, &nitem->id)) {
+			if ((error = iterator_advance(&info->oitem, info->old_iter)) < 0 ||
+			    (error = iterator_advance(&info->nitem, info->new_iter)) < 0)
+				break;
+
+			continue;
+		}
+
+		/*
+		 * Expand the tree that comes next.  Tree typechange detection
+		 * compares an unmatched file `a` with the next entry on the
+		 * other side, which an autoexpanding iterator would take from
+		 * the trees between `a` and `a/`, so expand those trees too.
+		 */
+		expand_old = old_is_tree && (cmp <= 0 ||
+			(typechange_trees && tree_sorts_before_subdir(diff, oitem, nitem)));
+		expand_new = new_is_tree && (cmp >= 0 ||
+			(typechange_trees && tree_sorts_before_subdir(diff, nitem, oitem)));
+
+		if (!expand_old && !expand_new)
+			break;
+
+		if (expand_old &&
+		    (error = iterator_advance_into(&info->oitem, info->old_iter)) < 0)
+			break;
+
+		if (expand_new &&
+		    (error = iterator_advance_into(&info->nitem, info->new_iter)) < 0)
+			break;
+	}
+
+	return error;
+}
+
 static int handle_unmatched_new_item(
 	git_diff_generated *diff, diff_in_progress *info)
 {
@@ -1265,6 +1357,7 @@ int git_diff__from_iterators(
 {
 	git_diff_generated *diff;
 	diff_in_progress info = {0};
+	bool returns_trees;
 	int error = 0;
 
 	*out = NULL;
@@ -1291,9 +1384,23 @@ int git_diff__from_iterators(
 		(error = iterator_current(&info.nitem, new_iter)) < 0)
 		goto cleanup;
 
+	/* only a diff of two trees handles tree entries, since the handling
+	 * of unmatched index and workdir items looks at more of the other side
+	 */
+	returns_trees = iterator_is_tree(old_iter) && iterator_is_tree(new_iter) &&
+		(iterator_returns_trees(old_iter) || iterator_returns_trees(new_iter));
+
 	/* run iterators building diffs */
 	while (!error && (info.oitem || info.nitem)) {
 		int cmp;
+
+		if (returns_trees) {
+			if ((error = handle_tree_items(diff, &info)) < 0)
+				break;
+
+			if (!info.oitem && !info.nitem)
+				break;
+		}
 
 		/* report progress */
 		if (opts && opts->progress_cb) {
@@ -1376,6 +1483,7 @@ int git_diff_tree_to_tree(
 		b_opts = GIT_ITERATOR_OPTIONS_INIT;
 	git_iterator *a = NULL, *b = NULL;
 	git_diff *diff = NULL;
+	uint32_t flags = opts ? opts->flags : 0;
 	char *prefix = NULL;
 	int error = 0;
 
@@ -1388,8 +1496,16 @@ int git_diff_tree_to_tree(
 	 * currently case insensitive, unless the user explicitly asked
 	 * for case insensitivity
 	 */
-	if (opts && (opts->flags & GIT_DIFF_IGNORE_CASE) != 0)
+	if ((flags & GIT_DIFF_IGNORE_CASE) != 0)
 		iflag = GIT_ITERATOR_IGNORE_CASE;
+
+	/* return tree entries, so that the diff can skip unmodified trees,
+	 * unless unmodified files are requested.  a case insensitive tree
+	 * iterator merges trees whose names differ only in case, so one of
+	 * them cannot be skipped on its own.
+	 */
+	if ((flags & (GIT_DIFF_IGNORE_CASE | GIT_DIFF_INCLUDE_UNMODIFIED)) == 0)
+		iflag |= GIT_ITERATOR_DONT_AUTOEXPAND;
 
 	if ((error = diff_prepare_iterator_opts(&prefix, &a_opts, iflag, &b_opts, iflag, opts)) < 0 ||
 	    (error = git_iterator_for_tree(&a, old_tree, &a_opts)) < 0 ||
