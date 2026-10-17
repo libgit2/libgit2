@@ -587,3 +587,23 @@ void test_ignore_path__negative_more_specific(void)
 	assert_is_ignored(false, "dir/test.txt");
 	assert_is_ignored(true, "outer/dir/test.txt");
 }
+
+void test_ignore_path__negative_under_excluded_directory(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "dir/\n!dir/sub/*\n");
+	assert_is_ignored(true, "dir/sub/test.txt");
+	assert_is_ignored(true, "dir/test.txt");
+}
+
+void test_ignore_path__negative_under_excluded_directory_contents(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "dir/*\n!dir/test.txt\n");
+	assert_is_ignored(false, "dir/test.txt");
+	assert_is_ignored(true, "dir/other.txt");
+}
+
+void test_ignore_path__negative_reincluded_directory(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "dir/\n!dir/\n");
+	assert_is_ignored(false, "dir/test.txt");
+}
