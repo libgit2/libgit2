@@ -1,0 +1,4 @@
+# v3 git bundle
+@filter=blob:none
+not-an-oid refs/heads/main
+
