@@ -18,5 +18,6 @@ int git_signature__parse(git_signature *sig, const char **buffer_out, const char
 void git_signature__writebuf(git_str *buf, const char *header, const git_signature *sig);
 bool git_signature__equal(const git_signature *one, const git_signature *two);
 int git_signature__pdup(git_signature **dest, const git_signature *source, git_pool *pool);
+int git_signature__resolved(git_signature **dest, const git_signature *source, const char *name, const char *email);
 
 #endif
