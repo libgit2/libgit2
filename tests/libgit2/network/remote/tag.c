@@ -91,3 +91,56 @@ void test_network_remote_tag__push_different_tag_types(void)
 	cl_git_pass(git_remote_push(_remote, &refspecs_tagged_blob, &opts));
 	cl_git_pass(git_reference_name_to_id(&blob_tag_id, _repo, "refs/tags/tagged-blob"));
 }
+
+static void fetch_tag_refspec(char *refspec, const char *destination)
+{
+	git_strarray refspecs = { &refspec, 1 };
+	git_fetch_options opts = GIT_FETCH_OPTIONS_INIT;
+	git_oid expected, actual;
+
+	opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
+	cl_git_pass(git_reference_name_to_id(&expected, _repo, "refs/tags/hard_tag"));
+	cl_git_pass(git_remote_fetch(_remote, &refspecs, &opts, NULL));
+	cl_git_pass(git_reference_name_to_id(&actual, _dummy, destination));
+	cl_assert_equal_oid(&expected, &actual);
+}
+
+void test_network_remote_tag__fetch_explicit_destination(void)
+{
+	fetch_tag_refspec("refs/tags/hard_tag:refs/custom/tag", "refs/custom/tag");
+}
+
+void test_network_remote_tag__fetch_wildcard_destination(void)
+{
+	fetch_tag_refspec("refs/tags/*:refs/custom/*", "refs/custom/hard_tag");
+}
+
+void test_network_remote_tag__fetch_force_updates_existing_tag(void)
+{
+	git_oid old_id;
+	git_reference *ref;
+
+	cl_git_pass(git_blob_create_from_buffer(&old_id, _dummy, "old", 3));
+	cl_git_pass(git_reference_create(&ref, _dummy, "refs/tags/hard_tag",
+		&old_id, false, NULL));
+	git_reference_free(ref);
+
+	fetch_tag_refspec("+refs/tags/*:refs/tags/*", "refs/tags/hard_tag");
+}
+
+void test_network_remote_tag__fetch_autofollow_preserves_existing_tag(void)
+{
+	git_fetch_options opts = GIT_FETCH_OPTIONS_INIT;
+	git_oid old_id, actual;
+	git_reference *ref;
+
+	cl_git_pass(git_blob_create_from_buffer(&old_id, _dummy, "old", 3));
+	cl_git_pass(git_reference_create(&ref, _dummy, "refs/tags/hard_tag",
+		&old_id, false, NULL));
+	git_reference_free(ref);
+
+	opts.download_tags = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
+	cl_git_pass(git_remote_fetch(_remote, NULL, &opts, NULL));
+	cl_git_pass(git_reference_name_to_id(&actual, _dummy, "refs/tags/hard_tag"));
+	cl_assert_equal_oid(&old_id, &actual);
+}
