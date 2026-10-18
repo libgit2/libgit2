@@ -33,8 +33,8 @@ typedef struct git_commit_graph_file {
 	/* The type of object IDs in the commit graph file. */
 	git_oid_t oid_type;
 
-	/* The OID Fanout table. */
-	const uint32_t *oid_fanout;
+	/* The OID Fanout table: 256 4-byte entries in network byte order. */
+	const unsigned char *oid_fanout;
 	/* The total number of commits in the graph. */
 	uint32_t num_commits;
 

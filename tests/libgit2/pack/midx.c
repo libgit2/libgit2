@@ -31,6 +31,39 @@ void test_pack_midx__parse(void)
 	git_str_dispose(&midx_path);
 }
 
+void test_pack_midx__parse_unaligned(void)
+{
+	git_midx_file idx = {{0}};
+	struct git_midx_entry e;
+	git_oid id;
+	git_str contents = GIT_STR_INIT;
+	unsigned char *buf;
+
+	/*
+	 * The reader makes no assumption about the alignment of the file
+	 * data, so parse a copy of it that starts at an odd address.
+	 */
+	cl_git_pass(git_futils_readbuffer(&contents,
+		cl_fixture("testrepo.git/objects/pack/multi-pack-index")));
+	buf = git__malloc(contents.size + 1);
+	cl_assert(buf);
+	memcpy(buf + 1, contents.ptr, contents.size);
+
+	idx.oid_type = GIT_OID_SHA1;
+	cl_git_pass(git_midx_parse(&idx, buf + 1, contents.size));
+
+	cl_git_pass(git_oid_from_string(&id, "5001298e0c09ad9c34e4249bc5801c75e9754fa5", GIT_OID_SHA1));
+	cl_git_pass(git_midx_entry_find(&e, &idx, &id, GIT_OID_SHA1_HEXSIZE));
+	cl_assert_equal_oid(&e.sha1, &id);
+	cl_assert_equal_s(
+			(const char *)git_vector_get(&idx.packfile_names, e.pack_index),
+			"pack-d7c6adf9f61318f041845b01440d09aa7a91e1b5.idx");
+
+	git_midx_close(&idx);
+	git__free(buf);
+	git_str_dispose(&contents);
+}
+
 void test_pack_midx__lookup(void)
 {
 	git_repository *repo;

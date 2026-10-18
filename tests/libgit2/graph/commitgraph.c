@@ -91,6 +91,56 @@ void test_graph_commitgraph__parse_octopus_merge(void)
 	git_str_dispose(&commit_graph_path);
 }
 
+void test_graph_commitgraph__parse_unaligned(void)
+{
+	git_commit_graph_file file = {{0}};
+	struct git_commit_graph_entry e, parent;
+	git_oid id;
+	git_str contents = GIT_STR_INIT;
+	unsigned char *buf;
+
+	/*
+	 * The reader makes no assumption about the alignment of the file
+	 * data, so parse a copy of it that starts at an odd address.
+	 */
+	cl_git_pass(git_futils_readbuffer(&contents,
+		cl_fixture("merge-recursive/.gitted/objects/info/commit-graph")));
+	buf = git__malloc(contents.size + 1);
+	cl_assert(buf);
+	memcpy(buf + 1, contents.ptr, contents.size);
+
+	file.oid_type = GIT_OID_SHA1;
+	cl_git_pass(git_commit_graph_file_parse(&file, buf + 1, contents.size));
+
+	cl_git_pass(git_oid_from_string(&id, "d71c24b3b113fd1d1909998c5bfe33b86a65ee03", GIT_OID_SHA1));
+	cl_git_pass(git_commit_graph_entry_find(&e, &file, &id, GIT_OID_SHA1_HEXSIZE));
+	cl_assert_equal_oid(&e.sha1, &id);
+	cl_git_pass(git_oid_from_string(&id, "348f16ffaeb73f319a75cec5b16a0a47d2d5e27c", GIT_OID_SHA1));
+	cl_assert_equal_oid(&e.tree_oid, &id);
+	cl_assert_equal_i(e.generation, 7);
+	cl_assert_equal_i(e.commit_time, UINT64_C(1447083009));
+	cl_assert_equal_i(e.parent_count, 3);
+
+	cl_git_pass(git_oid_from_string(&id, "ad2ace9e15f66b3d1138922e6ffdc3ea3f967fa6", GIT_OID_SHA1));
+	cl_git_pass(git_commit_graph_entry_parent(&parent, &file, &e, 0));
+	cl_assert_equal_oid(&parent.sha1, &id);
+	cl_assert_equal_i(parent.generation, 6);
+
+	cl_git_pass(git_oid_from_string(&id, "483065df53c0f4a02cdc6b2910b05d388fc17ffb", GIT_OID_SHA1));
+	cl_git_pass(git_commit_graph_entry_parent(&parent, &file, &e, 1));
+	cl_assert_equal_oid(&parent.sha1, &id);
+	cl_assert_equal_i(parent.generation, 2);
+
+	cl_git_pass(git_oid_from_string(&id, "815b5a1c80ca749d705c7aa0cb294a00cbedd340", GIT_OID_SHA1));
+	cl_git_pass(git_commit_graph_entry_parent(&parent, &file, &e, 2));
+	cl_assert_equal_oid(&parent.sha1, &id);
+	cl_assert_equal_i(parent.generation, 6);
+
+	git_commit_graph_file_close(&file);
+	git__free(buf);
+	git_str_dispose(&contents);
+}
+
 void test_graph_commitgraph__writer(void)
 {
 	git_repository *repo;

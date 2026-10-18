@@ -97,10 +97,10 @@ static int midx_parse_oid_fanout(
 	if (chunk_oid_fanout->length != 256 * 4)
 		return midx_error("OID Fanout chunk has wrong length");
 
-	idx->oid_fanout = (const uint32_t *)(data + chunk_oid_fanout->offset);
+	idx->oid_fanout = data + chunk_oid_fanout->offset;
 	nr = 0;
 	for (i = 0; i < 256; ++i) {
-		uint32_t n = ntohl(idx->oid_fanout[i]);
+		uint32_t n = git__get_be32(idx->oid_fanout + i * 4);
 		if (n < nr)
 			return midx_error("index is non-monotonic");
 		nr = n;
@@ -166,7 +166,7 @@ int git_midx_parse(
 		const unsigned char *data,
 		size_t size)
 {
-	struct git_midx_header *hdr;
+	struct git_midx_header hdr;
 	const unsigned char *chunk_hdr;
 	struct git_midx_chunk *last_chunk;
 	uint32_t i;
@@ -187,14 +187,14 @@ int git_midx_parse(
 	if (size < sizeof(struct git_midx_header) + oid_size)
 		return midx_error("multi-pack index is too short");
 
-	hdr = ((struct git_midx_header *)data);
+	memcpy(&hdr, data, sizeof(hdr));
 
-	if (hdr->signature != htonl(MIDX_SIGNATURE) ||
-	    hdr->version != MIDX_VERSION ||
-	    hdr->object_id_version != MIDX_OBJECT_ID_VERSION) {
+	if (hdr.signature != htonl(MIDX_SIGNATURE) ||
+	    hdr.version != MIDX_VERSION ||
+	    hdr.object_id_version != MIDX_OBJECT_ID_VERSION) {
 		return midx_error("unsupported multi-pack index version");
 	}
-	if (hdr->chunks == 0)
+	if (hdr.chunks == 0)
 		return midx_error("no chunks in multi-pack index");
 
 	/*
@@ -203,7 +203,7 @@ int git_midx_parse(
 	 */
 	last_chunk_offset =
 			sizeof(struct git_midx_header) +
-			(1 + hdr->chunks) * 12;
+			(1 + hdr.chunks) * 12;
 
 	checksum_size = oid_size;
 	trailer_offset = size - checksum_size;
@@ -214,10 +214,10 @@ int git_midx_parse(
 
 	chunk_hdr = data + sizeof(struct git_midx_header);
 	last_chunk = NULL;
-	for (i = 0; i < hdr->chunks; ++i, chunk_hdr += 12) {
-		uint32_t chunk_id = ntohl(*((uint32_t *)(chunk_hdr + 0)));
-		uint64_t high_offset = ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 4)))) & 0xffffffffu;
-		uint64_t low_offset = ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 8)))) & 0xffffffffu;
+	for (i = 0; i < hdr.chunks; ++i, chunk_hdr += 12) {
+		uint32_t chunk_id = git__get_be32(chunk_hdr + 0);
+		uint64_t high_offset = git__get_be32(chunk_hdr + 4);
+		uint64_t low_offset = git__get_be32(chunk_hdr + 8);
 
 		if (high_offset >= INT32_MAX)
 			return midx_error("chunk offset out of range");
@@ -265,7 +265,7 @@ int git_midx_parse(
 	last_chunk->length = (size_t)(trailer_offset - last_chunk_offset);
 
 	error = midx_parse_packfile_names(
-			idx, data, ntohl(hdr->packfiles), &chunk_packfile_names);
+			idx, data, ntohl(hdr.packfiles), &chunk_packfile_names);
 	if (error < 0)
 		return error;
 	error = midx_parse_oid_fanout(idx, data, &chunk_oid_fanout);
@@ -395,8 +395,8 @@ int git_midx_entry_find(
 	oid_size = git_oid_size(idx->oid_type);
 	oid_hexsize = git_oid_hexsize(idx->oid_type);
 
-	hi = ntohl(idx->oid_fanout[(int)short_oid->id[0]]);
-	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(idx->oid_fanout[(int)short_oid->id[0] - 1]));
+	hi = git__get_be32(idx->oid_fanout + 4 * (int)short_oid->id[0]);
+	lo = ((short_oid->id[0] == 0x0) ? 0 : git__get_be32(idx->oid_fanout + 4 * ((int)short_oid->id[0] - 1)));
 
 	pos = git_pack__lookup_id(idx->oid_lookup, oid_size, lo, hi, short_oid->id, idx->oid_type);
 
@@ -430,7 +430,7 @@ int git_midx_entry_find(
 		return git_odb__error_ambiguous("found multiple offsets for multi-pack index entry");
 
 	object_offset = idx->object_offsets + pos * 8;
-	offset = ntohl(*((uint32_t *)(object_offset + 4)));
+	offset = git__get_be32(object_offset + 4);
 	if (idx->object_large_offsets && offset & 0x80000000) {
 		uint32_t object_large_offsets_pos = (uint32_t) (offset ^ 0x80000000);
 		const unsigned char *object_large_offsets_index = idx->object_large_offsets;
@@ -441,10 +441,9 @@ int git_midx_entry_find(
 
 		object_large_offsets_index += 8 * object_large_offsets_pos;
 
-		offset = (((uint64_t)ntohl(*((uint32_t *)(object_large_offsets_index + 0)))) << 32) |
-				ntohl(*((uint32_t *)(object_large_offsets_index + 4)));
+		offset = git__get_be64(object_large_offsets_index);
 	}
-	pack_index = ntohl(*((uint32_t *)(object_offset + 0)));
+	pack_index = git__get_be32(object_offset + 0);
 	if (pack_index >= git_vector_length(&idx->packfile_names))
 		return midx_error("invalid index into the packfile names table");
 	e->pack_index = pack_index;

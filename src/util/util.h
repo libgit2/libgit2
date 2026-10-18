@@ -351,6 +351,29 @@ GIT_INLINE(uint64_t) git_time_monotonic(void)
 
 #endif
 
+/*
+ * Read a big-endian (network order) integer from a byte buffer.  Unlike
+ * `ntohl(*(uint32_t *)p)`, these make no assumption about the alignment
+ * of `p`, so they are safe to use on file data at arbitrary offsets.
+ */
+GIT_INLINE(uint32_t) git__get_be32(const void *ptr)
+{
+	const unsigned char *p = ptr;
+
+	return ((uint32_t)p[0] << 24) |
+	       ((uint32_t)p[1] << 16) |
+	       ((uint32_t)p[2] << 8) |
+	       ((uint32_t)p[3]);
+}
+
+GIT_INLINE(uint64_t) git__get_be64(const void *ptr)
+{
+	const unsigned char *p = ptr;
+
+	return ((uint64_t)git__get_be32(p) << 32) |
+	       (uint64_t)git__get_be32(p + 4);
+}
+
 extern int git__getenv(git_str *out, const char *name);
 
 extern int git__online_cpus(void);

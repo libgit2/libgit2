@@ -40,3 +40,27 @@ void test_encoding__encode(void)
 
 	cl_assert(git_encode_varint(buf, 1, UINT64_C(1489279344088)) == -1);
 }
+
+void test_encoding__get_be32_be64(void)
+{
+	unsigned char buf[16];
+	size_t i;
+
+	/* the readers must work at any offset, aligned or not */
+	for (i = 0; i < 8; i++) {
+		memset(buf, 0, sizeof(buf));
+		memcpy(buf + i, "\x01\x02\x03\x04\x05\x06\x07\x08", 8);
+		cl_assert_equal_i(git__get_be32(buf + i), 0x01020304);
+		cl_assert_equal_i(git__get_be32(buf + i + 4), 0x05060708);
+		cl_assert(git__get_be64(buf + i) == UINT64_C(0x0102030405060708));
+
+		memcpy(buf + i, "\xff\xfe\xfd\xfc\x80\x00\x00\x01", 8);
+		cl_assert(git__get_be32(buf + i) == 0xfffefdfc);
+		cl_assert(git__get_be32(buf + i + 4) == 0x80000001);
+		cl_assert(git__get_be64(buf + i) == UINT64_C(0xfffefdfc80000001));
+
+		memset(buf + i, 0xff, 8);
+		cl_assert(git__get_be32(buf + i) == UINT32_MAX);
+		cl_assert(git__get_be64(buf + i) == UINT64_MAX);
+	}
+}
