@@ -1,0 +1,4 @@
+[remote "origin"]
+	# <https://github.blog/open-source/git/git-2-29-released/#user-content-negative-refspecs>
+	# `git config set --append remote.origin.fetch '^hidden'`
+	fetch = ^hidden
