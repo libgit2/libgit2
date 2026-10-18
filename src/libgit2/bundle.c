@@ -7,19 +7,27 @@
 
 #include "bundle.h"
 
+#include "filebuf.h"
+#include "hashmap_str.h"
 #include "posix.h"
 #include "odb.h"
 #include "refs.h"
 #include "repository.h"
 
+#include "git2/bundle.h"
 #include "git2/odb.h"
+#include "git2/pack.h"
 #include "git2/refs.h"
+#include "git2/revwalk.h"
+#include "git2/tag.h"
 
 #define BUNDLE_READ_CHUNK 8192
 #define BUNDLE_HEADER_LINE_MAX (1024 * 1024)
 
 #define BUNDLE_CAP_OBJECT_FORMAT "object-format"
 #define BUNDLE_CAP_FILTER "filter"
+
+#define BUNDLE_FILE_MODE 0666
 
 static void bundle_header_dispose(git_bundle_header *header);
 
@@ -568,4 +576,316 @@ static void bundle_header_dispose(git_bundle_header *header)
 	git_array_clear(header->prerequisites);
 
 	memset(header, 0, sizeof(*header));
+}
+
+int git_bundle_create_options_init(
+	git_bundle_create_options *opts, unsigned int version)
+{
+	GIT_INIT_STRUCTURE_FROM_TEMPLATE(opts, version,
+		git_bundle_create_options, GIT_BUNDLE_CREATE_OPTIONS_INIT);
+	return 0;
+}
+
+typedef struct {
+	git_oid oid;
+	char *name;
+} bundle_ref;
+
+static void bundle_refs_dispose(git_vector *refs)
+{
+	bundle_ref *ref;
+	size_t i;
+
+	git_vector_foreach(refs, i, ref) {
+		git__free(ref->name);
+		git__free(ref);
+	}
+
+	git_vector_dispose(refs);
+}
+
+/*
+ * Validate the selection and snapshot each ref's name and resolved id, in
+ * caller order and without later duplicates.
+ */
+static int bundle_refs_snapshot(
+	git_vector *out, git_repository *repo, const git_strarray *refs)
+{
+	git_hashset_str seen = GIT_HASHSET_INIT;
+	git_reference *direct, *resolved;
+	bundle_ref *ref;
+	size_t i;
+	int valid, error = 0;
+
+	if (!refs || !refs->count) {
+		git_error_set(GIT_ERROR_INVALID, "no references selected for bundle");
+		return -1;
+	}
+
+	if (git_repository_is_shallow(repo)) {
+		git_error_set(GIT_ERROR_INVALID,
+			"cannot create a bundle from a shallow repository");
+		return GIT_ENOTSUPPORTED;
+	}
+
+	for (i = 0; i < refs->count; i++) {
+		const char *name = refs->strings[i];
+
+		if (!name)
+			valid = 0;
+		else if (strcmp(name, GIT_HEAD_FILE) == 0)
+			valid = 1;
+		else if (git__prefixcmp(name, GIT_REFS_DIR) != 0)
+			valid = 0;
+		else if ((error = git_reference_name_is_valid(&valid, name)) < 0)
+			return error;
+
+		if (!valid) {
+			git_error_set(GIT_ERROR_REFERENCE,
+				"invalid bundle reference name '%s'",
+				name ? name : "(null)");
+			return GIT_EINVALIDSPEC;
+		}
+	}
+
+	if (git_vector_init(out, refs->count, NULL) < 0)
+		return -1;
+
+	for (i = 0; i < refs->count; i++) {
+		const char *name = refs->strings[i];
+
+		if (git_hashset_str_contains(&seen, name))
+			continue;
+
+		if ((error = git_reference_lookup(&direct, repo, name)) < 0)
+			goto done;
+
+		error = git_reference_resolve(&resolved, direct);
+		git_reference_free(direct);
+
+		if (error < 0)
+			goto done;
+
+		ref = git__calloc(1, sizeof(bundle_ref));
+		if (ref)
+			ref->name = git__strdup(name);
+
+		if (!ref || !ref->name) {
+			git__free(ref);
+			git_reference_free(resolved);
+			error = -1;
+			goto done;
+		}
+
+		git_oid_cpy(&ref->oid, git_reference_target(resolved));
+		git_reference_free(resolved);
+
+		if ((error = git_vector_insert(out, ref)) < 0) {
+			git__free(ref->name);
+			git__free(ref);
+			goto done;
+		}
+
+		if ((error = git_hashset_str_add(&seen, ref->name)) < 0)
+			goto done;
+	}
+
+done:
+	git_hashset_str_dispose(&seen);
+
+	if (error < 0)
+		bundle_refs_dispose(out);
+
+	return error;
+}
+
+/*
+ * Add every object reachable from the selected ids.  Tags are inserted
+ * one by one and commits go through a revwalk: `insert_recur` on either
+ * would leave out the commit's parents.
+ */
+static int bundle_collect(
+	git_packbuilder *pb, git_repository *repo, const git_vector *refs)
+{
+	git_revwalk *walk = NULL;
+	git_object *obj = NULL, *next;
+	bundle_ref *ref;
+	bool have_commits = false;
+	size_t i;
+	int error;
+
+	if ((error = git_revwalk_new(&walk, repo)) < 0)
+		return error;
+
+	git_vector_foreach(refs, i, ref) {
+		if ((error = git_object_lookup(&obj, repo, &ref->oid,
+				GIT_OBJECT_ANY)) < 0)
+			goto done;
+
+		while (git_object_type(obj) == GIT_OBJECT_TAG) {
+			if ((error = git_packbuilder_insert(
+					pb, git_object_id(obj), NULL)) < 0 ||
+			    (error = git_tag_target(&next, (git_tag *)obj)) < 0)
+				goto done;
+
+			git_object_free(obj);
+			obj = next;
+		}
+
+		if (git_object_type(obj) == GIT_OBJECT_COMMIT) {
+			error = git_revwalk_push(walk, git_object_id(obj));
+			have_commits = true;
+		} else {
+			error = git_packbuilder_insert_recur(
+				pb, git_object_id(obj), NULL);
+		}
+
+		if (error < 0)
+			goto done;
+
+		git_object_free(obj);
+		obj = NULL;
+	}
+
+	if (have_commits)
+		error = git_packbuilder_insert_walk(pb, walk);
+
+done:
+	git_object_free(obj);
+	git_revwalk_free(walk);
+	return error;
+}
+
+static int bundle_write_header(
+	git_bundle_write_cb write_cb,
+	void *payload,
+	git_repository *repo,
+	const git_vector *refs)
+{
+	git_str buf = GIT_STR_INIT;
+	git_oid_t oid_type = git_repository_oid_type(repo);
+	char hex[GIT_OID_MAX_HEXSIZE + 1];
+	bundle_ref *ref;
+	size_t i;
+	int error;
+
+	if (oid_type == GIT_OID_SHA1) {
+		git_str_puts(&buf, GIT_BUNDLE_SIGNATURE_V2 "\n");
+	} else {
+		git_str_puts(&buf, GIT_BUNDLE_SIGNATURE_V3 "\n");
+		git_str_printf(&buf, "@" BUNDLE_CAP_OBJECT_FORMAT "=%s\n",
+			git_oid_type_name(oid_type));
+	}
+
+	git_vector_foreach(refs, i, ref) {
+		git_oid_tostr(hex, sizeof(hex), &ref->oid);
+		git_str_printf(&buf, "%s %s\n", hex, ref->name);
+	}
+
+	git_str_putc(&buf, '\n');
+
+	if (git_str_oom(&buf))
+		error = -1;
+	else
+		error = write_cb(buf.ptr, buf.size, payload);
+
+	git_str_dispose(&buf);
+	return error;
+}
+
+typedef struct {
+	git_bundle_write_cb write_cb;
+	void *payload;
+} bundle_pack_writer;
+
+static int bundle_pack_write(void *buf, size_t size, void *payload)
+{
+	bundle_pack_writer *writer = payload;
+
+	return writer->write_cb(buf, size, writer->payload);
+}
+
+static int bundle_write(
+	git_repository *repo,
+	const git_vector *refs,
+	const git_bundle_create_options *opts,
+	git_bundle_write_cb write_cb,
+	void *payload)
+{
+	git_packbuilder *pb = NULL;
+	bundle_pack_writer writer = { write_cb, payload };
+	int error;
+
+	if ((error = git_packbuilder_new(&pb, repo)) < 0)
+		return error;
+
+	if (opts && opts->progress_cb &&
+	    (error = git_packbuilder_set_callbacks(pb,
+			opts->progress_cb, opts->progress_cb_payload)) < 0)
+		goto done;
+
+	if ((error = bundle_collect(pb, repo, refs)) < 0 ||
+	    (error = bundle_write_header(write_cb, payload, repo, refs)) < 0)
+		goto done;
+
+	error = git_packbuilder_foreach(pb, bundle_pack_write, &writer);
+
+done:
+	git_packbuilder_free(pb);
+	return error;
+}
+
+static int bundle_write_filebuf(const void *buf, size_t len, void *payload)
+{
+	return git_filebuf_write(payload, buf, len);
+}
+
+int git_bundle__write(
+	git_repository *repo,
+	const git_strarray *refs,
+	const git_bundle_create_options *opts,
+	git_bundle_write_cb write_cb,
+	void *payload)
+{
+	git_vector snapshot = GIT_VECTOR_INIT;
+	int error;
+
+	if ((error = bundle_refs_snapshot(&snapshot, repo, refs)) < 0)
+		return error;
+
+	error = bundle_write(repo, &snapshot, opts, write_cb, payload);
+
+	bundle_refs_dispose(&snapshot);
+	return error;
+}
+
+int git_bundle_create(
+	git_repository *repo,
+	const char *path,
+	const git_strarray *refs,
+	const git_bundle_create_options *opts)
+{
+	git_vector snapshot = GIT_VECTOR_INIT;
+	git_filebuf file = GIT_FILEBUF_INIT;
+	int error;
+
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(path);
+	GIT_ERROR_CHECK_VERSION(opts, GIT_BUNDLE_CREATE_OPTIONS_VERSION,
+		"git_bundle_create_options");
+
+	if ((error = bundle_refs_snapshot(&snapshot, repo, refs)) < 0)
+		return error;
+
+	if ((error = git_filebuf_open(&file, path, 0, BUNDLE_FILE_MODE)) < 0)
+		goto done;
+
+	if ((error = bundle_write(repo, &snapshot, opts,
+			bundle_write_filebuf, &file)) < 0 ||
+	    (error = git_filebuf_commit(&file)) < 0)
+		git_filebuf_cleanup(&file);
+
+done:
+	bundle_refs_dispose(&snapshot);
+	return error;
 }

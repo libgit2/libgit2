@@ -14,6 +14,7 @@
 #include "str.h"
 #include "vector.h"
 
+#include "git2/bundle.h"
 #include "git2/remote.h"
 #include "git2/types.h"
 
@@ -118,6 +119,21 @@ void git_bundle_parser_dispose(git_bundle_parser *parser);
  */
 int git_bundle_check_prerequisites(
 	git_bundle_header *header, git_repository *repo);
+
+/** Write `len` bytes of a bundle being created. */
+typedef int GIT_CALLBACK(git_bundle_write_cb)(
+	const void *buf, size_t len, void *payload);
+
+/**
+ * Create a bundle through a write callback.  This is `git_bundle_create`
+ * without the file: the same validation, header, and pack.
+ */
+int git_bundle__write(
+	git_repository *repo,
+	const git_strarray *refs,
+	const git_bundle_create_options *opts,
+	git_bundle_write_cb write_cb,
+	void *payload);
 
 /**
  * Decide whether `url` names a bundle file, by parsing its header.

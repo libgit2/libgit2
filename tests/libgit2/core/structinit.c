@@ -95,6 +95,11 @@ void test_core_structinit__compare(void)
 		git_blob_filter_options, GIT_BLOB_FILTER_OPTIONS_VERSION, \
 		GIT_BLOB_FILTER_OPTIONS_INIT, git_blob_filter_options_init);
 
+	/* bundle_create */
+	CHECK_MACRO_FUNC_INIT_EQUAL( \
+		git_bundle_create_options, GIT_BUNDLE_CREATE_OPTIONS_VERSION, \
+		GIT_BUNDLE_CREATE_OPTIONS_INIT, git_bundle_create_options_init);
+
 	/* checkout */
 	CHECK_MACRO_FUNC_INIT_EQUAL( \
 		git_checkout_options, GIT_CHECKOUT_OPTIONS_VERSION, \
