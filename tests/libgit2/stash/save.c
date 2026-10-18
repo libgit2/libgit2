@@ -186,6 +186,20 @@ void test_stash_save__untracked_skips_ignored(void)
 	cl_assert(git_fs_path_exists("stash/just.ignore"));
 }
 
+void test_stash_save__untracked_skips_ignored_sibling(void)
+{
+	cl_must_pass(p_mkdir("stash/dir", 0777));
+	cl_git_mkfile("stash/dir/untracked", "contents\n");
+	cl_git_mkfile("stash/dir/sibling.ignore", "contents\n");
+
+	cl_git_pass(git_stash_save(
+		&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+
+	cl_assert(!git_fs_path_exists("stash/dir/untracked"));
+	assert_blob_oid("refs/stash^3:dir/sibling.ignore", NULL);
+	cl_assert(git_fs_path_exists("stash/dir/sibling.ignore"));
+}
+
 void test_stash_save__can_include_untracked_and_ignored_files(void)
 {
 	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED));

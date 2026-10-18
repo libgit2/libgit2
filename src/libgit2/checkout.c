@@ -372,6 +372,31 @@ static int checkout_queue_remove(checkout_data *data, const char *path)
 	return git_vector_insert(&data->removes, copy);
 }
 
+static bool checkout_is_empty_dir(checkout_data *data, const char *path)
+{
+	git_str *fullpath;
+
+	if (checkout_target_fullpath(&fullpath, data, path) < 0)
+		return false;
+
+	return git_fs_path_is_empty_dir(fullpath->ptr);
+}
+
+static bool wd_only_tree_needs_descent(
+	checkout_data *data, git_iterator *workdir, const git_index_entry *wd)
+{
+	bool remove_untracked =
+		(data->strategy & GIT_CHECKOUT_REMOVE_UNTRACKED) != 0;
+	bool remove_ignored =
+		(data->strategy & GIT_CHECKOUT_REMOVE_IGNORED) != 0;
+
+	return wd->mode == GIT_FILEMODE_TREE &&
+		remove_untracked != remove_ignored &&
+		!git_iterator_current_is_ignored(workdir) &&
+		wd_item_is_removable(data, wd) &&
+		!checkout_is_empty_dir(data, wd->path);
+}
+
 /* note that this advances the iterator over the wd item */
 static int checkout_action_wd_only(
 	checkout_data *data,
@@ -420,6 +445,9 @@ static int checkout_action_wd_only(
 				return git_iterator_advance_into(wditem, workdir);
 		}
 	}
+
+	if (wd_only_tree_needs_descent(data, workdir, wd))
+		return git_iterator_advance_into(wditem, workdir);
 
 	if (notify != GIT_CHECKOUT_NOTIFY_NONE) {
 		/* if we found something in the index, notify and advance */
@@ -487,16 +515,6 @@ static bool submodule_is_config_only(
 	git_submodule_free(sm);
 
 	return rval;
-}
-
-static bool checkout_is_empty_dir(checkout_data *data, const char *path)
-{
-	git_str *fullpath;
-
-	if (checkout_target_fullpath(&fullpath, data, path) < 0)
-		return false;
-
-	return git_fs_path_is_empty_dir(fullpath->ptr);
 }
 
 static int checkout_action_with_wd(
