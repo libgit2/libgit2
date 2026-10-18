@@ -325,6 +325,13 @@ static int ssh_exec_subtransport_close(git_smart_subtransport *t)
 
 	if (transport->process) {
 		git_process_close(transport->process);
+#ifndef GIT_WIN32
+		/* Reap the ssh process after closing its pipes. */
+		while (git_process_wait(NULL, transport->process) < 0 &&
+		       errno == EINTR) {
+			/* Retry interrupted waits. */
+		}
+#endif
 		git_process_free(transport->process);
 		transport->process = NULL;
 	}
