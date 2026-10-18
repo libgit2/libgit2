@@ -1001,6 +1001,52 @@ static int index_entry_create(
 	return 0;
 }
 
+/*
+ * git add refuses a pathspec whose non-final component is a
+ * symlink. Staging such a path produces a tree git cannot
+ * check out next to the symlink.
+ */
+static int index_verify_no_symlink_component(
+	git_repository *repo,
+	const char *rel_path)
+{
+	const char *slash;
+	git_str prefix = GIT_STR_INIT;
+	git_str full = GIT_STR_INIT;
+	int error = 0;
+
+	if (rel_path == NULL)
+		return 0;
+
+	for (slash = strchr(rel_path, '/'); slash != NULL;
+	     slash = strchr(slash + 1, '/')) {
+		if (slash == rel_path)
+			continue;
+
+		if (git_str_set(&prefix, rel_path, (size_t)(slash - rel_path)) < 0) {
+			error = -1;
+			goto done;
+		}
+
+		if (git_repository_workdir_path(&full, repo, prefix.ptr) < 0) {
+			error = -1;
+			goto done;
+		}
+
+		if (git_fs_path_islink(full.ptr)) {
+			git_error_set(GIT_ERROR_INDEX,
+				"'%s' is beyond a symbolic link", rel_path);
+			error = -1;
+			goto done;
+		}
+	}
+
+done:
+	git_str_dispose(&prefix);
+	git_str_dispose(&full);
+	return error;
+}
+
 static int index_entry_init(
 	git_index_entry **entry_out,
 	git_index *index,
@@ -1026,6 +1072,9 @@ static int index_entry_init(
 	repo = INDEX_OWNER(index);
 	if (git_repository__ensure_not_bare(repo, "create blob from file") < 0)
 		return GIT_EBAREREPO;
+
+	if ((error = index_verify_no_symlink_component(repo, rel_path)) < 0)
+		return error;
 
 	if (git_repository_workdir_path(&path, repo, rel_path) < 0)
 		return -1;

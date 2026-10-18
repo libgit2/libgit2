@@ -630,6 +630,9 @@ GIT_EXTERN(void) git_index_iterator_free(git_index_iterator *iterator);
  * The file `path` must be relative to the repository's
  * working folder and must be readable.
  *
+ * A path whose non-final component is a symbolic link is
+ * rejected, matching `git add`.
+ *
  * This method will fail in bare index instances.
  *
  * This forces the file to be added to the index, not looking
