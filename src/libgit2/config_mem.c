@@ -199,7 +199,6 @@ static int config_memory_get(git_config_backend *backend, const char *key, git_c
 	if ((error = git_config_list_get(&entry, memory_backend->config_list, key)) != 0)
 		return error;
 
-	git_config_list_incref(memory_backend->config_list);
 	*out = &entry->base;
 	return 0;
 }

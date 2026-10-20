@@ -60,13 +60,14 @@ static int config_snapshot_get(
 	git_config_list_incref(config_list);
 	git_mutex_unlock(&b->values_mutex);
 
-	if ((error = (git_config_list_get(&entry, config_list, key))) < 0) {
-		git_config_list_free(config_list);
-		return error;
-	}
+	if ((error = (git_config_list_get(&entry, config_list, key))) < 0)
+		goto out;
 
 	*out = &entry->base;
-	return 0;
+
+out:
+	git_config_list_free(config_list);
+	return error;
 }
 
 static int config_snapshot_set(git_config_backend *cfg, const char *name, const char *value)
