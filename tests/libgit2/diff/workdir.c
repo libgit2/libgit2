@@ -16,6 +16,7 @@ void test_diff_workdir__to_index(void)
 {
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
+	git_diff *reverse_diff = NULL;
 	diff_expects exp;
 	int use_iterator;
 
@@ -59,6 +60,51 @@ void test_diff_workdir__to_index(void)
 		cl_assert_equal_i(5, exp.line_dels);
 	}
 
+	/* Let's try that once more with a reversed diff */
+	/* Free `diff` later. We want to compare it with the reverse diff first. */
+
+	opts.flags |= GIT_DIFF_REVERSE;
+
+	cl_git_pass(git_diff_index_to_workdir(&reverse_diff, g_repo, NULL, &opts));
+
+	memset(&exp, 0, sizeof(exp));
+
+	cl_git_pass(git_diff_foreach(
+		reverse_diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
+
+	cl_assert_equal_i(13, exp.files);
+	cl_assert_equal_i(0, exp.file_status[GIT_DELTA_DELETED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_ADDED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_MODIFIED]);
+	cl_assert_equal_i(1, exp.file_status[GIT_DELTA_IGNORED]);
+	cl_assert_equal_i(4, exp.file_status[GIT_DELTA_UNTRACKED]);
+
+	cl_assert_equal_i(8, exp.hunks);
+
+	cl_assert_equal_i(14, exp.lines);
+	cl_assert_equal_i(5, exp.line_ctxt);
+	cl_assert_equal_i(4, exp.line_dels);
+	cl_assert_equal_i(5, exp.line_adds);
+
+	/* Verify if the reverse diff has the same OIDs as the direct diff. */
+	{
+		size_t delta_idx;
+
+		cl_assert_equal_i(git_diff_num_deltas(diff),
+						  git_diff_num_deltas(reverse_diff));
+
+		for (delta_idx = 0; delta_idx < git_diff_num_deltas(diff); delta_idx++) {
+			const git_diff_delta *direct_delta = git_diff_get_delta(diff, delta_idx);
+			const git_diff_delta *reverse_delta = git_diff_get_delta(reverse_diff, delta_idx);
+
+			cl_assert_equal_oid(&direct_delta->old_file.id,
+								&reverse_delta->new_file.id);
+
+			cl_assert_equal_oid(&direct_delta->new_file.id,
+								&reverse_delta->old_file.id);
+		}
+	}
+
 	{
 		git_diff_perfdata perf = GIT_DIFF_PERFDATA_INIT;
 		cl_git_pass(git_diff_get_perfdata(&perf, diff));
@@ -68,6 +114,7 @@ void test_diff_workdir__to_index(void)
 	}
 
 	git_diff_free(diff);
+	git_diff_free(reverse_diff);
 }
 
 void test_diff_workdir__to_index_with_conflicts(void)
@@ -180,6 +227,7 @@ void test_diff_workdir__to_tree(void)
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
 	git_diff *diff = NULL;
 	git_diff *diff2 = NULL;
+	git_diff *reverse_diff = NULL;
 	diff_expects exp;
 	int use_iterator;
 
@@ -302,21 +350,20 @@ void test_diff_workdir__to_tree(void)
 		cl_assert_equal_i(4, exp.line_dels);
 	}
 
-	git_diff_free(diff);
-
 	/* Let's try that once more with a reversed diff */
+	/* Free `diff` later. We want to compare it with the reverse diff first. */
 
 	opts.flags |= GIT_DIFF_REVERSE;
 
-	cl_git_pass(git_diff_tree_to_index(&diff, g_repo, b, NULL, &opts));
+	cl_git_pass(git_diff_tree_to_index(&reverse_diff, g_repo, b, NULL, &opts));
 	cl_git_pass(git_diff_index_to_workdir(&diff2, g_repo, NULL, &opts));
-	cl_git_pass(git_diff_merge(diff, diff2));
+	cl_git_pass(git_diff_merge(reverse_diff, diff2));
 	git_diff_free(diff2);
 
 	memset(&exp, 0, sizeof(exp));
 
 	cl_git_pass(git_diff_foreach(
-		diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
+		reverse_diff, diff_file_cb, diff_binary_cb, diff_hunk_cb, diff_line_cb, &exp));
 
 	cl_assert_equal_i(16, exp.files);
 	cl_assert_equal_i(5, exp.file_status[GIT_DELTA_DELETED]);
@@ -332,7 +379,27 @@ void test_diff_workdir__to_tree(void)
 	cl_assert_equal_i(12, exp.line_dels);
 	cl_assert_equal_i(4, exp.line_adds);
 
+	/* Verify if the reverse diff has the same OIDs as the direct diff. */
+	{
+		size_t delta_idx;
+
+		cl_assert_equal_i(git_diff_num_deltas(diff),
+						  git_diff_num_deltas(reverse_diff));
+
+		for (delta_idx = 0; delta_idx < git_diff_num_deltas(diff); delta_idx++) {
+			const git_diff_delta *direct_delta = git_diff_get_delta(diff, delta_idx);
+			const git_diff_delta *reverse_delta = git_diff_get_delta(reverse_diff, delta_idx);
+
+			cl_assert_equal_oid(&direct_delta->old_file.id,
+								&reverse_delta->new_file.id);
+
+			cl_assert_equal_oid(&direct_delta->new_file.id,
+								&reverse_delta->old_file.id);
+		}
+	}
+
 	git_diff_free(diff);
+	git_diff_free(reverse_diff);
 
 	/* all done now */
 
