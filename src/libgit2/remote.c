@@ -3147,7 +3147,70 @@ static int apply_insteadof(char **out, git_config *config, const char *url, int 
 	*out = git_str_detach(&result);
 	return 0;
 }
+int git_remote_set_head(
+	git_repository *repo,
+	const char *remote_name,
+	const char *branch_name)
+{
+	git_remote *remote = NULL;
+	git_refspec *refspec;
+	git_reference *remote_head = NULL;
+	git_str remote_head_name = GIT_STR_INIT;
+	git_str remote_branch_name = GIT_STR_INIT;
+	git_str default_branch = GIT_STR_INIT;
+	const char *target = branch_name;
+	int error;
 
+	GIT_ASSERT_ARG(repo);
+	GIT_ASSERT_ARG(remote_name);
+
+	if ((error = git_remote_lookup(&remote, repo, remote_name)) < 0)
+		return error;
+
+	if (!target) {
+		if ((error = git_remote__default_branch(&default_branch, remote)) < 0)
+			goto cleanup;
+
+		target = git_str_cstr(&default_branch);
+	}
+
+	refspec = git_remote__matching_refspec(remote, target);
+
+	if (refspec == NULL) {
+		git_error_set(GIT_ERROR_NET, "the remote's default branch does not fit the refspec configuration");
+		error = GIT_EINVALIDSPEC;
+		goto cleanup;
+	}
+
+	if ((error = git_refspec__transform(
+		&remote_branch_name,
+		refspec,
+		target)) < 0)
+		goto cleanup;
+
+	if ((error = git_str_printf(&remote_head_name,
+		"%s%s/%s",
+		GIT_REFS_REMOTES_DIR,
+		git_remote_name(remote),
+		GIT_HEAD_REF)) < 0)
+		goto cleanup;
+
+	error = git_reference_symbolic_create(
+		&remote_head,
+		repo,
+		git_str_cstr(&remote_head_name),
+		git_str_cstr(&remote_branch_name),
+		true,
+		"remote set-head");
+
+cleanup:
+	git_remote_free(remote);
+	git_reference_free(remote_head);
+	git_str_dispose(&remote_branch_name);
+	git_str_dispose(&remote_head_name);
+	git_str_dispose(&default_branch);
+	return error;
+}
 /* Deprecated functions */
 
 #ifndef GIT_DEPRECATE_HARD
