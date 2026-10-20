@@ -55,14 +55,14 @@ void test_message_trailer__no_whitespace(void)
 void test_message_trailer__extra_whitespace(void)
 {
 	git_message_trailer trailers[] = {
-		{"Key", "value"},
+		{"Key", "value with leading and trailing spaces"},
 		{NULL, NULL},
 	};
 
 	assert_trailers(
 		"Message\n"
 		"\n"
-		"Key   :   value\n"
+		"Key   :   value with leading and trailing spaces  \n"
 	, trailers);
 }
 
@@ -93,6 +93,23 @@ void test_message_trailer__not_last_paragraph(void)
 		"\n"
 		"More stuff\n"
 	, trailers);
+}
+
+void test_message_trailer__empty_value(void)
+{
+	git_message_trailer trailers[] = {
+		{ "EmptyValue", "" },
+		{ "Another", "trailer here" },
+		{ "YetAnother", "trailer" },
+		{ NULL, NULL },
+	};
+	assert_trailers(
+	        "Message\n"
+	        "\n"
+	        "EmptyValue:     \n"
+	        "Another: trailer here\n"
+	        "YetAnother: trailer\n",
+	    trailers);
 }
 
 void test_message_trailer__conflicts(void)

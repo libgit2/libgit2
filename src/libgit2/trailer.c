@@ -368,6 +368,12 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 				}
 
 				value = ptr;
+
+				if (*ptr == '\n')
+			        {
+				        NEXT(S_VALUE_NL);
+			        }
+
 				NEXT(S_VALUE);
 			}
 			case S_VALUE: {
@@ -387,7 +393,14 @@ int git_message_trailers(git_message_trailer_array *trailer_arr, const char *mes
 					NEXT(S_VALUE);
 				}
 
-				ptr[-1] = 0;
+				/* Trim trailing whitespace. */
+			        char *end_of_value = ptr - 1;
+			        while (end_of_value > value &&
+			               (*(end_of_value - 1) == ' ' ||
+			                *(end_of_value - 1) == '\t'))
+				        end_of_value--;
+			        *end_of_value = 0;
+
 				GOTO(S_VALUE_END);
 			}
 			case S_VALUE_END: {
