@@ -130,6 +130,12 @@ static void hashsig_heap_insert(hashsig_heap *h, hashsig_t val)
 
 typedef struct {
 	int use_ignores;
+	/*
+	 * The run being accumulated, carried between calls so that a run
+	 * spanning two blocks of a file hashes as a single run.
+	 */
+	hashsig_state state;
+	int len;
 	uint8_t ignore_ch[256];
 } hashsig_in_progress;
 
@@ -154,7 +160,22 @@ static int hashsig_in_progress_init(
 		memset(prog, 0, sizeof(*prog));
 	}
 
+	prog->state = HASHSIG_HASH_START;
+	prog->len = 0;
+
 	return 0;
+}
+
+/* Add the run accumulated so far, if any, to the signature. */
+static void hashsig_flush_hashes(git_hashsig *sig, hashsig_in_progress *prog)
+{
+	if (prog->len > 0) {
+		hashsig_heap_insert(&sig->mins, (hashsig_t)prog->state);
+		hashsig_heap_insert(&sig->maxs, (hashsig_t)prog->state);
+	}
+
+	prog->state = HASHSIG_HASH_START;
+	prog->len = 0;
 }
 
 static int hashsig_add_hashes(
@@ -164,14 +185,14 @@ static int hashsig_add_hashes(
 	hashsig_in_progress *prog)
 {
 	const uint8_t *scan = data, *end = data + size;
-	hashsig_state state = HASHSIG_HASH_START;
-	int use_ignores = prog->use_ignores, len;
+	hashsig_state state = prog->state;
+	int use_ignores = prog->use_ignores, len = prog->len;
 	uint8_t ch;
 
 	while (scan < end) {
-		state = HASHSIG_HASH_START;
+		int done = 0;
 
-		for (len = 0; scan < end && len < HASHSIG_MAX_RUN; ) {
+		for (; scan < end && len < HASHSIG_MAX_RUN; ) {
 			ch = *scan;
 
 			if (use_ignores)
@@ -193,12 +214,23 @@ static int hashsig_add_hashes(
 			/* check run terminator */
 			if (ch == '\n' || ch == '\0') {
 				sig->lines++;
+				done = 1;
 				break;
 			}
 
 			++len;
 			HASHSIG_HASH_MIX(state, ch);
 		}
+
+		if (len >= HASHSIG_MAX_RUN)
+			done = 1;
+
+		/*
+		 * Only record the run once we know it has ended; running out
+		 * of data means it continues in the next block.
+		 */
+		if (!done)
+			break;
 
 		if (len > 0) {
 			hashsig_heap_insert(&sig->mins, (hashsig_t)state);
@@ -207,9 +239,14 @@ static int hashsig_add_hashes(
 			while (scan < end && (*scan == '\n' || !*scan))
 				++scan;
 		}
+
+		state = HASHSIG_HASH_START;
+		len = 0;
 	}
 
 	prog->use_ignores = use_ignores;
+	prog->state = state;
+	prog->len = len;
 
 	return 0;
 }
@@ -258,8 +295,10 @@ int git_hashsig_create(
 
 	error = hashsig_add_hashes(sig, (const uint8_t *)buf, buflen, &prog);
 
-	if (!error)
+	if (!error) {
+		hashsig_flush_hashes(sig, &prog);
 		error = hashsig_finalize_hashes(sig);
+	}
 
 	if (!error)
 		*out = sig;
@@ -304,8 +343,10 @@ int git_hashsig_create_fromfile(
 
 	p_close(fd);
 
-	if (!error)
+	if (!error) {
+		hashsig_flush_hashes(sig, &prog);
 		error = hashsig_finalize_hashes(sig);
+	}
 
 	if (!error)
 		*out = sig;
