@@ -28,6 +28,14 @@ typedef struct {
 int git_parse_ctx_init(git_parse_ctx *ctx, const char *content, size_t content_len);
 void git_parse_ctx_clear(git_parse_ctx *ctx);
 
+long git_parse_unescaped_char_offset_in_line(
+	git_parse_ctx *ctx,
+	char char_to_search_for);
+long git_parse_unescaped_char_offset_in_str(
+	const char *base,
+	size_t len,
+	char char_to_search_for);
+
 #define git_parse_ctx_contains_s(ctx, str) \
 	git_parse_ctx_contains(ctx, str, sizeof(str) - 1)
 
