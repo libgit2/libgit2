@@ -8,6 +8,7 @@
 #define INCLUDE_revwalk_h__
 
 #include "common.h"
+#include "commit_graph.h"
 
 #include "git2/revwalk.h"
 #include "commit_list.h"
@@ -49,6 +50,8 @@ struct git_revwalk {
 
 	git_pathspec *pathspec;
 	bool pathspec_wildcard;
+	git_bloom_filter_cache *pathspec_cache;
+	git_commit_graph_file *pathspec_cgfile;
 };
 
 git_commit_list_node *git_revwalk__commit_lookup(git_revwalk *walk, const git_oid *oid);

@@ -69,7 +69,8 @@ extern int git__strntol64(int64_t *n, const char *buff, size_t buff_len, const c
 
 
 extern void git__hexdump(const char *buffer, size_t n);
-extern uint32_t git__hash(const void *key, int len, uint32_t seed);
+extern uint32_t git__hash(const void *key, size_t len, uint32_t seed);
+extern uint32_t git__hash_v2(const void *key, size_t len, uint32_t seed);
 
 /* 32-bit cross-platform rotl */
 #ifdef _MSC_VER /* use built-in method in MSVC */
