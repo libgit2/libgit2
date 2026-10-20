@@ -293,6 +293,12 @@ static git_diff_delta *diff_delta__last_for_item(
 	if (!delta)
 		return NULL;
 
+	/* the delta for the item may not have been created (eg, because
+	 * of the pathspec or the notify callback)
+	 */
+	if (diff->base.strcomp(delta->new_file.path, item->path) != 0)
+		return NULL;
+
 	switch (delta->status) {
 	case GIT_DELTA_UNMODIFIED:
 	case GIT_DELTA_DELETED:
@@ -305,8 +311,7 @@ static git_diff_delta *diff_delta__last_for_item(
 		break;
 	case GIT_DELTA_UNREADABLE:
 	case GIT_DELTA_UNTRACKED:
-		if (diff->base.strcomp(delta->new_file.path, item->path) == 0 &&
-			git_oid__cmp(&delta->new_file.id, &item->id) == 0)
+		if (git_oid__cmp(&delta->new_file.id, &item->id) == 0)
 			return delta;
 		break;
 	case GIT_DELTA_MODIFIED:

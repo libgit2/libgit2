@@ -573,3 +573,52 @@ void test_diff_tree__diff_tree_with_empty_dir_entry_succeeds(void)
 	git_treebuilder_free(builder);
 	git_buf_dispose(&patch);
 }
+
+void test_diff_tree__typechange_trees_does_not_change_other_deltas(void)
+{
+	git_tree_update updates[2];
+	char *pathspec[] = { "a", "c/*" };
+	const git_diff_delta *delta;
+	git_oid same, other, id;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(git_blob_create_from_buffer(&same, g_repo, "same\n", 5));
+	cl_git_pass(git_blob_create_from_buffer(&other, g_repo, "other\n", 6));
+
+	/* the files `a` and `c` have the same contents */
+	memset(updates, 0, sizeof(updates));
+	updates[0].action = GIT_TREE_UPDATE_UPSERT;
+	updates[0].filemode = GIT_FILEMODE_BLOB;
+	updates[0].path = "a";
+	git_oid_cpy(&updates[0].id, &same);
+	updates[1].action = GIT_TREE_UPDATE_UPSERT;
+	updates[1].filemode = GIT_FILEMODE_BLOB;
+	updates[1].path = "c";
+	git_oid_cpy(&updates[1].id, &same);
+	cl_git_pass(git_tree_create_updated(&id, g_repo, NULL, 2, updates));
+	cl_git_pass(git_tree_lookup(&a, g_repo, &id));
+
+	/* `a` is deleted and `c` becomes a tree */
+	updates[0].path = "c/d";
+	git_oid_cpy(&updates[0].id, &other);
+	cl_git_pass(git_tree_create_updated(&id, g_repo, NULL, 1, updates));
+	cl_git_pass(git_tree_lookup(&b, g_repo, &id));
+
+	/* the pathspec excludes the file `c`, so it has no delta */
+	opts.flags = GIT_DIFF_INCLUDE_TYPECHANGE_TREES;
+	opts.pathspec.strings = pathspec;
+	opts.pathspec.count = 2;
+
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+	cl_assert_equal_i(2, git_diff_num_deltas(diff));
+
+	delta = git_diff_get_delta(diff, 0);
+	cl_assert_equal_i(GIT_DELTA_DELETED, delta->status);
+	cl_assert_equal_s("a", delta->old_file.path);
+	cl_assert_equal_i(0, delta->new_file.mode);
+
+	delta = git_diff_get_delta(diff, 1);
+	cl_assert_equal_i(GIT_DELTA_ADDED, delta->status);
+	cl_assert_equal_s("c/d", delta->new_file.path);
+}
