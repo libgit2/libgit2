@@ -438,6 +438,7 @@ void test_fetchhead_nonetwork__create_when_refpecs_given(void)
 {
 	git_remote *remote;
 	git_str path = GIT_STR_INIT;
+	git_strarray tags = {0};
 	char *refspec1 = "refs/heads/master";
 	char *refspec2 = "refs/heads/haacked";
 	char *refspecs[] = { refspec1, refspec2 };
@@ -460,6 +461,10 @@ void test_fetchhead_nonetwork__create_when_refpecs_given(void)
 	cl_assert(find_master_haacked_called);
 	cl_assert(found_master);
 	cl_assert(found_haacked);
+
+	cl_git_pass(git_tag_list(&tags, g_repo));
+	cl_assert_equal_i(0, tags.count);
+	git_strarray_dispose(&tags);
 
 	git_remote_free(remote);
 	git_str_dispose(&path);
