@@ -54,25 +54,29 @@ int git_config_list_new(git_config_list **out)
 int git_config_list_dup_entry(git_config_list *config_list, const git_config_entry *entry)
 {
 	git_config_list_entry *duplicated;
-	int error;
+	int error = -1;
 
 	duplicated = git__calloc(1, sizeof(git_config_list_entry));
 	GIT_ERROR_CHECK_ALLOC(duplicated);
 
 	duplicated->base.entry.name = git__strdup(entry->name);
-	GIT_ERROR_CHECK_ALLOC(duplicated->base.entry.name);
+	if (!duplicated->base.entry.name)
+		goto out;
 
 	if (entry->value) {
 		duplicated->base.entry.value = git__strdup(entry->value);
-		GIT_ERROR_CHECK_ALLOC(duplicated->base.entry.value);
+		if (!duplicated->base.entry.value)
+			goto out;
 	}
 
 	duplicated->base.entry.backend_type = git_config_list_add_string(config_list, entry->backend_type);
-	GIT_ERROR_CHECK_ALLOC(duplicated->base.entry.backend_type);
+	if (!duplicated->base.entry.backend_type)
+		goto out;
 
 	if (entry->origin_path) {
 		duplicated->base.entry.origin_path = git_config_list_add_string(config_list, entry->origin_path);
-		GIT_ERROR_CHECK_ALLOC(duplicated->base.entry.origin_path);
+		if (!duplicated->base.entry.origin_path)
+			goto out;
 	}
 
 	duplicated->base.entry.level = entry->level;
@@ -102,7 +106,7 @@ int git_config_list_dup(git_config_list **out, git_config_list *config_list)
 		goto out;
 
 	for (head = config_list->entries; head; head = head->next)
-		if ((git_config_list_dup_entry(result, &head->entry->base.entry)) < 0)
+		if ((error = git_config_list_dup_entry(result, &head->entry->base.entry)) < 0)
 			goto out;
 
 	*out = result;
@@ -160,6 +164,11 @@ int git_config_list_append(git_config_list *config_list, git_config_list_entry *
 	config_entry_list *list_head;
 	config_entry_map_head *map_head;
 
+	/* allocate before the map is touched, so a failure leaves it unchanged */
+	list_head = git__calloc(1, sizeof(config_entry_list));
+	GIT_ERROR_CHECK_ALLOC(list_head);
+	list_head->entry = entry;
+
 	if (git_config_list_headmap_get(&map_head, &config_list->map, entry->base.entry.name) == 0) {
 		map_head->multivar = true;
 		/*
@@ -172,14 +181,15 @@ int git_config_list_append(git_config_list *config_list, git_config_list_entry *
 		entry->base.entry.name = map_head->entry->base.entry.name;
 	} else {
 		map_head = git__calloc(1, sizeof(*map_head));
-		if ((git_config_list_headmap_put(&config_list->map, entry->base.entry.name, map_head)) < 0)
+
+		if (!map_head ||
+		    git_config_list_headmap_put(&config_list->map, entry->base.entry.name, map_head) < 0) {
+			git__free(map_head);
+			git__free(list_head);
 			return -1;
+		}
 	}
 	map_head->entry = entry;
-
-	list_head = git__calloc(1, sizeof(config_entry_list));
-	GIT_ERROR_CHECK_ALLOC(list_head);
-	list_head->entry = entry;
 
 	if (config_list->entries)
 		config_list->entries->last->next = list_head;
@@ -277,9 +287,13 @@ const char *git_config_list_add_string(
 	if (git_config_list_pathmap_get(&s, &config_list->strings, str) == 0)
 		return s;
 
-	if ((s = git__strdup(str)) == NULL ||
-	     git_config_list_pathmap_put(&config_list->strings, s, s) < 0)
+	if ((s = git__strdup(str)) == NULL)
 		return NULL;
+
+	if (git_config_list_pathmap_put(&config_list->strings, s, s) < 0) {
+		git__free(s);
+		return NULL;
+	}
 
 	return s;
 }
