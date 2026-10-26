@@ -146,6 +146,7 @@ struct git_repository {
 
 	char *gitlink;
 	char *gitdir;
+	char *gitdir_unresolved;
 	char *commondir;
 	char *workdir;
 	char *namespace;

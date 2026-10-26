@@ -187,6 +187,7 @@ void git_repository_free(git_repository *repo)
 
 	git__free(repo->gitlink);
 	git__free(repo->gitdir);
+	git__free(repo->gitdir_unresolved);
 	git__free(repo->commondir);
 	git__free(repo->workdir);
 	git__free(repo->namespace);
@@ -762,6 +763,7 @@ done:
 
 struct repo_paths {
 	git_str gitdir;
+	git_str gitdir_unresolved;
 	git_str workdir;
 	git_str gitlink;
 	git_str commondir;
@@ -772,9 +774,77 @@ struct repo_paths {
 GIT_INLINE(void) repo_paths_dispose(struct repo_paths *paths)
 {
 	git_str_dispose(&paths->gitdir);
+	git_str_dispose(&paths->gitdir_unresolved);
 	git_str_dispose(&paths->workdir);
 	git_str_dispose(&paths->gitlink);
 	git_str_dispose(&paths->commondir);
+}
+
+/* Preserve the path supplied by the caller for conditional includes. */
+static int make_unresolved_path(
+	git_str *out,
+	const char *path,
+	const char *resolved_path)
+{
+	git_str pwd = GIT_STR_INIT;
+	char cwd[GIT_PATH_MAX + 1], resolved_pwd[GIT_PATH_MAX + 1];
+	const char *base = NULL;
+	int error = 0;
+
+	if (!git_fs_path_is_absolute(path)) {
+		if (p_getcwd(cwd, sizeof(cwd)) < 0) {
+			git_error_set(GIT_ERROR_OS, "could not get current directory");
+			return -1;
+		}
+		base = cwd;
+
+		error = git__getenv(&pwd, "PWD");
+		if (error < 0 && error != GIT_ENOTFOUND)
+			goto out;
+
+		/* An inherited or stale PWD must not select a different path. */
+		if (!error && git_fs_path_is_absolute(pwd.ptr) &&
+		    p_realpath(pwd.ptr, resolved_pwd) &&
+		    git_fs_path_dirlen(cwd) == git_fs_path_dirlen(resolved_pwd) &&
+		    !strncmp(cwd, resolved_pwd, git_fs_path_dirlen(cwd)))
+			base = pwd.ptr;
+	}
+
+	if ((error = git_fs_path_join_unrooted(out, path, base, NULL)) < 0)
+		goto out;
+	git_fs_path_mkposix(out->ptr);
+	error = git_fs_path_resolve_relative(out, 0);
+	if (error < 0) {
+		/* The filesystem may accept paths such as /../ that normalization rejects. */
+		git_error_clear();
+		error = git_str_sets(out, resolved_path);
+	}
+
+out:
+	git_str_dispose(&pwd);
+	return error;
+}
+
+static int set_unresolved_gitdir(
+	git_str *out,
+	const char *unresolved,
+	const char *gitdir)
+{
+	char resolved[GIT_PATH_MAX + 1], expected[GIT_PATH_MAX + 1];
+	int error;
+	size_t len = git_fs_path_dirlen(unresolved);
+
+	if (len == git_fs_path_dirlen(gitdir) && !strncmp(unresolved, gitdir, len))
+		return 0;
+
+	/* Walking above a symlink can make the two parent paths diverge. */
+	if (!p_realpath(unresolved, resolved) || !p_realpath(gitdir, expected) ||
+	    strcmp(resolved, expected))
+		return 0;
+
+	if ((error = git_str_sets(out, unresolved)) < 0)
+		return error;
+	return git_fs_path_to_dir(out);
 }
 
 static int find_repo_traverse(
@@ -784,6 +854,7 @@ static int find_repo_traverse(
 	uint32_t flags)
 {
 	git_str path = GIT_STR_INIT;
+	git_str unresolved_path = GIT_STR_INIT;
 	git_str repo_link = GIT_STR_INIT;
 	git_str common_link = GIT_STR_INIT;
 	struct stat st;
@@ -797,6 +868,8 @@ static int find_repo_traverse(
 
 	if ((error = git_fs_path_prettify(&path, start_path, NULL)) < 0)
 		return error;
+	if ((error = make_unresolved_path(&unresolved_path, start_path, path.ptr)) < 0)
+		goto out;
 
 	/*
 	 * In each loop we look first for a `.git` dir within the
@@ -821,7 +894,9 @@ static int find_repo_traverse(
 	for (;;) {
 		if (!(flags & GIT_REPOSITORY_OPEN_NO_DOTGIT)) {
 			if (!in_dot_git) {
-				if ((error = git_str_joinpath(&path, path.ptr, DOT_GIT)) < 0)
+				if ((error = git_str_joinpath(&path, path.ptr, DOT_GIT)) < 0 ||
+				    (error = git_str_joinpath(&unresolved_path,
+					unresolved_path.ptr, DOT_GIT)) < 0)
 					goto out;
 			}
 			in_dot_git = !in_dot_git;
@@ -841,7 +916,9 @@ static int find_repo_traverse(
 
 				if (is_valid) {
 					if ((error = git_fs_path_to_dir(&path)) < 0 ||
-					    (error = git_str_set(&out->gitdir, path.ptr, path.size)) < 0)
+					    (error = git_str_set(&out->gitdir, path.ptr, path.size)) < 0 ||
+					    (error = set_unresolved_gitdir(&out->gitdir_unresolved,
+						unresolved_path.ptr, path.ptr)) < 0)
 						goto out;
 
 					if ((error = git_str_attach(&out->gitlink, git_worktree__read_link(path.ptr, GIT_GITDIR_FILE), 0)) < 0)
@@ -874,7 +951,9 @@ static int find_repo_traverse(
 		 * we'll search .git in the parent directory next (added
 		 * at the top of the loop).
 		 */
-		if ((error = git_fs_path_dirname_r(&path, path.ptr)) < 0)
+		if ((error = git_fs_path_dirname_r(&path, path.ptr)) < 0 ||
+		    (error = git_fs_path_dirname_r(&unresolved_path,
+			unresolved_path.ptr)) < 0)
 			goto out;
 
 		/*
@@ -911,6 +990,7 @@ out:
 		repo_paths_dispose(out);
 
 	git_str_dispose(&path);
+	git_str_dispose(&unresolved_path);
 	git_str_dispose(&repo_link);
 	git_str_dispose(&common_link);
 	return error;
@@ -1076,6 +1156,7 @@ int git_repository_open_bare(
 	const char *bare_path)
 {
 	git_str path = GIT_STR_INIT, common_path = GIT_STR_INIT;
+	git_str unresolved_path = GIT_STR_INIT, unresolved_gitdir = GIT_STR_INIT;
 	git_repository *repo = NULL;
 	bool is_valid;
 	int error;
@@ -1098,6 +1179,17 @@ int git_repository_open_bare(
 	GIT_ERROR_CHECK_ALLOC(repo->gitdir);
 	repo->commondir = git_str_detach(&common_path);
 	GIT_ERROR_CHECK_ALLOC(repo->commondir);
+
+	if ((error = make_unresolved_path(&unresolved_path, bare_path, repo->gitdir)) < 0 ||
+	    (error = set_unresolved_gitdir(&unresolved_gitdir,
+		unresolved_path.ptr, repo->gitdir)) < 0) {
+		git_str_dispose(&unresolved_path);
+		git_str_dispose(&unresolved_gitdir);
+		git_repository_free(repo);
+		return error;
+	}
+	git_str_dispose(&unresolved_path);
+	repo->gitdir_unresolved = git_str_detach(&unresolved_gitdir);
 
 	/* of course we're bare! */
 	repo->is_bare = 1;
@@ -1181,6 +1273,7 @@ int git_repository_open_ext(
 
 	repo->gitdir = git_str_detach(&paths.gitdir);
 	GIT_ERROR_CHECK_ALLOC(repo->gitdir);
+	repo->gitdir_unresolved = git_str_detach(&paths.gitdir_unresolved);
 
 	if (paths.gitlink.size) {
 		repo->gitlink = git_str_detach(&paths.gitlink);
