@@ -284,6 +284,97 @@ void test_ignore_path__subdirectory_gitignore(void)
 	assert_is_ignored(false, "dir/file3");
 }
 
+void test_ignore_path__nested_negation_reincludes_parent_rule(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "**/vendor/\n");
+	cl_must_pass(p_mkdir("attr/nested", 0777));
+	cl_must_pass(p_mkdir("attr/nested/vendor", 0777));
+	cl_git_mkfile("attr/nested/.gitignore", "!vendor\n");
+	cl_git_mkfile("attr/nested/vendor/file", "content\n");
+
+	assert_is_ignored(false, "nested/vendor");
+	assert_is_ignored(false, "nested/vendor/file");
+}
+
+void test_ignore_path__nested_negation_cannot_reinclude_ignored_parent(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "blocked/\n");
+	cl_must_pass(p_mkdir("attr/blocked", 0777));
+	cl_must_pass(p_mkdir("attr/blocked/vendor", 0777));
+	cl_git_mkfile("attr/blocked/.gitignore", "!vendor\n");
+	cl_git_mkfile("attr/blocked/vendor/file", "content\n");
+
+	assert_is_ignored(true, "blocked/vendor");
+	assert_is_ignored(true, "blocked/vendor/file");
+}
+
+void test_ignore_path__negation_overrides_info_exclude(void)
+{
+	cl_git_rewritefile(
+		"attr/.git/info/exclude",
+		"vendor/\n"
+		"*.txt\n");
+	cl_git_rewritefile(
+		"attr/.gitignore",
+		"!vendor\n"
+		"!other/file.txt\n");
+	cl_git_pass(git_futils_mkdir_r("attr/vendor", 0777));
+	cl_git_pass(git_futils_mkdir_r("attr/other", 0777));
+	cl_git_mkfile("attr/vendor/file.bin", "content\n");
+	cl_git_mkfile("attr/other/file.txt", "content\n");
+
+	assert_is_ignored(false, "vendor");
+	assert_is_ignored(false, "vendor/file.bin");
+	assert_is_ignored(false, "other/file.txt");
+}
+
+void test_ignore_path__negation_overrides_global_excludes(void)
+{
+	git_config *cfg;
+	git_str excludesfile = GIT_STR_INIT;
+
+	cl_git_pass(git_str_joinpath(
+		&excludesfile, git_repository_path(g_repo), "globalexclude"));
+	cl_git_mkfile(excludesfile.ptr, "vendor/\n");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_string(
+		cfg, "core.excludesfile", excludesfile.ptr));
+	git_config_free(cfg);
+
+	cl_git_rewritefile("attr/.gitignore", "!vendor\n");
+	cl_git_pass(git_futils_mkdir_r("attr/vendor", 0777));
+	cl_git_mkfile("attr/vendor/file.bin", "content\n");
+	git_attr_cache_flush(g_repo);
+
+	assert_is_ignored(false, "vendor");
+	assert_is_ignored(false, "vendor/file.bin");
+
+	git_str_dispose(&excludesfile);
+}
+
+void test_ignore_path__internal_negation_overrides_ignore_file(void)
+{
+	cl_git_rewritefile("attr/.gitignore", "vendor/\n");
+	cl_git_pass(git_futils_mkdir_r("attr/vendor", 0777));
+	cl_git_mkfile("attr/vendor/file.bin", "content\n");
+	cl_git_pass(git_ignore_add_rule(g_repo, "!vendor\n"));
+
+	assert_is_ignored(false, "vendor");
+	assert_is_ignored(false, "vendor/file.bin");
+}
+
+void test_ignore_path__wildcard_negation_cannot_reinclude_parent(void)
+{
+	cl_git_rewritefile("attr/.git/info/exclude", "vendor/\n");
+	cl_git_rewritefile("attr/.gitignore", "!vendor/**\n");
+	cl_git_pass(git_futils_mkdir_r("attr/vendor", 0777));
+	cl_git_mkfile("attr/vendor/file.bin", "content\n");
+
+	assert_is_ignored(true, "vendor");
+	assert_is_ignored(true, "vendor/file.bin");
+}
+
 void test_ignore_path__expand_tilde_to_homedir(void)
 {
 	git_str homefile = GIT_STR_INIT;
