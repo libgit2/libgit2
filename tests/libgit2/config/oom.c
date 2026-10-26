@@ -22,8 +22,13 @@ static void *failing_realloc(void *p, size_t n, const char *file, int line)
 
 void test_config_oom__initialize(void)
 {
-	git_stdalloc_init_allocator(&std_alloc);
-	git_stdalloc_init_allocator(&failing_alloc);
+	/*
+	 * Wrap the default allocator rather than the standard one: builds
+	 * with DEBUG_STRICT_ALLOC free with a different allocator.
+	 */
+	cl_git_pass(git_allocator_setup(NULL));
+	memcpy(&std_alloc, &git__allocator, sizeof(std_alloc));
+	memcpy(&failing_alloc, &git__allocator, sizeof(failing_alloc));
 
 	failing_alloc.gmalloc = failing_malloc;
 	failing_alloc.grealloc = failing_realloc;

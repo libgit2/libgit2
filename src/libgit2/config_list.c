@@ -54,25 +54,29 @@ int git_config_list_new(git_config_list **out)
 int git_config_list_dup_entry(git_config_list *config_list, const git_config_entry *entry)
 {
 	git_config_list_entry *duplicated;
-	int error;
+	int error = -1;
 
 	duplicated = git__calloc(1, sizeof(git_config_list_entry));
 	GIT_ERROR_CHECK_ALLOC(duplicated);
 
 	duplicated->base.entry.name = git__strdup(entry->name);
-	GIT_ERROR_CHECK_ALLOC(duplicated->base.entry.name);
+	if (!duplicated->base.entry.name)
+		goto out;
 
 	if (entry->value) {
 		duplicated->base.entry.value = git__strdup(entry->value);
-		GIT_ERROR_CHECK_ALLOC(duplicated->base.entry.value);
+		if (!duplicated->base.entry.value)
+			goto out;
 	}
 
 	duplicated->base.entry.backend_type = git_config_list_add_string(config_list, entry->backend_type);
-	GIT_ERROR_CHECK_ALLOC(duplicated->base.entry.backend_type);
+	if (!duplicated->base.entry.backend_type)
+		goto out;
 
 	if (entry->origin_path) {
 		duplicated->base.entry.origin_path = git_config_list_add_string(config_list, entry->origin_path);
-		GIT_ERROR_CHECK_ALLOC(duplicated->base.entry.origin_path);
+		if (!duplicated->base.entry.origin_path)
+			goto out;
 	}
 
 	duplicated->base.entry.level = entry->level;
@@ -283,9 +287,13 @@ const char *git_config_list_add_string(
 	if (git_config_list_pathmap_get(&s, &config_list->strings, str) == 0)
 		return s;
 
-	if ((s = git__strdup(str)) == NULL ||
-	     git_config_list_pathmap_put(&config_list->strings, s, s) < 0)
+	if ((s = git__strdup(str)) == NULL)
 		return NULL;
+
+	if (git_config_list_pathmap_put(&config_list->strings, s, s) < 0) {
+		git__free(s);
+		return NULL;
+	}
 
 	return s;
 }

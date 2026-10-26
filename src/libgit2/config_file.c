@@ -501,7 +501,11 @@ int git_config_backend_from_file(git_config_backend **out, const char *path)
 	git_mutex_init(&backend->values_mutex);
 
 	backend->file.path = git__strdup(path);
-	GIT_ERROR_CHECK_ALLOC(backend->file.path);
+	if (!backend->file.path) {
+		git_mutex_free(&backend->values_mutex);
+		git__free(backend);
+		return -1;
+	}
 	git_array_init(backend->file.includes);
 
 	backend->parent.open = config_file_open;
@@ -807,21 +811,28 @@ static int read_on_variable(
 		return -1;
 
 	entry = git__calloc(1, sizeof(git_config_list_entry));
-	GIT_ERROR_CHECK_ALLOC(entry);
+	if (!entry) {
+		git_str_dispose(&buf);
+		return -1;
+	}
 
 	entry->base.entry.name = git_str_detach(&buf);
-	GIT_ERROR_CHECK_ALLOC(entry->base.entry.name);
+	if (!entry->base.entry.name)
+		goto on_error;
 
 	if (var_value) {
 		entry->base.entry.value = git__strdup(var_value);
-		GIT_ERROR_CHECK_ALLOC(entry->base.entry.value);
+		if (!entry->base.entry.value)
+			goto on_error;
 	}
 
 	entry->base.entry.backend_type = git_config_list_add_string(parse_data->config_list, CONFIG_FILE_TYPE);
-	GIT_ERROR_CHECK_ALLOC(entry->base.entry.backend_type);
+	if (!entry->base.entry.backend_type)
+		goto on_error;
 
 	entry->base.entry.origin_path = git_config_list_add_string(parse_data->config_list, parse_data->file->path);
-	GIT_ERROR_CHECK_ALLOC(entry->base.entry.origin_path);
+	if (!entry->base.entry.origin_path)
+		goto on_error;
 
 	entry->base.entry.level = parse_data->level;
 	entry->base.entry.include_depth = parse_data->depth;
@@ -829,7 +840,7 @@ static int read_on_variable(
 	entry->config_list = parse_data->config_list;
 
 	if ((result = git_config_list_append(parse_data->config_list, entry)) < 0)
-		return result;
+		goto on_error;
 
 	result = 0;
 
@@ -841,6 +852,12 @@ static int read_on_variable(
 		result = parse_conditional_include(parse_data, entry->base.entry.name, entry->base.entry.value);
 
 	return result;
+
+on_error:
+	git__free((char *)entry->base.entry.name);
+	git__free((char *)entry->base.entry.value);
+	git__free(entry);
+	return -1;
 }
 
 static int config_file_read_buffer(
