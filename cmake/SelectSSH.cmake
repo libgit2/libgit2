@@ -33,6 +33,11 @@ elseif(USE_SSH STREQUAL ON OR USE_SSH STREQUAL "libssh2")
 		set(GIT_SSH_LIBSSH2_MEMORY_CREDENTIALS 1)
 	endif()
 
+	check_library_exists("${LIBSSH2_LIBRARIES}" libssh2_userauth_publickey_sk "${LIBSSH2_LIBRARY_DIRS}" HAVE_LIBSSH2_CUSTOM_SK_CREDENTIALS)
+	if(HAVE_LIBSSH2_CUSTOM_SK_CREDENTIALS)
+		set(GIT_SSH_LIBSSH2_CUSTOM_SK_CREDENTIALS 1)
+	endif()
+
 	set(GIT_SSH 1)
 	set(GIT_SSH_LIBSSH2 1)
 	add_feature_info(SSH ON "using libssh2")

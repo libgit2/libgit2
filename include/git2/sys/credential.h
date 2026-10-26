@@ -85,6 +85,26 @@ struct git_credential_ssh_custom {
 	void *payload;         /**< Payload passed to prompt_callback */
 };
 
+/**
+ * A security key with a custom signature function
+ */
+struct git_credential_ssh_custom_sk {
+	git_credential parent; /**< The parent credential */
+	char *username;        /**< The username to authenticate as */
+	char *publickey;       /**< The public key data */
+	size_t publickey_len;  /**< Length of the public key */
+	char *privatekey;      /**< The private key data */
+	size_t privatekey_len; /**< Length of the private key */
+	char *passphrase;      /**< The passphrase for the security key */
+
+	/**
+	 * Callback used to sign the data.
+	 */
+	git_credential_sign_sk_cb sign_callback;
+
+	void *payload;         /**< Payload passed to prompt_callback */
+};
+
 /** @} */
 GIT_END_DECL
 
