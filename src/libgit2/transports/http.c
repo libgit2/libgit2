@@ -16,6 +16,7 @@ bool git_http__expect_continue = false;
 #include "remote.h"
 #include "smart.h"
 #include "auth.h"
+#include "auth_default.h"
 #include "auth_negotiate.h"
 #include "auth_ntlm.h"
 #include "trace.h"
@@ -53,6 +54,7 @@ typedef struct {
 	git_credential *cred;
 	unsigned auth_schemetypes;
 	unsigned url_cred_presented : 1;
+	unsigned default_cred_presented : 1;
 } http_server;
 
 typedef struct {
@@ -136,6 +138,7 @@ static int handle_auth(
 	void *callback_payload)
 {
 	git_str server_url = GIT_STR_INIT;
+	const char *reason = "";
 	int error = 1;
 
 	if (server->cred)
@@ -162,8 +165,27 @@ static int handle_auth(
 			error = 1;
 	}
 
+#ifdef GIT_WIN32
+	/*
+	 * Finally, use the default credentials of the logged-on user, but
+	 * only once: if the server rejects them, another try will not help.
+	 */
+	if (error > 0 && (allowed_credtypes & GIT_CREDENTIAL_DEFAULT)) {
+		if (server->default_cred_presented) {
+			reason = "; the default credentials were rejected";
+		} else if (server_url.size || (error = git_net_url_fmt(&server_url, &server->url)) == 0) {
+			error = git_http_auth_default_fallback(&server->cred, server_url.ptr, allowed_credtypes);
+
+			if (error == 0)
+				server->default_cred_presented = 1;
+			else if (error > 0)
+				reason = "; default credentials were not used (only for local, intranet or trusted sites)";
+		}
+	}
+#endif
+
 	if (error > 0) {
-		git_error_set(GIT_ERROR_HTTP, "%s authentication required but no callback set", server_type);
+		git_error_set(GIT_ERROR_HTTP, "%s authentication required but no callback set%s", server_type, reason);
 		error = GIT_EAUTH;
 	}
 
@@ -242,6 +264,16 @@ static int handle_response(
 	int error;
 
 	*complete = false;
+
+	/*
+	 * The request got past authentication, so the default credentials
+	 * were not rejected; a later challenge may try them again.
+	 */
+	if (response->status != GIT_HTTP_STATUS_UNAUTHORIZED &&
+	    response->status != GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED)
+		transport->server.default_cred_presented = false;
+	if (response->status != GIT_HTTP_STATUS_PROXY_AUTHENTICATION_REQUIRED)
+		transport->proxy.default_cred_presented = false;
 
 	if (allow_replay && git_http_response_is_redirect(response)) {
 		if (!response->location) {
@@ -725,6 +757,8 @@ static int http_close(git_smart_subtransport *t)
 
 	transport->server.url_cred_presented = false;
 	transport->proxy.url_cred_presented = false;
+	transport->server.default_cred_presented = false;
+	transport->proxy.default_cred_presented = false;
 
 	git_net_url_dispose(&transport->server.url);
 	git_net_url_dispose(&transport->proxy.url);
