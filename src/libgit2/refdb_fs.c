@@ -973,7 +973,7 @@ static int iter_load_paths(
 	git_str_clear(&ctx->ref_name);
 	git_str_put(&ctx->ref_name, ctx->ref_prefix, ctx->ref_prefix_len);
 
-	while (git_iterator_advance(&entry, fsit) == 0) {
+	while ((error = git_iterator_advance(&entry, fsit)) == 0) {
 		char *ref_dup;
 
 		git_str_truncate(&ctx->ref_name, ctx->ref_prefix_len);
@@ -1000,6 +1000,8 @@ static int iter_load_paths(
 		if ((error = git_vector_insert(&ctx->iter->loose, ref_dup)) < 0)
 			goto done;
 	}
+	if (error == GIT_ITEROVER)
+		error = 0;
 
 done:
 	git_iterator_free(fsit);
@@ -1040,6 +1042,16 @@ done:
 	return error;
 }
 
+/*
+ * Skip loose refs that are missing or corrupted, but propagate other errors
+ * instead of silently returning an incomplete list.
+ */
+static bool iter_loose_lookup_skippable(int error)
+{
+	return error == GIT_ENOTFOUND ||
+		git_error_last()->klass == GIT_ERROR_REFERENCE;
+}
+
 static int refdb_fs_backend__iterator_next(
 	git_reference **out, git_reference_iterator *_iter)
 {
@@ -1051,13 +1063,16 @@ static int refdb_fs_backend__iterator_next(
 	while (iter->loose_pos < iter->loose.length) {
 		const char *path = git_vector_get(&iter->loose, iter->loose_pos++);
 
-		if (loose_lookup(out, backend, path) == 0) {
+		if ((error = loose_lookup(out, backend, path)) == 0) {
 			ref = git_sortedcache_lookup(iter->cache, path);
 			if (ref)
 				ref->flags |= PACKREF_SHADOWED;
 
 			return 0;
 		}
+
+		if (!iter_loose_lookup_skippable(error))
+			return error;
 
 		git_error_clear();
 	}
@@ -1091,9 +1106,8 @@ static int refdb_fs_backend__iterator_next_name(
 
 	while (iter->loose_pos < iter->loose.length) {
 		const char *path = git_vector_get(&iter->loose, iter->loose_pos++);
-		struct packref *ref;
 
-		if (loose_lookup(NULL, backend, path) == 0) {
+		if ((error = loose_lookup(NULL, backend, path)) == 0) {
 			ref = git_sortedcache_lookup(iter->cache, path);
 			if (ref)
 				ref->flags |= PACKREF_SHADOWED;
@@ -1101,6 +1115,9 @@ static int refdb_fs_backend__iterator_next_name(
 			*out = path;
 			return 0;
 		}
+
+		if (!iter_loose_lookup_skippable(error))
+			return error;
 
 		git_error_clear();
 	}
