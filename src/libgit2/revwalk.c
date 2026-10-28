@@ -656,9 +656,6 @@ static int limit_list(git_commit_list **out, git_revwalk *walk, git_commit_list 
 			break;
 		}
 
-		if (walk->pathspec && !include_path(walk, commit))
-			continue;
-
 		if (walk->hide_cb && walk->hide_cb(&commit->oid, walk->hide_cb_payload))
 			continue;
 
@@ -951,7 +948,13 @@ int git_revwalk_next(git_oid *oid, git_revwalk *walk)
 			return error;
 	}
 
-	error = walk->get_next(&next, walk);
+	/*
+	 * Filter commits by path on output to allow user code aborting the walk
+	 * early to be cheap
+	 */
+	do {
+		error = walk->get_next(&next, walk);
+	} while (!error && walk->pathspec && !include_path(walk, next));
 
 	if (error == GIT_ITEROVER) {
 		git_revwalk_reset(walk);
@@ -986,7 +989,6 @@ int git_revwalk_pathspec(git_revwalk *walk, git_pathspec *pathspec) {
 	if (pathspec) {
 		walk->pathspec = pathspec;
 		walk->pathspec_wildcard = pathspec_has_wildcard(pathspec);
-		walk->limited = 1;
 	}
 	/* Reset previously set pathspec */ 
 	else if (walk->pathspec) {
