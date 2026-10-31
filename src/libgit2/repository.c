@@ -2714,6 +2714,39 @@ static int mkdir_parent(git_str *buf, uint32_t mode, bool skip2)
 		(skip2 ? GIT_MKDIR_SKIP_LAST2 : GIT_MKDIR_SKIP_LAST));
 }
 
+/*
+ * Determine whether `path` (relative to `base` if it is not rooted)
+ * names the directory `dir`, ignoring separator style, "." and ".."
+ * components and trailing separators.
+ */
+static bool repo_init_is_dir(
+	const char *dir, const char *path, const char *base)
+{
+	git_str one = GIT_STR_INIT, two = GIT_STR_INIT;
+	bool equal = false;
+
+	if (git_str_sets(&one, dir) < 0 ||
+	    git_fs_path_join_unrooted(&two, path, base, NULL) < 0)
+		goto done;
+
+	git_fs_path_mkposix(one.ptr);
+	git_fs_path_mkposix(two.ptr);
+
+	if (git_fs_path_resolve_relative(&one, 0) < 0 ||
+	    git_fs_path_resolve_relative(&two, 0) < 0 ||
+	    git_fs_path_to_dir(&one) < 0 ||
+	    git_fs_path_to_dir(&two) < 0)
+		goto done;
+
+	equal = (strcmp(one.ptr, two.ptr) == 0);
+
+done:
+	git_str_dispose(&one);
+	git_str_dispose(&two);
+
+	return equal;
+}
+
 static int repo_init_directories(
 	git_str *repo_path,
 	git_str *wd_path,
@@ -2721,7 +2754,7 @@ static int repo_init_directories(
 	git_repository_init_options *opts)
 {
 	int error = 0;
-	bool is_bare, add_dotgit, has_dotgit, natural_wd;
+	bool is_bare, add_dotgit, has_dotgit, natural_wd, workdir_is_repo;
 	mode_t dirmode;
 
 	/* There are three possible rules for what we are allowed to create:
@@ -2748,8 +2781,16 @@ static int repo_init_directories(
 
 	is_bare = ((opts->flags & GIT_REPOSITORY_INIT_BARE) != 0);
 
+	/*
+	 * A working directory that is the repository directory itself is
+	 * redundant; the repository layout is the same as if no working
+	 * directory was given.
+	 */
+	workdir_is_repo = !is_bare && opts->workdir_path &&
+		repo_init_is_dir(given_repo, opts->workdir_path, given_repo);
+
 	add_dotgit =
-		!is_bare && !opts->workdir_path &&
+		!is_bare && (workdir_is_repo || !opts->workdir_path) &&
 		git__suffixcmp(given_repo, "/" DOT_GIT) != 0 &&
 		git__suffixcmp(given_repo, "/" GIT_DIR) != 0;
 
@@ -2765,7 +2806,7 @@ static int repo_init_directories(
 	/* set up workdir path */
 
 	if (!is_bare) {
-		if (opts->workdir_path) {
+		if (opts->workdir_path && !workdir_is_repo) {
 			if (git_fs_path_join_unrooted(
 					wd_path, opts->workdir_path, repo_path->ptr, NULL) < 0)
 				return -1;
@@ -2778,6 +2819,8 @@ static int repo_init_directories(
 			return -1;
 		}
 
+		git_fs_path_mkposix(wd_path->ptr);
+
 		if (git_fs_path_to_dir(wd_path) < 0)
 			return -1;
 	} else {
@@ -2787,8 +2830,7 @@ static int repo_init_directories(
 	natural_wd =
 		has_dotgit &&
 		wd_path->size > 0 &&
-		wd_path->size + strlen(GIT_DIR) == repo_path->size &&
-		memcmp(repo_path->ptr, wd_path->ptr, wd_path->size) == 0;
+		repo_init_is_dir(repo_path->ptr, GIT_DIR, wd_path->ptr);
 	if (natural_wd)
 		opts->flags |= GIT_REPOSITORY_INIT__NATURAL_WD;
 

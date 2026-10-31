@@ -74,6 +74,39 @@ static void ensure_repository_init(
 	cl_assert(git_repository_is_empty(g_repo));
 }
 
+static void assert_init_with_explicit_workdir(
+	const char *repo_path,
+	const char *workdir_path,
+	const char *expected_dir,
+	bool natural_workdir)
+{
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+	git_str expected = GIT_STR_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH;
+	opts.workdir_path = workdir_path;
+
+	cl_git_pass(git_repository_init_ext(&g_repo, repo_path, &opts));
+
+	cl_assert(!git_repository_is_bare(g_repo));
+	cl_assert(git_fs_path_isdir(git_repository_path(g_repo)));
+
+	cl_git_pass(git_str_printf(&expected, "%s/", expected_dir));
+	cl_assert(!git__suffixcmp(git_repository_workdir(g_repo),
+		expected.ptr));
+
+	git_str_clear(&expected);
+	cl_git_pass(git_str_printf(&expected, "%s/.git/", expected_dir));
+	cl_assert(!git__suffixcmp(git_repository_path(g_repo), expected.ptr));
+
+	assert_config_entry_existence(g_repo, "core.worktree",
+		!natural_workdir);
+
+	git_str_dispose(&expected);
+	git_repository_free(g_repo);
+	g_repo = NULL;
+}
+
 void test_repo_init__standard_repo(void)
 {
 	cl_set_cleanup(&cleanup_repository, "testrepo");
@@ -780,4 +813,96 @@ void test_repo_init__absolute_path_with_backslashes(void)
 #else
 	clar__skip();
 #endif
+}
+
+void test_repo_init__workdir_path_equals_repo_path(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_set_cleanup(&cleanup_repository, "samepath");
+
+	cl_git_pass(git_str_joinpath(&path, clar_sandbox_path(),
+		"samepath/repo"));
+	assert_init_with_explicit_workdir(path.ptr, path.ptr,
+		"samepath/repo", true);
+
+#ifdef GIT_WIN32
+	{
+		git_str workdir_path = GIT_STR_INIT;
+		char *c;
+
+		cl_git_pass(git_str_joinpath(&path, clar_sandbox_path(),
+			"samepath/repo2"));
+
+		cl_git_pass(git_str_sets(&workdir_path, path.ptr));
+		for (c = workdir_path.ptr; *c; c++) {
+			if (*c == '/')
+				*c = '\\';
+		}
+		cl_git_pass(git_str_putc(&workdir_path, '\\'));
+
+		assert_init_with_explicit_workdir(path.ptr, workdir_path.ptr,
+			"samepath/repo2", true);
+
+		git_str_dispose(&workdir_path);
+	}
+#endif
+
+	git_str_dispose(&path);
+}
+
+void test_repo_init__workdir_path_equals_repo_path_reinit(void)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_set_cleanup(&cleanup_repository, "samepath");
+
+	cl_git_pass(git_str_joinpath(&path, clar_sandbox_path(),
+		"samepath/repo"));
+	cl_git_pass(git_repository_init(&g_repo, path.ptr, 0));
+
+	git_repository_free(g_repo);
+	g_repo = NULL;
+
+	assert_init_with_explicit_workdir(path.ptr, ".", "samepath/repo", true);
+
+	git_str_dispose(&path);
+}
+
+void test_repo_init__gitdir_with_explicit_workdir(void)
+{
+	git_str repo_path = GIT_STR_INIT, workdir_path = GIT_STR_INIT;
+
+	cl_set_cleanup(&cleanup_repository, "samepath");
+
+	cl_git_pass(git_str_joinpath(&repo_path, clar_sandbox_path(),
+		"samepath/repo/.git"));
+	cl_git_pass(git_str_joinpath(&workdir_path, clar_sandbox_path(),
+		"samepath/repo"));
+
+#ifdef GIT_WIN32
+	{
+		char *c;
+
+		for (c = workdir_path.ptr; *c; c++) {
+			if (*c == '/')
+				*c = '\\';
+		}
+	}
+#endif
+
+	assert_init_with_explicit_workdir(repo_path.ptr, workdir_path.ptr,
+		"samepath/repo", true);
+
+	/* a workdir spelled with a "." still names the natural workdir */
+	cl_git_pass(git_str_joinpath(&repo_path, clar_sandbox_path(),
+		"samepath/repo2/.git"));
+	cl_git_pass(git_str_joinpath(&workdir_path, clar_sandbox_path(),
+		"samepath/repo2/."));
+
+	assert_init_with_explicit_workdir(repo_path.ptr, workdir_path.ptr,
+		"samepath/repo2", true);
+
+	git_str_dispose(&repo_path);
+	git_str_dispose(&workdir_path);
 }
