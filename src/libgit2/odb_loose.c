@@ -129,7 +129,12 @@ static int parse_header_packlike(
 			goto on_error;
 
 		c = data[used++];
-		size += (c & 0x7f) << shift;
+
+		/* Reject sizes whose high bits would be shifted out. */
+		if ((((size_t)(c & 0x7f)) << shift) >> shift != (c & 0x7f))
+			goto on_error;
+
+		size += ((size_t)(c & 0x7f)) << shift;
 		shift += 7;
 	}
 
