@@ -92,6 +92,20 @@ unsigned char incomplete_pack[] = {
 };
 unsigned int incomplete_pack_len = 115;
 
+/*
+ * Packfile with one blob, whose size is followed by continuation bytes so
+ * that the last byte of the size only has bits beyond the range of the
+ * size type.
+ */
+static const unsigned char size_overflow_pack[] = {
+  0x50, 0x41, 0x43, 0x4b, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01,
+  0xb1, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x10, 0x78, 0x9c,
+  0xe3, 0x02, 0x00, 0x00, 0x0b, 0x00, 0x0b, 0xdc, 0x9f, 0x84, 0x74, 0x2f,
+  0x5f, 0xf7, 0x47, 0xd5, 0xcf, 0xe6, 0x0b, 0xa0, 0x4b, 0x9a, 0x0e, 0xb2,
+  0xa0, 0x8d, 0x16
+};
+static const unsigned int size_overflow_pack_len = 51;
+
 static const unsigned char base_obj[] = { 07, 076 };
 static const unsigned int base_obj_len = 2;
 
@@ -143,6 +157,19 @@ void test_pack_indexer__leaky(void)
 
 	cl_assert(git_error_last() != NULL);
 	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_INDEXER);
+
+	git_indexer_free(idx);
+}
+
+void test_pack_indexer__size_overflow(void)
+{
+	git_indexer *idx = 0;
+	git_indexer_progress stats = { 0 };
+
+	cl_git_pass(git_indexer_new(&idx, ".", NULL));
+
+	cl_git_fail(git_indexer_append(
+		idx, size_overflow_pack, size_overflow_pack_len, &stats));
 
 	git_indexer_free(idx);
 }
