@@ -90,11 +90,25 @@ cleanup:
 	return error;
 }
 
+/*
+ * The name to record as the upstream remote in the branch tracking
+ * configuration.  The remote may have been created by a user-supplied
+ * `remote_cb` with a name other than "origin"; if it is anonymous,
+ * fall back to "origin".
+ */
+static const char *tracking_remote_name(git_remote *remote)
+{
+	const char *name = remote ? git_remote_name(remote) : NULL;
+
+	return name ? name : GIT_REMOTE_ORIGIN;
+}
+
 static int create_tracking_branch(
 	git_reference **branch,
 	git_repository *repo,
 	const git_oid *target,
 	const char *branch_name,
+	const char *remote_name,
 	const char *log_message)
 {
 	int error;
@@ -105,7 +119,7 @@ static int create_tracking_branch(
 	return setup_tracking_config(
 		repo,
 		branch_name,
-		GIT_REMOTE_ORIGIN,
+		remote_name,
 		git_reference_name(*branch));
 }
 
@@ -113,6 +127,7 @@ static int update_head_to_new_branch(
 	git_repository *repo,
 	const git_oid *target,
 	const char *name,
+	const char *remote_name,
 	const char *reflog_message)
 {
 	git_reference *tracking_branch = NULL;
@@ -122,7 +137,7 @@ static int update_head_to_new_branch(
 		name += strlen(GIT_REFS_HEADS_DIR);
 
 	error = create_tracking_branch(&tracking_branch, repo, target, name,
-			reflog_message);
+			remote_name, reflog_message);
 
 	if (!error)
 		error = git_repository_set_head(
@@ -137,7 +152,9 @@ static int update_head_to_new_branch(
 	return error;
 }
 
-static int update_head_to_default(git_repository *repo)
+static int update_head_to_default(
+	git_repository *repo,
+	const char *remote_name)
 {
 	git_str initialbranch = GIT_STR_INIT;
 	const char *branch_name;
@@ -154,7 +171,7 @@ static int update_head_to_default(git_repository *repo)
 
 	branch_name = initialbranch.ptr + strlen(GIT_REFS_HEADS_DIR);
 
-	error = setup_tracking_config(repo, branch_name, GIT_REMOTE_ORIGIN,
+	error = setup_tracking_config(repo, branch_name, remote_name,
 		initialbranch.ptr);
 
 done:
@@ -227,7 +244,8 @@ static int update_head_to_remote(
 
 	/* We cloned an empty repository or one with an unborn HEAD */
 	if (refs_len == 0 || strcmp(refs[0]->name, GIT_HEAD_REF))
-		return update_head_to_default(repo);
+		return update_head_to_default(repo,
+			tracking_remote_name(remote));
 
 	/* We know we have HEAD, let's see where it points */
 	remote_head = refs[0];
@@ -249,6 +267,7 @@ static int update_head_to_remote(
 		repo,
 		remote_head_id,
 		git_str_cstr(&branch),
+		tracking_remote_name(remote),
 		reflog_message);
 
 cleanup:
@@ -279,7 +298,7 @@ static int update_head_to_branch(
 		goto cleanup;
 
 	if ((retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref), branch,
-			reflog_message)) < 0)
+			tracking_remote_name(remote), reflog_message)) < 0)
 		goto cleanup;
 
 	retcode = git_remote__default_branch(&default_branch, remote);

@@ -2887,12 +2887,18 @@ out:
 	return error;
 }
 
-static int repo_init_create_origin(git_repository *repo, const char *url)
+static int repo_init_create_origin(
+	git_repository *repo,
+	const char *name,
+	const char *url)
 {
 	int error;
 	git_remote *remote;
 
-	if (!(error = git_remote_create(&remote, repo, GIT_REMOTE_ORIGIN, url))) {
+	if (!name)
+		name = GIT_REMOTE_ORIGIN;
+
+	if (!(error = git_remote_create(&remote, repo, name, url))) {
 		git_remote_free(remote);
 	}
 
@@ -3030,7 +3036,8 @@ int git_repository_init_ext(
 		goto out;
 
 	if (opts->origin_url &&
-	    (error = repo_init_create_origin(*out, opts->origin_url)) < 0)
+	    (error = repo_init_create_origin(*out, opts->origin_name,
+			opts->origin_url)) < 0)
 		goto out;
 
 out:
