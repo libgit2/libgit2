@@ -816,18 +816,107 @@ typedef struct {
 	uint16_t similarity;
 } diff_find_match;
 
-int git_diff_find_similar(
+/*
+ * Find best-fit matches for rename / copy candidates
+ */
+static int find_inexact_matches(
 	git_diff *diff,
-	const git_diff_find_options *given_opts)
+	const git_diff_find_options *opts,
+	void **sigcache,
+	diff_find_match *src2tgt,
+	diff_find_match *tgt2src,
+	diff_find_match *tgt2src_copy,
+	const size_t num_srcs,
+	const size_t num_tgts)
 {
 	size_t s, t;
 	int error = 0, result;
 	uint16_t similarity;
 	git_diff_delta *src, *tgt;
+	size_t tried_srcs, tried_tgts;
+	size_t num_bumped;
+
+	do {
+		tried_tgts = num_bumped = 0;
+
+		git_vector_foreach(&diff->deltas, t, tgt) {
+			/* skip things that are not rename targets */
+			if ((tgt->flags & GIT_DIFF_FLAG__IS_RENAME_TARGET) == 0)
+				continue;
+
+			tried_srcs = 0;
+
+			git_vector_foreach(&diff->deltas, s, src) {
+				/* skip things that are not rename sources */
+				if ((src->flags & GIT_DIFF_FLAG__IS_RENAME_SOURCE) == 0)
+					continue;
+
+				/* calculate similarity for this pair and find best match */
+				if (s == t)
+					result = -1; /* don't measure self-similarity here */
+				else if ((error = similarity_measure(
+					&result, diff, opts, sigcache, 2 * s, 2 * t + 1)) < 0)
+					return error;
+
+				if (result < 0)
+					continue;
+				similarity = (uint16_t)result;
+
+				/* is this a better rename? */
+				if (tgt2src[t].similarity < similarity &&
+					src2tgt[s].similarity < similarity)
+				{
+					/* eject old mapping */
+					if (src2tgt[s].similarity > 0) {
+						tgt2src[src2tgt[s].idx].similarity = 0;
+						num_bumped++;
+					}
+					if (tgt2src[t].similarity > 0) {
+						src2tgt[tgt2src[t].idx].similarity = 0;
+						num_bumped++;
+					}
+
+					/* write new mapping */
+					tgt2src[t].idx = s;
+					tgt2src[t].similarity = similarity;
+					src2tgt[s].idx = t;
+					src2tgt[s].similarity = similarity;
+				}
+
+				/* keep best absolute match for copies */
+				if (tgt2src_copy != NULL &&
+					tgt2src_copy[t].similarity < similarity)
+				{
+					tgt2src_copy[t].idx = s;
+					tgt2src_copy[t].similarity = similarity;
+				}
+
+				if (++tried_srcs >= num_srcs)
+					break;
+
+				/* cap on maximum targets we'll examine (per "tgt" file) */
+				if (tried_srcs > opts->rename_limit)
+					break;
+			}
+
+			if (++tried_tgts >= num_tgts)
+				break;
+		}
+	} while (num_bumped > 0); /* try again if we bumped some items */
+
+	return 0;
+}
+
+int git_diff_find_similar(
+	git_diff *diff,
+	const git_diff_find_options *given_opts)
+{
+	size_t s, t;
+	int error = 0;
+	git_diff_delta *src, *tgt;
 	git_diff_find_options opts = GIT_DIFF_FIND_OPTIONS_INIT;
 	size_t num_deltas, num_srcs = 0, num_tgts = 0;
-	size_t tried_srcs = 0, tried_tgts = 0;
-	size_t num_rewrites = 0, num_updates = 0, num_bumped = 0,
+	size_t num_rewrites = 0, num_updates = 0,
 	       num_to_delete = 0;
 	size_t sigcache_size;
 	void **sigcache = NULL; /* cache of similarity metric file signatures */
@@ -891,79 +980,9 @@ int git_diff_find_similar(
 		GIT_ERROR_CHECK_ALLOC(tgt2src_copy);
 	}
 
-	/*
-	 * Find best-fit matches for rename / copy candidates
-	 */
-
-find_best_matches:
-	tried_tgts = num_bumped = 0;
-
-	git_vector_foreach(&diff->deltas, t, tgt) {
-		/* skip things that are not rename targets */
-		if ((tgt->flags & GIT_DIFF_FLAG__IS_RENAME_TARGET) == 0)
-			continue;
-
-		tried_srcs = 0;
-
-		git_vector_foreach(&diff->deltas, s, src) {
-			/* skip things that are not rename sources */
-			if ((src->flags & GIT_DIFF_FLAG__IS_RENAME_SOURCE) == 0)
-				continue;
-
-			/* calculate similarity for this pair and find best match */
-			if (s == t)
-				result = -1; /* don't measure self-similarity here */
-			else if ((error = similarity_measure(
-				&result, diff, &opts, sigcache, 2 * s, 2 * t + 1)) < 0)
-				goto cleanup;
-
-			if (result < 0)
-				continue;
-			similarity = (uint16_t)result;
-
-			/* is this a better rename? */
-			if (tgt2src[t].similarity < similarity &&
-				src2tgt[s].similarity < similarity)
-			{
-				/* eject old mapping */
-				if (src2tgt[s].similarity > 0) {
-					tgt2src[src2tgt[s].idx].similarity = 0;
-					num_bumped++;
-				}
-				if (tgt2src[t].similarity > 0) {
-					src2tgt[tgt2src[t].idx].similarity = 0;
-					num_bumped++;
-				}
-
-				/* write new mapping */
-				tgt2src[t].idx = s;
-				tgt2src[t].similarity = similarity;
-				src2tgt[s].idx = t;
-				src2tgt[s].similarity = similarity;
-			}
-
-			/* keep best absolute match for copies */
-			if (tgt2src_copy != NULL &&
-				tgt2src_copy[t].similarity < similarity)
-			{
-				tgt2src_copy[t].idx = s;
-				tgt2src_copy[t].similarity = similarity;
-			}
-
-			if (++tried_srcs >= num_srcs)
-				break;
-
-			/* cap on maximum targets we'll examine (per "tgt" file) */
-			if (tried_srcs > opts.rename_limit)
-				break;
-		}
-
-		if (++tried_tgts >= num_tgts)
-			break;
-	}
-
-	if (num_bumped > 0) /* try again if we bumped some items */
-		goto find_best_matches;
+	if ((error = find_inexact_matches(diff, &opts, sigcache, src2tgt, tgt2src,
+		tgt2src_copy, num_srcs, num_tgts)) < 0)
+		goto cleanup;
 
 	/*
 	 * Rewrite the diffs with renames / copies
