@@ -37,7 +37,11 @@ typedef int GIT_SOCKET;
 
 #define p_utimes(f, t) utimes(f, t)
 
-#define p_readlink(a, b, c) readlink(a, b, c)
+#ifdef __wasi__
+extern ssize_t p_readlink(const char *path, char *buf, size_t bufsize);
+#else
+# define p_readlink(a, b, c) readlink(a, b, c)
+#endif
 #define p_symlink(o,n) symlink(o, n)
 #define p_link(o,n) link(o, n)
 #define p_unlink(p) unlink(p)

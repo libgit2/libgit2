@@ -142,6 +142,10 @@ if(AMIGA)
 	add_definitions(-DNO_ADDRINFO -DNO_READDIR_R -DNO_MMAP)
 endif()
 
+if(CMAKE_SYSTEM_NAME STREQUAL "WASI")
+	# WASI preview 1 has no mmap (packs are read into memory instead)
+	add_definitions(-DNO_MMAP)
+endif()
 #
 # Set build time information
 #

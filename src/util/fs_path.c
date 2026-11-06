@@ -1993,6 +1993,33 @@ done:
 	return error;
 }
 
+#elif defined(__wasi__)
+
+/* WASI has no users or file ownership: every file is the current user's */
+int git_fs_path_owner_is(
+	bool *out,
+	const char *path,
+	git_fs_path_owner_t owner_type)
+{
+	struct stat st;
+
+	if (mock_owner) {
+		*out = ((mock_owner & owner_type) != 0);
+		return 0;
+	}
+
+	if (p_lstat(path, &st) != 0) {
+		if (errno == ENOENT)
+			return GIT_ENOTFOUND;
+
+		git_error_set(GIT_ERROR_OS, "could not stat '%s'", path);
+		return -1;
+	}
+
+	*out = (owner_type & GIT_FS_PATH_OWNER_CURRENT_USER) != 0;
+	return 0;
+}
+
 #else
 
 static int sudo_uid_lookup(uid_t *out)

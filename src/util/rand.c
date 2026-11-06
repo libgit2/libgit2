@@ -112,12 +112,14 @@ GIT_INLINE(int) getseed(uint64_t *seed)
 	*seed |= ((uint64_t)tv.tv_usec << 40);
 	*seed |= ((uint64_t)tv.tv_sec);
 
+#ifndef __wasi__   /* WASI has no process or user ids */
 	*seed ^= ((uint64_t)getpid() << 48);
 	*seed ^= ((uint64_t)getppid() << 32);
 	*seed ^= ((uint64_t)getpgid(0) << 28);
 	*seed ^= ((uint64_t)getsid(0) << 16);
 	*seed ^= ((uint64_t)getuid() << 8);
 	*seed ^= ((uint64_t)getgid());
+#endif
 
 # if defined(GIT_RAND_GETLOADAVG)
 	getloadavg(loadavg, 3);

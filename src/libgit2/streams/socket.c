@@ -12,7 +12,9 @@
 #include "runtime.h"
 #include "stream.h"
 
-#ifndef _WIN32
+#if defined(__wasi__)
+/* WASI preview 1 has no sockets: see default_socket_stream_new below */
+#elif !defined(_WIN32)
 # include <sys/types.h>
 # include <sys/socket.h>
 # include <sys/select.h>
@@ -35,6 +37,7 @@
 int git_socket_stream__connect_timeout = 0;
 int git_socket_stream__timeout = 0;
 
+#ifndef __wasi__
 #ifdef GIT_WIN32
 static void net_set_error(const char *str)
 {
@@ -389,6 +392,14 @@ static int default_socket_stream_new(
 	*out = (git_stream *) st;
 	return 0;
 }
+#else /* __wasi__ */
+static int default_socket_stream_new(git_stream **out, const char *host, const char *port)
+{
+	GIT_UNUSED(out); GIT_UNUSED(host); GIT_UNUSED(port);
+	git_error_set(GIT_ERROR_NET, "WASI has no sockets: register a transport (git_transport_register) or a stream (git_stream_register)");
+	return -1;
+}
+#endif /* __wasi__ */
 
 int git_socket_stream_new(
 	git_stream **out,

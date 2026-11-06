@@ -53,7 +53,13 @@ GIT_INLINE(int) git__is_int(int64_t p)
 #if (__has_builtin(__builtin_add_overflow) || \
      (defined(__GNUC__) && (__GNUC__ >= 5)))
 
-# if (SIZE_MAX == UINT_MAX)
+# if defined(__wasm__)
+/* wasm32: size_t is `unsigned long` although SIZE_MAX == UINT_MAX; use the type-generic builtins */
+#  define git__add_sizet_overflow(out, one, two) \
+     __builtin_add_overflow(one, two, out)
+#  define git__multiply_sizet_overflow(out, one, two) \
+     __builtin_mul_overflow(one, two, out)
+# elif (SIZE_MAX == UINT_MAX)
 #  define git__add_sizet_overflow(out, one, two) \
      __builtin_uadd_overflow(one, two, out)
 #  define git__multiply_sizet_overflow(out, one, two) \

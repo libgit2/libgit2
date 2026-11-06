@@ -17,7 +17,9 @@
 # include "win32/utf-conv.h"
 #else
 # include <unistd.h>
-# include <pwd.h>
+# ifndef __wasi__
+#  include <pwd.h>
+# endif
 #endif
 
 #ifdef GIT_WIN32
@@ -268,7 +270,16 @@ static int git_sysdir_guess_system_dirs(git_str *out)
 #endif
 }
 
-#ifndef GIT_WIN32
+#ifdef __wasi__
+/* WASI: one user, no passwd database; homes come from $HOME / $XDG_CONFIG_HOME only */
+# define getuid() 0
+# define geteuid() 0
+static int get_passwd_home(git_str *out, int uid)
+{
+	GIT_UNUSED(out); GIT_UNUSED(uid);
+	return GIT_ENOTFOUND;
+}
+#elif !defined(GIT_WIN32)
 static int get_passwd_home(git_str *out, uid_t uid)
 {
 	struct passwd pwd, *pwdptr;
