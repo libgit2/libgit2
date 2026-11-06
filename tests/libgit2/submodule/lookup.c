@@ -43,6 +43,12 @@ void test_submodule_lookup__simple_lookup(void)
 	assert_submodule_exists(g_repo, "sm_added_and_uncommited/");
 }
 
+void test_submodule_lookup__name_of_only_slashes(void)
+{
+	cl_git_fail(git_submodule_lookup(NULL, g_repo, "/"));
+	cl_git_fail(git_submodule_lookup(NULL, g_repo, "//"));
+}
+
 void test_submodule_lookup__can_be_dupped(void)
 {
 	git_submodule *sm;
