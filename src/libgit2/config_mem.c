@@ -86,8 +86,11 @@ static int read_variable_cb(
 	entry->base.free = git_config_list_entry_free;
 	entry->config_list = parse_data->config_list;
 
-	if ((result = git_config_list_append(parse_data->config_list, entry)) < 0)
-		return result;
+	if ((result = git_config_list_append(parse_data->config_list, entry)) < 0) {
+		git__free((char *) entry->base.entry.name);
+		git__free((char *) entry->base.entry.value);
+		git__free(entry);
+	}
 
 	return result;
 }
@@ -166,8 +169,12 @@ static int parse_values(
 		entry->base.free = git_config_list_entry_free;
 		entry->config_list = memory_backend->config_list;
 
-		if (git_config_list_append(memory_backend->config_list, entry) < 0)
+		if (git_config_list_append(memory_backend->config_list, entry) < 0) {
+			git__free((char *) entry->base.entry.name);
+			git__free((char *) entry->base.entry.value);
+			git__free(entry);
 			return -1;
+		}
 	}
 
 	return 0;
