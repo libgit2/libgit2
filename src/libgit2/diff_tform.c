@@ -16,6 +16,7 @@
 #include "fs_path.h"
 #include "futils.h"
 #include "config.h"
+#include "hashmap_oid.h"
 
 git_diff_delta *git_diff__delta_dup(
 	const git_diff_delta *d, git_pool *pool)
@@ -535,6 +536,19 @@ static void similarity_unload(similarity_info *info)
 		git_str_dispose(&info->data);
 }
 
+/* Ensure workdir items have an OID */
+static void workdir_find_oid(git_diff *diff, size_t idx)
+{
+	git_diff_file *file = similarity_get_file(diff, idx);
+	git_iterator_t src = (idx & 1) ? diff->new_src : diff->old_src;
+
+	if (git_oid_is_zero(&file->id) &&
+		src == GIT_ITERATOR_WORKDIR &&
+		!git_diff__oid_for_file(&file->id,
+			diff, file->path, file->mode, file->size))
+		file->flags |= GIT_DIFF_FLAG_VALID_ID;
+}
+
 #define FLAG_SET(opts,flag_name) (((opts)->flags & flag_name) != 0)
 
 /* - score < 0 means files cannot be compared
@@ -563,17 +577,8 @@ static int similarity_measure(
 
 	/* if exact match is requested, force calculation of missing OIDs now */
 	if (exact_match) {
-		if (git_oid_is_zero(&a_file->id) &&
-			diff->old_src == GIT_ITERATOR_WORKDIR &&
-			!git_diff__oid_for_file(&a_file->id,
-				diff, a_file->path, a_file->mode, a_file->size))
-			a_file->flags |= GIT_DIFF_FLAG_VALID_ID;
-
-		if (git_oid_is_zero(&b_file->id) &&
-			diff->new_src == GIT_ITERATOR_WORKDIR &&
-			!git_diff__oid_for_file(&b_file->id,
-				diff, b_file->path, b_file->mode, b_file->size))
-			b_file->flags |= GIT_DIFF_FLAG_VALID_ID;
+		workdir_find_oid(diff, a_idx);
+		workdir_find_oid(diff, b_idx);
 	}
 
 	/* check OID match as a quick test */
@@ -816,6 +821,113 @@ typedef struct {
 	uint16_t similarity;
 } diff_find_match;
 
+#define NO_SOURCE SIZE_MAX
+GIT_HASHMAP_OID_SETUP(git_diff_oidmap, size_t);
+
+static int find_oids(
+	git_diff_oidmap *oid_to_src,
+	size_t *same_src,
+	git_diff *diff,
+	bool hash_workdir)
+{
+	git_diff_delta *src;
+	size_t s = diff->deltas.length, head_src;
+
+	/* Walk backwards to form chains of same source with each chain starting
+	 * with the first source in the diff
+	 */
+	while (s-- > 0) {
+		src = GIT_VECTOR_GET(&diff->deltas, s);
+		same_src[s] = NO_SOURCE;
+
+		if ((src->flags & GIT_DIFF_FLAG__IS_RENAME_SOURCE) != 0) {
+			if (hash_workdir)
+				workdir_find_oid(diff, 2 * s);
+
+			if (!git_oid_is_zero(&src->old_file.id)) {
+				if (!git_diff_oidmap_get(&head_src,
+						oid_to_src, &src->old_file.id))
+					same_src[s] = head_src;
+
+				if (git_diff_oidmap_put(oid_to_src,
+						&src->old_file.id, s) < 0)
+					return -1;
+			}
+		}
+	}
+
+	return 0;
+}
+
+static void match_exact_target(
+	size_t t,
+	size_t s,
+	size_t *same_src,
+	diff_find_match *src2tgt,
+	diff_find_match *tgt2src,
+	diff_find_match *tgt2src_copy)
+{
+	for (; s != NO_SOURCE; s = same_src[s]) {
+		if (s != t) {
+			if (tgt2src_copy != NULL && tgt2src_copy[t].similarity < 100) {
+				tgt2src_copy[t].idx = s;
+				tgt2src_copy[t].similarity = 100;
+			}
+
+			if (src2tgt[s].similarity < 100) {
+				tgt2src[t].idx = s;
+				tgt2src[t].similarity = 100;
+				src2tgt[s].idx = t;
+				src2tgt[s].similarity = 100;
+				return;
+			}
+		}
+	}
+}
+
+/*
+ * Find exact matches cheaply through OID comparison
+ */
+static int find_exact_matches(
+	git_diff *diff,
+	const git_diff_find_options *opts,
+	diff_find_match *src2tgt,
+	diff_find_match *tgt2src,
+	diff_find_match *tgt2src_copy)
+{
+	/* Only hash workdir files up front when matching exactly since
+	 * the inexact pass would otherwise read them anyway.
+	 * TODO: There might be better solutions to handle this
+	 */
+	bool hash_workdir = FLAG_SET(opts, GIT_DIFF_FIND_EXACT_MATCH_ONLY);
+	git_diff_oidmap oid_to_src = GIT_HASHMAP_INIT;
+	git_diff_delta *tgt;
+	size_t *same_src, s, t;
+	int error = 0;
+
+	same_src = git__mallocarray(diff->deltas.length, sizeof(size_t));
+	GIT_ERROR_CHECK_ALLOC(same_src);
+
+	if ((error = find_oids(&oid_to_src, same_src,
+		diff, hash_workdir)) == 0) {
+		git_vector_foreach(&diff->deltas, t, tgt) {
+			if ((tgt->flags & GIT_DIFF_FLAG__IS_RENAME_TARGET) != 0) {
+				if (hash_workdir)
+					workdir_find_oid(diff, (2 * t) + 1);
+
+				if (!git_diff_oidmap_get(&s,
+						&oid_to_src, &tgt->new_file.id))
+					match_exact_target(t, s, same_src,
+						src2tgt, tgt2src, tgt2src_copy);
+			}
+		}
+	}
+
+	git_diff_oidmap_dispose(&oid_to_src);
+	git__free(same_src);
+	return error;
+}
+
 /*
  * Find best-fit matches for rename / copy candidates
  */
@@ -841,14 +953,16 @@ static int find_inexact_matches(
 
 		git_vector_foreach(&diff->deltas, t, tgt) {
 			/* skip things that are not rename targets */
-			if ((tgt->flags & GIT_DIFF_FLAG__IS_RENAME_TARGET) == 0)
+			if ((tgt->flags & GIT_DIFF_FLAG__IS_RENAME_TARGET) == 0 ||
+				tgt2src[t].similarity >= 100)
 				continue;
 
 			tried_srcs = 0;
 
 			git_vector_foreach(&diff->deltas, s, src) {
 				/* skip things that are not rename sources */
-				if ((src->flags & GIT_DIFF_FLAG__IS_RENAME_SOURCE) == 0)
+				if ((src->flags & GIT_DIFF_FLAG__IS_RENAME_SOURCE) == 0 ||
+					(tgt2src_copy == NULL && src2tgt[s].similarity >= 100))
 					continue;
 
 				/* calculate similarity for this pair and find best match */
@@ -980,8 +1094,13 @@ int git_diff_find_similar(
 		GIT_ERROR_CHECK_ALLOC(tgt2src_copy);
 	}
 
-	if ((error = find_inexact_matches(diff, &opts, sigcache, src2tgt, tgt2src,
-		tgt2src_copy, num_srcs, num_tgts)) < 0)
+	if ((error = find_exact_matches(diff, &opts,
+		src2tgt, tgt2src, tgt2src_copy)) < 0)
+		goto cleanup;
+
+	if (!FLAG_SET(&opts, GIT_DIFF_FIND_EXACT_MATCH_ONLY) &&
+		(error = find_inexact_matches(diff, &opts, sigcache, src2tgt,
+			tgt2src, tgt2src_copy, num_srcs, num_tgts)) < 0)
 		goto cleanup;
 
 	/*
