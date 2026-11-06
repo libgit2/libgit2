@@ -186,6 +186,11 @@ int git_worktree_lookup(git_worktree **out, git_repository *repo, const char *na
 
 	*out = NULL;
 
+	if (!repo->commondir) {
+		git_error_set(GIT_ERROR_WORKTREE, "worktree '%s' not found", name);
+		return GIT_ENOTFOUND;
+	}
+
 	if ((error = git_str_join3(&path, '/', repo->commondir, "worktrees", name)) < 0)
 		goto out;
 
