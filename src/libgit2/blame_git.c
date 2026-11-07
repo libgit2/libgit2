@@ -33,17 +33,15 @@ static void origin_decref(git_blame__origin *o)
 	}
 }
 
-/* Given a commit and a path in it, create a new origin structure. */
-static int make_origin(git_blame__origin **out, git_commit *commit, const char *path)
+/* On success, provides a new origin taking ownership of the provided blob */
+static int make_origin_from_blob(
+	git_blame__origin **out,
+	git_commit *commit,
+	const char *path,
+	git_blob *blob)
 {
 	git_blame__origin *o;
-	git_object *blob;
 	size_t path_len = strlen(path), alloc_len;
-	int error = 0;
-
-	if ((error = git_object_lookup_bypath(&blob, (git_object*)commit,
-			path, GIT_OBJECT_BLOB)) < 0)
-		return error;
 
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, sizeof(*o), path_len);
 	GIT_ERROR_CHECK_ALLOC_ADD(&alloc_len, alloc_len, 1);
@@ -51,13 +49,29 @@ static int make_origin(git_blame__origin **out, git_commit *commit, const char *
 	GIT_ERROR_CHECK_ALLOC(o);
 
 	o->commit = commit;
-	o->blob = (git_blob *) blob;
+	o->blob = blob;
 	o->refcnt = 1;
 	strcpy(o->path, path);
 
 	*out = o;
 
 	return 0;
+}
+
+/* Given a commit and a path in it, create a new origin structure. */
+static int make_origin(git_blame__origin **out, git_commit *commit, const char *path)
+{
+	git_object *blob;
+	int error = 0;
+
+	if ((error = git_object_lookup_bypath(&blob, (git_object*)commit,
+			path, GIT_OBJECT_BLOB)) < 0)
+		return error;
+
+	if ((error = make_origin_from_blob(out, commit, path, (git_blob *)blob)) < 0)
+		git_blob_free((git_blob*)blob);
+
+	return error;
 }
 
 /* Locate an existing origin or create a new one. */
@@ -437,32 +451,30 @@ static git_blame__origin *find_origin(
 	git_diff *difflist = NULL;
 	git_diff_options diffopts = GIT_DIFF_OPTIONS_INIT;
 	git_tree *otree=NULL, *ptree=NULL;
+	git_tree_entry *oentry = NULL, *pentry = NULL;
+	git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
+	size_t i;
+	int error;
 
 	/* Get the trees from this commit and its parent */
 	if (0 != git_commit_tree(&otree, origin->commit) ||
 	    0 != git_commit_tree(&ptree, parent))
 		goto cleanup;
 
-	/* Configure the diff */
-	diffopts.context_lines = 0;
-	diffopts.flags = GIT_DIFF_SKIP_BINARY_CHECK;
+	if (git_tree_entry_bypath(&oentry, otree, origin->path) < 0)
+		goto cleanup;
 
-	/* Check to see if files we're interested have changed */
-	diffopts.pathspec.count = blame->paths.length;
-	diffopts.pathspec.strings = (char**)blame->paths.contents;
-	if (0 != git_diff_tree_to_tree(&difflist, blame->repository, ptree, otree, &diffopts))
-			goto cleanup;
+	error = git_tree_entry_bypath(&pentry, ptree, origin->path);
 
-	if (!git_diff_num_deltas(difflist)) {
-		/* No changes; copy data */
-		git_blame__get_origin(&porigin, blame, parent, origin->path);
-	} else {
-		git_diff_find_options findopts = GIT_DIFF_FIND_OPTIONS_INIT;
-		int i;
-
+	if (error == GIT_ENOTFOUND ||
+	    (!error && GIT_MODE_TYPE(git_tree_entry_filemode(pentry)) !=
+	               GIT_MODE_TYPE(git_tree_entry_filemode(oentry)))) {
 		/* Generate a full diff between the two trees */
-		git_diff_free(difflist);
-		diffopts.pathspec.count = 0;
+
+		/* Configure the diff */
+		diffopts.context_lines = 0;
+		diffopts.flags = GIT_DIFF_SKIP_BINARY_CHECK;
+
 		if (0 != git_diff_tree_to_tree(&difflist, blame->repository, ptree, otree, &diffopts))
 			goto cleanup;
 
@@ -472,7 +484,7 @@ static git_blame__origin *find_origin(
 			goto cleanup;
 
 		/* Find one that matches */
-		for (i=0; i<(int)git_diff_num_deltas(difflist); i++) {
+		for (i=0; i< git_diff_num_deltas(difflist); i++) {
 			const git_diff_delta *delta = git_diff_get_delta(difflist, i);
 
 			if (!git_vector_bsearch(NULL, &blame->paths, delta->new_file.path))
@@ -482,10 +494,27 @@ static git_blame__origin *find_origin(
 				make_origin(&porigin, parent, delta->old_file.path);
 			}
 		}
+	} else if (!error && git_oid_equal(git_tree_entry_id(pentry),
+	                                   git_tree_entry_id(oentry))) {
+		/* If the OIDs are equal, then there's no change */
+		git_blob *blob;
+
+		git_object_dup((git_object **)&blob, (git_object *)origin->blob);
+		if (make_origin_from_blob(&porigin, parent, origin->path, blob) < 0)
+			git_blob_free(blob);
+	} else if (!error) {
+		/* If it's modified, then the parent is in the same location */
+		git_blob *blob;
+
+		if (git_blob_lookup(&blob, blame->repository, git_tree_entry_id(pentry)) == 0 &&
+		    make_origin_from_blob(&porigin, parent, origin->path, blob) < 0)
+			git_blob_free(blob);
 	}
 
 cleanup:
 	git_diff_free(difflist);
+	git_tree_entry_free(oentry);
+	git_tree_entry_free(pentry);
 	git_tree_free(otree);
 	git_tree_free(ptree);
 	return porigin;
