@@ -184,6 +184,152 @@ void test_clone_nonetwork__can_checkout_given_branch(void)
 	git_reference_free(remote_head);
 }
 
+static void assert_checkout_tag(const char *name, int bare, git_clone_local_t local)
+{
+	git_object *target, *commit;
+	git_reference *remote_head;
+	git_config *config;
+	git_str config_key = GIT_STR_INIT;
+	const char *value, *tag_name = name;
+
+	if (!git__prefixcmp(tag_name, GIT_REFS_TAGS_DIR))
+		tag_name += strlen(GIT_REFS_TAGS_DIR);
+	g_options.checkout_branch = name;
+	g_options.bare = bare;
+	g_options.local = local;
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+
+	cl_assert_equal_i(1, git_repository_head_detached(g_repo));
+	cl_git_pass(git_repository_head(&g_ref, g_repo));
+	cl_git_pass(git_revparse_single(&target, g_repo, name));
+	cl_git_pass(git_object_peel(&commit, target, GIT_OBJECT_COMMIT));
+	cl_assert_equal_oid(git_object_id(commit), git_reference_target(g_ref));
+	git_object_free(commit);
+	git_object_free(target);
+
+	cl_git_pass(git_repository_config_snapshot(&config, g_repo));
+	cl_git_pass(git_str_printf(&config_key, "branch.%s.remote", tag_name));
+	cl_git_fail_with(GIT_ENOTFOUND, git_config_get_string(&value, config, config_key.ptr));
+	git_str_dispose(&config_key);
+	git_config_free(config);
+	cl_git_pass(git_reference_lookup(&remote_head, g_repo, "refs/remotes/origin/HEAD"));
+	cl_assert_equal_s("refs/remotes/origin/master", git_reference_symbolic_target(remote_head));
+	git_reference_free(remote_head);
+	if (!bare)
+		cl_assert(git_fs_path_exists(!strcmp(name, "refs/tags/test") ?
+			"foo/readme.txt" : "foo/README"));
+}
+
+void test_clone_nonetwork__checkout_annotated_tag(void)
+{
+	assert_checkout_tag("hard_tag", 0, GIT_CLONE_LOCAL_AUTO);
+}
+
+static void checkout_created_tag(int annotated)
+{
+	git_repository *source;
+	git_object *target;
+	git_signature *signature;
+	git_oid id;
+
+	source = cl_git_sandbox_init("testrepo.git");
+	cl_git_pass(git_revparse_single(&target, source, "hard_tag"));
+	if (annotated) {
+		cl_git_pass(git_signature_now(&signature, "tagger", "tagger@example.com"));
+		cl_git_pass(git_tag_create(&id, source, "nested", target, signature, "nested tag", 0));
+		git_signature_free(signature);
+	} else {
+		git_object *commit;
+		cl_git_pass(git_object_peel(&commit, target, GIT_OBJECT_COMMIT));
+		cl_git_pass(git_tag_create_lightweight(&id, source, "nested", commit, 0));
+		git_object_free(commit);
+	}
+	git_object_free(target);
+
+	g_options.checkout_branch = "nested";
+	cl_git_pass(git_clone(&g_repo, cl_git_path_url(git_repository_path(source)), "./foo", &g_options));
+	cl_assert_equal_i(1, git_repository_head_detached(g_repo));
+	cl_git_pass(git_repository_head(&g_ref, g_repo));
+	cl_git_pass(git_revparse_single(&target, source, "hard_tag^{}"));
+	cl_assert_equal_oid(git_object_id(target), git_reference_target(g_ref));
+	cl_assert(git_fs_path_exists("foo/README"));
+	git_object_free(target);
+	cl_git_sandbox_cleanup();
+}
+
+void test_clone_nonetwork__checkout_nested_tag(void)
+{
+	checkout_created_tag(1);
+}
+
+void test_clone_nonetwork__checkout_lightweight_tag(void)
+{
+	checkout_created_tag(0);
+}
+
+void test_clone_nonetwork__checkout_tag_full_reference(void)
+{
+	assert_checkout_tag("refs/tags/test", 0, GIT_CLONE_LOCAL_AUTO);
+}
+
+void test_clone_nonetwork__checkout_tag_bare(void)
+{
+	assert_checkout_tag("hard_tag", 1, GIT_CLONE_LOCAL_AUTO);
+}
+
+void test_clone_nonetwork__checkout_tag_without_local_optimization(void)
+{
+	assert_checkout_tag("hard_tag", 0, GIT_CLONE_NO_LOCAL);
+}
+
+void test_clone_nonetwork__checkout_branch_full_reference(void)
+{
+	g_options.checkout_branch = "refs/heads/test";
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+	cl_git_pass(git_repository_head(&g_ref, g_repo));
+	cl_assert_equal_s("refs/heads/test", git_reference_name(g_ref));
+}
+
+void test_clone_nonetwork__checkout_branch_precedes_tag(void)
+{
+	g_options.checkout_branch = "test";
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+	cl_git_pass(git_repository_head(&g_ref, g_repo));
+	cl_assert_equal_s("refs/heads/test", git_reference_name(g_ref));
+}
+
+void test_clone_nonetwork__checkout_missing_branch_or_tag(void)
+{
+	g_options.checkout_branch = "does-not-exist";
+	cl_git_fail_with(GIT_ENOTFOUND, git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+	cl_assert_equal_p(NULL, g_repo);
+	cl_assert(!git_fs_path_exists("foo"));
+}
+
+void test_clone_nonetwork__checkout_missing_explicit_branch_does_not_use_tag(void)
+{
+	g_options.checkout_branch = "refs/heads/hard_tag";
+	cl_git_fail_with(GIT_ENOTFOUND, git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+	cl_assert_equal_p(NULL, g_repo);
+	cl_assert(!git_fs_path_exists("foo"));
+}
+
+void test_clone_nonetwork__checkout_missing_explicit_tag(void)
+{
+	g_options.checkout_branch = "refs/tags/does-not-exist";
+	cl_git_fail_with(GIT_ENOTFOUND, git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+	cl_assert_equal_p(NULL, g_repo);
+	cl_assert(!git_fs_path_exists("foo"));
+}
+
+void test_clone_nonetwork__checkout_noncommit_tag(void)
+{
+	g_options.checkout_branch = "point_to_blob";
+	cl_git_fail(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+	cl_assert_equal_p(NULL, g_repo);
+	cl_assert(!git_fs_path_exists("foo"));
+}
+
 static int clone_cancel_fetch_transfer_progress_cb(
 	const git_indexer_progress *stats, void *data)
 {
