@@ -878,6 +878,12 @@ int git_submodule_add_setup(
 	GIT_ASSERT_ARG(url);
 	GIT_ASSERT_ARG(path);
 
+	if (!git_repository_workdir(repo)) {
+		git_error_set(GIT_ERROR_SUBMODULE,
+			"cannot add a submodule to a repository without a working directory");
+		return GIT_EBAREREPO;
+	}
+
 	/* see if there is already an entry for this submodule */
 
 	if (git_submodule_lookup(NULL, repo, path) < 0)
