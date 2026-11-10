@@ -301,6 +301,7 @@ GIT_EXTERN(int) git_submodule_foreach(
  * @param use_gitlink Should workdir contain a gitlink to the repo in
  *        .git/modules vs. repo directly in workdir.
  * @return 0 on success, GIT_EEXISTS if submodule already exists,
+ *         GIT_EBAREREPO if the repository has no working directory,
  *         -1 on other errors.
  */
 GIT_EXTERN(int) git_submodule_add_setup(
