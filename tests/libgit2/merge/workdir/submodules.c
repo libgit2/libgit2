@@ -138,3 +138,111 @@ void test_merge_workdir_submodules__update_delete_conflict(void)
 	git_reference_free(their_ref);
 	git_reference_free(our_ref);
 }
+
+void test_merge_workdir_submodules__delete_keeps_workdir(void)
+{
+	git_object *our_commit;
+	git_annotated_commit *their_head;
+	git_index *index;
+
+	cl_git_pass(git_revparse_single(&our_commit, repo, "f665b45"));
+	cl_git_pass(git_reset(repo, our_commit, GIT_RESET_HARD, NULL));
+	cl_assert(git_fs_path_isdir(TEST_REPO_PATH "/submodule"));
+	cl_git_mkfile(TEST_REPO_PATH "/submodule/local.txt", "keep me\n");
+	cl_git_pass(git_annotated_commit_from_revspec(&their_head, repo,
+		SUBMODULE_DELETE_BRANCH));
+
+	cl_git_pass(git_merge(repo, (const git_annotated_commit **)&their_head,
+		1, NULL, NULL));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_assert(git_index_get_bypath(index, "submodule", 0) == NULL);
+	cl_git_pass(git_index_read(index, 1));
+	cl_assert(git_index_get_bypath(index, "submodule", 0) == NULL);
+	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/submodule/local.txt"));
+
+	git_index_free(index);
+	git_annotated_commit_free(their_head);
+	git_object_free(our_commit);
+}
+
+static void merge_deleted_submodule(unsigned int strategy, const char *path,
+	int expect_deleted, int initialized)
+{
+	git_object *our_commit;
+	git_annotated_commit *their_head;
+	git_index *index;
+	git_repository *subrepo;
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	char *paths[] = { (char *)path };
+
+	cl_git_pass(git_revparse_single(&our_commit, repo, "f665b45"));
+	cl_git_pass(git_reset(repo, our_commit, GIT_RESET_HARD, NULL));
+	if (initialized) {
+		cl_git_pass(git_repository_init(&subrepo,
+			TEST_REPO_PATH "/submodule", 0));
+		git_repository_free(subrepo);
+	}
+	cl_git_mkfile(TEST_REPO_PATH "/submodule/local.txt", "keep me\n");
+	cl_git_pass(git_annotated_commit_from_revspec(&their_head, repo,
+		SUBMODULE_DELETE_BRANCH));
+	opts.checkout_strategy = strategy;
+	if (path) {
+		opts.paths.strings = paths;
+		opts.paths.count = 1;
+	}
+	cl_git_pass(git_merge(repo, (const git_annotated_commit **)&their_head,
+		1, NULL, &opts));
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_assert_equal_i(expect_deleted,
+		git_index_get_bypath(index, "submodule", 0) == NULL);
+	cl_git_pass(git_index_read(index, 1));
+	cl_assert_equal_i(expect_deleted,
+		git_index_get_bypath(index, "submodule", 0) == NULL);
+	cl_assert(git_fs_path_exists(TEST_REPO_PATH "/submodule/local.txt"));
+	if (initialized)
+		cl_assert(git_fs_path_isdir(TEST_REPO_PATH "/submodule/.git"));
+
+	git_index_free(index);
+	git_annotated_commit_free(their_head);
+	git_object_free(our_commit);
+}
+
+void test_merge_workdir_submodules__delete(void)
+{
+	merge_deleted_submodule(GIT_CHECKOUT_SAFE, NULL, 1, 0);
+}
+
+void test_merge_workdir_submodules__delete_force(void)
+{
+	merge_deleted_submodule(GIT_CHECKOUT_FORCE, NULL, 1, 0);
+}
+
+void test_merge_workdir_submodules__delete_dry_run(void)
+{
+	merge_deleted_submodule(GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DRY_RUN, NULL, 0, 0);
+}
+
+void test_merge_workdir_submodules__delete_update_only(void)
+{
+	merge_deleted_submodule(GIT_CHECKOUT_SAFE | GIT_CHECKOUT_UPDATE_ONLY, NULL, 0, 0);
+}
+
+void test_merge_workdir_submodules__delete_without_index_update(void)
+{
+	merge_deleted_submodule(GIT_CHECKOUT_SAFE | GIT_CHECKOUT_DONT_UPDATE_INDEX, NULL, 0, 0);
+}
+
+void test_merge_workdir_submodules__delete_pathspec(void)
+{
+	merge_deleted_submodule(GIT_CHECKOUT_SAFE, "submodule", 1, 0);
+}
+
+void test_merge_workdir_submodules__delete_other_pathspec(void)
+{
+	merge_deleted_submodule(GIT_CHECKOUT_SAFE, ".gitmodules", 0, 0);
+}
+
+void test_merge_workdir_submodules__delete_nested_repo_keeps_workdir(void)
+{
+	merge_deleted_submodule(GIT_CHECKOUT_SAFE, NULL, 1, 1);
+}
