@@ -480,8 +480,9 @@ void test_network_fetchlocal__prune_load_remote_prune_config(void)
 
 	cl_git_pass(git_repository_config(&config, repo));
 	cl_git_pass(git_config_set_bool(config, "remote.origin.prune", 1));
+	cl_git_pass(git_config_set_string(config, "remote.origin.url", url));
 
-	cl_git_pass(git_remote_create(&origin, repo, GIT_REMOTE_ORIGIN, url));
+	cl_git_pass(git_remote_lookup(&origin, repo, GIT_REMOTE_ORIGIN));
 	cl_assert_equal_i(1, git_remote_prune_refs(origin));
 
 	git_config_free(config);

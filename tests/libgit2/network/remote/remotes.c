@@ -413,7 +413,7 @@ void test_network_remote_remotes__list(void)
 	git_config *cfg;
 
 	cl_git_pass(git_remote_list(&list, _repo));
-	cl_assert(list.count == 5);
+	cl_assert(list.count == 6);
 	git_strarray_dispose(&list);
 
 	cl_git_pass(git_repository_config(&cfg, _repo));
@@ -497,13 +497,8 @@ void test_network_remote_remotes__can_load_with_an_empty_url(void)
 
 	cl_git_pass(git_remote_lookup(&remote, _repo, "empty-remote-url"));
 
-	cl_assert(remote->url == NULL);
+	cl_assert_equal_s(remote->url, "empty-remote-url");
 	cl_assert(remote->pushurl == NULL);
-
-	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
-
-	cl_assert(git_error_last() != NULL);
-	cl_assert(git_error_last()->klass == GIT_ERROR_INVALID);
 
 	git_remote_free(remote);
 }
@@ -514,20 +509,19 @@ void test_network_remote_remotes__can_load_with_only_an_empty_pushurl(void)
 
 	cl_git_pass(git_remote_lookup(&remote, _repo, "empty-remote-pushurl"));
 
-	cl_assert(remote->url == NULL);
+	cl_assert_equal_s(remote->url, "empty-remote-pushurl");
 	cl_assert(remote->pushurl == NULL);
-
-	cl_git_fail(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
 
 	git_remote_free(remote);
 }
 
-void test_network_remote_remotes__returns_ENOTFOUND_when_neither_url_nor_pushurl(void)
+void test_network_remote_remotes__uses_name_when_neither_url_nor_pushurl(void)
 {
 	git_remote *remote = NULL;
 
-	cl_git_fail_with(
-		git_remote_lookup(&remote, _repo, "no-remote-url"), GIT_ENOTFOUND);
+	cl_git_pass(git_remote_lookup(&remote, _repo, "no-remote-url"));
+	cl_assert_equal_s(git_remote_url(remote), "no-remote-url");
+	git_remote_free(remote);
 }
 
 static const char *fetch_refspecs[] = {
@@ -572,4 +566,166 @@ void test_network_remote_remotes__query_refspecs(void)
 
 	git_remote_free(remote);
 	git_remote_delete(_repo, "test");
+}
+
+static void assert_fallback_url(const char *name, const char *setting,
+	const char *value, const char *fetch_url, const char *push_url,
+	int rewrite, int explicit_push)
+{
+	git_config *config;
+	git_remote *remote;
+	git_str key = GIT_STR_INIT, url = GIT_STR_INIT;
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_str_printf(&key, "remote.%s.%s", name, setting));
+	cl_git_pass(git_config_set_string(config, key.ptr, value));
+	if (rewrite) {
+		cl_git_pass(git_config_set_string(config, "url.FETCH/.insteadOf", name));
+		cl_git_pass(git_config_set_string(config, "url.PUSH/.pushInsteadOf", name));
+	}
+	if (explicit_push) {
+		git_str_clear(&key);
+		cl_git_pass(git_str_printf(&key, "remote.%s.pushurl", name));
+		cl_git_pass(git_config_set_string(config, key.ptr, "DEST"));
+	}
+
+	cl_git_pass(git_remote_lookup(&remote, _repo, name));
+	cl_assert_equal_s(git_remote_name(remote), name);
+	cl_assert_equal_s(git_remote_url(remote), fetch_url);
+	cl_git_pass(git_remote__urlfordirection(&url, remote, GIT_DIRECTION_PUSH, NULL));
+	cl_assert_equal_s(url.ptr, push_url);
+
+	git_str_dispose(&key);
+	git_str_dispose(&url);
+	git_remote_free(remote);
+	git_config_free(config);
+}
+
+void test_network_remote_remotes__fallback_with_fetchspec(void)
+{
+	assert_fallback_url("fallback", "fetch", "+refs/heads/*:refs/remotes/fallback/*",
+		"fallback", "fallback", 0, 0);
+}
+
+void test_network_remote_remotes__fallback_with_unknown_setting(void)
+{
+	assert_fallback_url("fallback", "unknown", "yes", "fallback", "fallback", 0, 0);
+}
+
+void test_network_remote_remotes__fallback_with_pushurl(void)
+{
+	assert_fallback_url("fallback", "pushurl", "PUSH", "fallback", "PUSH", 0, 0);
+}
+
+void test_network_remote_remotes__fallback_rewrites_missing_url(void)
+{
+	assert_fallback_url("fallback", "fetch", "+refs/heads/*:refs/remotes/fallback/*",
+		"FETCH/", "PUSH/", 1, 0);
+}
+
+void test_network_remote_remotes__fallback_rewrites_empty_url(void)
+{
+	assert_fallback_url("fallback", "url", "", "FETCH/", "PUSH/", 1, 0);
+}
+
+void test_network_remote_remotes__fallback_keeps_explicit_pushurl(void)
+{
+	assert_fallback_url("fallback", "url", "", "FETCH/", "DEST", 1, 1);
+}
+
+void test_network_remote_remotes__fallback_rewrites_empty_pushurl(void)
+{
+	assert_fallback_url("fallback", "pushurl", "", "FETCH/", "PUSH/", 1, 0);
+}
+
+void test_network_remote_remotes__fallback_name_with_dot(void)
+{
+	assert_fallback_url("fallback.dot", "fetch", "", "fallback.dot", "fallback.dot", 0, 0);
+}
+
+void test_network_remote_remotes__does_not_match_similar_remote_name(void)
+{
+	git_config *config;
+	git_remote *remote = NULL;
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_set_string(config, "remote.fallbackXdot.fetch", ""));
+	cl_git_pass(git_config_set_string(config, "remote.fallback.dot.extra.fetch", ""));
+	cl_git_fail_with(git_remote_lookup(&remote, _repo, "fallback.dot"), GIT_ENOTFOUND);
+	git_config_free(config);
+}
+
+void test_network_remote_remotes__fallback_can_connect_to_local_repository(void)
+{
+	git_config *config;
+	git_remote *remote;
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_set_string(config, "remote.testrepo.git.fetch",
+		"+refs/heads/*:refs/remotes/local/*"));
+	cl_git_pass(git_remote_lookup(&remote, _repo, "testrepo.git"));
+	cl_git_pass(git_remote_connect(remote, GIT_DIRECTION_FETCH, NULL, NULL, NULL));
+	cl_git_pass(git_remote_disconnect(remote));
+	git_remote_free(remote);
+	git_config_free(config);
+}
+
+void test_network_remote_remotes__cannot_create_over_configured_remote_without_url(void)
+{
+	git_config *config;
+	git_remote *remote = NULL;
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_set_bool(config, "remote.fallback.prune", 1));
+	cl_git_fail_with(git_remote_create(&remote, _repo, "fallback", "elsewhere"), GIT_EEXISTS);
+	git_config_free(config);
+}
+
+static void assert_missing_url_value(const char *key)
+{
+	git_config *config;
+	git_remote *remote = NULL;
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_append2file("testrepo.git/config", "\n[remote \"fallback\"]\n");
+	cl_git_append2file("testrepo.git/config", strrchr(key, '.') + 1);
+	cl_git_append2file("testrepo.git/config", "\n");
+	cl_git_fail_with(git_remote_lookup(&remote, _repo, "fallback"), GIT_EINVALID);
+	cl_assert_equal_i(git_error_last()->klass, GIT_ERROR_CONFIG);
+	git_config_free(config);
+}
+
+void test_network_remote_remotes__rejects_url_without_value(void)
+{
+	assert_missing_url_value("remote.fallback.url");
+}
+
+void test_network_remote_remotes__rejects_pushurl_without_value(void)
+{
+	assert_missing_url_value("remote.fallback.pushurl");
+}
+
+void test_network_remote_remotes__can_manage_remote_without_url(void)
+{
+	git_config *config;
+	git_remote *remote;
+	git_strarray problems = {0};
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_set_bool(config, "remote.fallback.prune", 1));
+	cl_git_pass(git_remote_rename(&problems, _repo, "fallback", "renamed"));
+	cl_assert_equal_sz(problems.count, 0);
+	git_strarray_dispose(&problems);
+	cl_git_fail_with(git_remote_lookup(&remote, _repo, "fallback"), GIT_ENOTFOUND);
+	cl_git_pass(git_remote_lookup(&remote, _repo, "renamed"));
+	cl_assert_equal_s(git_remote_url(remote), "renamed");
+	cl_assert_equal_i(git_remote_prune_refs(remote), 1);
+	git_remote_free(remote);
+	cl_git_pass(git_remote_set_url(_repo, "renamed", "elsewhere"));
+	cl_git_pass(git_remote_lookup(&remote, _repo, "renamed"));
+	cl_assert_equal_s(git_remote_url(remote), "elsewhere");
+	git_remote_free(remote);
+	cl_git_pass(git_remote_delete(_repo, "renamed"));
+	cl_git_fail_with(git_remote_lookup(&remote, _repo, "renamed"), GIT_ENOTFOUND);
+	git_config_free(config);
 }

@@ -446,8 +446,18 @@ static int get_optional_config(
 
 	if (cb != NULL)
 		error = git_config_get_multivar_foreach(config, key, NULL, cb, payload);
-	else
-		error = git_config_get_string(payload, config, key);
+	else {
+		git_config_entry *entry = NULL;
+
+		error = git_config_get_entry(&entry, config, key);
+		if (!error && !entry->value) {
+			git_error_set(GIT_ERROR_CONFIG, "missing value for '%s'", key);
+			error = GIT_EINVALID;
+		}
+		if (!error)
+			*(const char **)payload = entry->value;
+		git_config_entry_free(entry);
+	}
 
 	if (found)
 		*found = !error;
@@ -457,6 +467,36 @@ static int get_optional_config(
 		error = 0;
 	}
 
+	return error;
+}
+
+static int remote_is_configured(bool *found, git_config *config, const char *name)
+{
+	git_config_iterator *iter = NULL;
+	git_config_entry *entry;
+	git_str pattern = GIT_STR_INIT;
+	int error;
+
+	git_str_puts(&pattern, "^remote\\.");
+	git_str_puts_escape_regex(&pattern, name);
+	git_str_puts(&pattern, "\\.[^.]+$");
+
+	if (git_str_oom(&pattern)) {
+		error = -1;
+		goto cleanup;
+	}
+
+	if ((error = git_config_iterator_glob_new(&iter, config, pattern.ptr)) < 0)
+		goto cleanup;
+
+	error = git_config_next(&entry, iter);
+	*found = (error == 0);
+	if (error == GIT_ITEROVER)
+		error = 0;
+
+cleanup:
+	git_config_iterator_free(iter);
+	git_str_dispose(&pattern);
 	return error;
 }
 
@@ -520,10 +560,21 @@ int git_remote_lookup(git_remote **out, git_repository *repo, const char *name)
 
 	optional_setting_found |= found;
 
+	if (!optional_setting_found &&
+	    (error = remote_is_configured(&optional_setting_found, config, name)) < 0)
+		goto cleanup;
+
 	if (!optional_setting_found) {
 		error = GIT_ENOTFOUND;
 		git_error_set(GIT_ERROR_CONFIG, "remote '%s' does not exist", name);
 		goto cleanup;
+	}
+
+	/* Git uses the configured remote's name when no fetch URL is set. */
+	if (!remote->url) {
+		if ((error = apply_insteadof(&remote->url, config, name, GIT_DIRECTION_FETCH, true)) < 0 ||
+		    (error = apply_insteadof(&remote->pushurl, config, name, GIT_DIRECTION_PUSH, false)) < 0)
+			goto cleanup;
 	}
 
 	if (found && strlen(val) > 0) {
@@ -2244,15 +2295,11 @@ static int remote_list_cb(const git_config_entry *entry, void *payload)
 {
 	git_vector *list = payload;
 	const char *name = entry->name + strlen("remote.");
-	size_t namelen = strlen(name);
+	const char *suffix = strrchr(name, '.');
 	char *remote_name;
 
-	/* we know name matches "remote.<stuff>.(push)?url" */
-
-	if (!strcmp(&name[namelen - 4], ".url"))
-		remote_name = git__strndup(name, namelen - 4); /* strip ".url" */
-	else
-		remote_name = git__strndup(name, namelen - 8); /* strip ".pushurl" */
+	/* The final component is the setting, not part of the remote name. */
+	remote_name = git__strndup(name, suffix - name);
 	GIT_ERROR_CHECK_ALLOC(remote_name);
 
 	return git_vector_insert(list, remote_name);
@@ -2271,7 +2318,7 @@ int git_remote_list(git_strarray *remotes_list, git_repository *repo)
 		return error;
 
 	error = git_config_foreach_match(
-		cfg, "^remote\\..*\\.(push)?url$", remote_list_cb, &list);
+		cfg, "^remote\\..+\\.[^.]+$", remote_list_cb, &list);
 
 	if (error < 0) {
 		git_vector_dispose_deep(&list);

@@ -41,3 +41,30 @@ void test_remote_list__always_checks_disk_config(void)
 	git_remote_free(remote);
 }
 
+
+void test_remote_list__includes_remotes_without_urls(void)
+{
+	git_config *config;
+	git_remote *remote;
+	git_strarray remotes;
+	size_t i;
+	int saw_unknown = 0, saw_fetch = 0;
+
+	cl_git_pass(git_repository_config(&config, _repo));
+	cl_git_pass(git_config_set_string(config, "remote.only-fetch.fetch", ""));
+	cl_git_pass(git_config_set_string(config, "remote.with.dot.unknown", "yes"));
+	cl_git_pass(git_config_set_string(config, "remote.with.dot.push", "refs/heads/main"));
+	cl_git_pass(git_config_set_string(config, "remote.pushDefault", "unconfigured"));
+	cl_git_pass(git_remote_list(&remotes, _repo));
+	cl_assert_equal_sz(remotes.count, 3);
+	for (i = 0; i < remotes.count; i++) {
+		saw_unknown += !strcmp(remotes.strings[i], "with.dot");
+		saw_fetch += !strcmp(remotes.strings[i], "only-fetch");
+		cl_git_pass(git_remote_lookup(&remote, _repo, remotes.strings[i]));
+		git_remote_free(remote);
+	}
+	cl_assert_equal_i(saw_unknown, 1);
+	cl_assert_equal_i(saw_fetch, 1);
+	git_strarray_dispose(&remotes);
+	git_config_free(config);
+}
