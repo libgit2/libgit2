@@ -1038,7 +1038,13 @@ int git_net_url_fmt(git_str *buf, git_net_url *url)
 		git_str_putc(buf, '@');
 	}
 
+	if (git_net_url_is_ipv6(url))
+		git_str_putc(buf, '[');
+
 	git_str_puts(buf, url->host);
+
+	if (git_net_url_is_ipv6(url))
+		git_str_putc(buf, ']');
 
 	if (url->port && !git_net_url_is_default_port(url)) {
 		git_str_putc(buf, ':');

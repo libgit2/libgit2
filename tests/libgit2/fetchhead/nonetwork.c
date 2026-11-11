@@ -546,3 +546,20 @@ void test_fetchhead_nonetwork__credentials_are_stripped(void)
 	cl_assert_equal_s(ref->remote_url, "https://github.com/libgit2/TestGitRepository");
 	git_fetchhead_ref_free(ref);
 }
+
+void test_fetchhead_nonetwork__ipv6_urls_are_preserved(void)
+{
+	git_fetchhead_ref *ref;
+	git_oid oid;
+
+	cl_git_pass(git_oid_from_string(&oid, "49322bb17d3acc9146f98c97d078513228bbf3c0", GIT_OID_SHA1));
+	cl_git_pass(git_fetchhead_ref_create(&ref, &oid, 0,
+		"refs/heads/main", "http://[::1]/repo.git"));
+	cl_assert_equal_s(ref->remote_url, "http://[::1]/repo.git");
+	git_fetchhead_ref_free(ref);
+
+	cl_git_pass(git_fetchhead_ref_create(&ref, &oid, 0,
+		"refs/heads/main", "https://[2001:db8::1]:8443/repo.git"));
+	cl_assert_equal_s(ref->remote_url, "https://[2001:db8::1]:8443/repo.git");
+	git_fetchhead_ref_free(ref);
+}
