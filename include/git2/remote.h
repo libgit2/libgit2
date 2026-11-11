@@ -214,6 +214,10 @@ GIT_EXTERN(int) git_remote_create_detached(
  * The name will be checked for validity.
  * See `git_tag_create()` for rules about valid names.
  *
+ * A remote is configured if it has any `remote.<name>.*` setting. If its
+ * URL is unset or empty, its name is used as the URL, with the usual
+ * `url.*.insteadOf` and `url.*.pushInsteadOf` substitutions.
+ *
  * @param[out] out pointer to the new remote object
  * @param repo the associated repository
  * @param name the remote's name
