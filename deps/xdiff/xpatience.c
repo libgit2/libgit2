@@ -19,6 +19,7 @@
  *  Davide Libenzi <davidel@xmailserver.org>
  *
  */
+
 #include "xinclude.h"
 
 /*
@@ -47,7 +48,7 @@
 struct hashmap {
 	int nr, alloc;
 	struct entry {
-		unsigned long hash;
+		size_t minimal_perfect_hash;
 		/*
 		 * 0 = unused entry, 1 = first line, 2 = second, etc.
 		 * line2 is NON_UNIQUE if the line is not unique
@@ -63,7 +64,7 @@ struct hashmap {
 
 		/*
 		 * If 1, this entry can serve as an anchor. See
-		 * Documentation/diff-options.txt for more information.
+		 * Documentation/diff-options.adoc for more information.
 		 */
 		unsigned anchor : 1;
 	} *entries, *first, *last;
@@ -75,7 +76,7 @@ struct hashmap {
 
 static int is_anchor(xpparam_t const *xpp, const char *line)
 {
-	int i;
+	size_t i;
 	for (i = 0; i < xpp->anchors_nr; i++) {
 		if (!strncmp(line, xpp->anchors[i], strlen(xpp->anchors[i])))
 			return 1;
@@ -87,9 +88,9 @@ static int is_anchor(xpparam_t const *xpp, const char *line)
 static void insert_record(xpparam_t const *xpp, int line, struct hashmap *map,
 			  int pass)
 {
-	xrecord_t **records = pass == 1 ?
+	xrecord_t *records = pass == 1 ?
 		map->env->xdf1.recs : map->env->xdf2.recs;
-	xrecord_t *record = records[line - 1];
+	xrecord_t *record = &records[line - 1];
 	/*
 	 * After xdl_prepare_env() (or more precisely, due to
 	 * xdl_classify_record()), the "ha" member of the records (AKA lines)
@@ -100,10 +101,10 @@ static void insert_record(xpparam_t const *xpp, int line, struct hashmap *map,
 	 * So we multiply ha by 2 in the hope that the hashing was
 	 * "unique enough".
 	 */
-	int index = (int)((record->ha << 1) % map->alloc);
+	int index = (int)((record->minimal_perfect_hash << 1) % map->alloc);
 
 	while (map->entries[index].line1) {
-		if (map->entries[index].hash != record->ha) {
+		if (map->entries[index].minimal_perfect_hash != record->minimal_perfect_hash) {
 			if (++index >= map->alloc)
 				index = 0;
 			continue;
@@ -119,8 +120,8 @@ static void insert_record(xpparam_t const *xpp, int line, struct hashmap *map,
 	if (pass == 2)
 		return;
 	map->entries[index].line1 = line;
-	map->entries[index].hash = record->ha;
-	map->entries[index].anchor = is_anchor(xpp, map->env->xdf1.recs[line - 1]->ptr);
+	map->entries[index].minimal_perfect_hash = record->minimal_perfect_hash;
+	map->entries[index].anchor = is_anchor(xpp, (const char *)map->env->xdf1.recs[line - 1].ptr);
 	if (!map->first)
 		map->first = map->entries + index;
 	if (map->last) {
@@ -210,7 +211,10 @@ static int find_longest_common_sequence(struct hashmap *map, struct entry **res)
 	for (entry = map->first; entry; entry = entry->next) {
 		if (!entry->line2 || entry->line2 == NON_UNIQUE)
 			continue;
-		i = binary_search(sequence, longest, entry);
+		if (longest == 0 || entry->line2 > sequence[longest - 1]->line2)
+			i = longest - 1;
+		else
+			i = binary_search(sequence, longest, entry);
 		entry->previous = i < 0 ? NULL : sequence[i];
 		++i;
 		if (i <= anchor_i)
@@ -245,9 +249,9 @@ static int find_longest_common_sequence(struct hashmap *map, struct entry **res)
 
 static int match(struct hashmap *map, int line1, int line2)
 {
-	xrecord_t *record1 = map->env->xdf1.recs[line1 - 1];
-	xrecord_t *record2 = map->env->xdf2.recs[line2 - 1];
-	return record1->ha == record2->ha;
+	xrecord_t *record1 = &map->env->xdf1.recs[line1 - 1];
+	xrecord_t *record2 = &map->env->xdf2.recs[line2 - 1];
+	return record1->minimal_perfect_hash == record2->minimal_perfect_hash;
 }
 
 static int patience_diff(xpparam_t const *xpp, xdfenv_t *env,
@@ -330,11 +334,11 @@ static int patience_diff(xpparam_t const *xpp, xdfenv_t *env,
 	/* trivial case: one side is empty */
 	if (!count1) {
 		while(count2--)
-			env->xdf2.rchg[line2++ - 1] = 1;
+			env->xdf2.changed[line2++ - 1] = true;
 		return 0;
 	} else if (!count2) {
 		while(count1--)
-			env->xdf1.rchg[line1++ - 1] = 1;
+			env->xdf1.changed[line1++ - 1] = true;
 		return 0;
 	}
 
@@ -346,9 +350,9 @@ static int patience_diff(xpparam_t const *xpp, xdfenv_t *env,
 	/* are there any matching lines at all? */
 	if (!map.has_matches) {
 		while(count1--)
-			env->xdf1.rchg[line1++ - 1] = 1;
+			env->xdf1.changed[line1++ - 1] = true;
 		while(count2--)
-			env->xdf2.rchg[line2++ - 1] = 1;
+			env->xdf2.changed[line2++ - 1] = true;
 		xdl_free(map.entries);
 		return 0;
 	}
@@ -369,5 +373,5 @@ static int patience_diff(xpparam_t const *xpp, xdfenv_t *env,
 
 int xdl_do_patience_diff(xpparam_t const *xpp, xdfenv_t *env)
 {
-	return patience_diff(xpp, env, 1, env->xdf1.nrec, 1, env->xdf2.nrec);
+	return patience_diff(xpp, env, 1, (int)env->xdf1.nrec, 1, (int)env->xdf2.nrec);
 }

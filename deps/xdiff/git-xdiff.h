@@ -14,6 +14,8 @@
 #ifndef INCLUDE_git_xdiff_h__
 #define INCLUDE_git_xdiff_h__
 
+#include <stddef.h>
+
 #include "regexp.h"
 
 /* Work around C90-conformance issues */
@@ -52,5 +54,23 @@ GIT_INLINE(int) xdl_regexec_buf(
 	GIT_ASSERT("not implemented");
 	return -1;
 }
+
+GIT_INLINE(bool) signed_add_overflows(int a, int b)
+{
+	int result;
+	return git__add_int_overflow(&result, a, b);
+}
+
+GIT_INLINE(size_t) st_add(size_t a, size_t b)
+{
+	size_t result;
+	if (git__add_sizet_overflow(&result, a, b))
+		abort();
+
+	return result;
+}
+#define st_add3(a, b, c) st_add(st_add((a), (b)), (c))
+#define st_add4(a, b, c, d) st_add(st_add3((a), (b), (c)), (d))
+#define st_add5(a, b, c, d, e) st_add(st_add4((a), (b), (c), (d)), (e))
 
 #endif
