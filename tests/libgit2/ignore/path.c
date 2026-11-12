@@ -316,6 +316,51 @@ void test_ignore_path__expand_tilde_to_homedir(void)
 	git_str_dispose(&homefile);
 }
 
+void test_ignore_path__negation_overrides_excludesfile(void)
+{
+	git_str excludes = GIT_STR_INIT;
+	git_config *cfg;
+
+	cl_git_pass(git_str_joinpath(&excludes, clar_sandbox_path(), "excludes"));
+	cl_git_mkfile(excludes.ptr, "secret.txt\n");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_string(cfg, "core.excludesfile", excludes.ptr));
+	git_config_free(cfg);
+	git_attr_cache_flush(g_repo);
+
+	cl_git_mkfile("attr/secret.txt", "");
+	assert_is_ignored(true, "secret.txt");
+
+	cl_git_rewritefile("attr/.gitignore", "!secret.txt\n");
+	git_attr_cache_flush(g_repo);
+	assert_is_ignored(false, "secret.txt");
+
+	git_str_dispose(&excludes);
+}
+
+void test_ignore_path__negation_does_not_unignore_file_in_ignored_dir(void)
+{
+	git_str excludes = GIT_STR_INIT;
+	git_config *cfg;
+
+	cl_git_pass(git_str_joinpath(&excludes, clar_sandbox_path(), "excludes"));
+	cl_git_mkfile(excludes.ptr, "dir/\n");
+
+	cl_git_pass(git_repository_config(&cfg, g_repo));
+	cl_git_pass(git_config_set_string(cfg, "core.excludesfile", excludes.ptr));
+	git_config_free(cfg);
+
+	cl_git_rewritefile("attr/.gitignore", "!dir/file3\n");
+	git_attr_cache_flush(g_repo);
+
+	/* git does not allow a file to be unignored when a parent directory
+	 * is excluded. */
+	assert_is_ignored(true, "dir/file3");
+
+	git_str_dispose(&excludes);
+}
+
 /* Ensure that the .gitignore in the subdirectory only affects
  * items in the subdirectory. */
 void test_ignore_path__gitignore_in_subdir(void)
