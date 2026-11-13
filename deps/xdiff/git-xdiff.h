@@ -36,7 +36,7 @@
 #define xdl_free(ptr) git__free(ptr)
 #define xdl_realloc(ptr, x) git__realloc(ptr, x)
 
-#define XDL_BUG(msg) GIT_ASSERT(!msg)
+#define XDL_BUG(msg) abort();
 
 #define xdl_regex_t git_regexp
 #define xdl_regmatch_t git_regmatch
