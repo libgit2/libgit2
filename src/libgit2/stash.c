@@ -488,9 +488,9 @@ static int commit_worktree(
 	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	int error = 0, ignorecase;
 
-	if ((error = git_repository_index(&r_index, repo) < 0) ||
+	if ((error = git_repository_index(&r_index, repo)) < 0 ||
 	    (error = git_index_new_ext(&i_index, &index_opts)) < 0 ||
-	    (error = git_index__fill(i_index, &r_index->entries) < 0) ||
+	    (error = git_index__fill(i_index, &r_index->entries)) < 0 ||
 	    (error = git_repository__configmap_lookup(&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
 		goto cleanup;
 
