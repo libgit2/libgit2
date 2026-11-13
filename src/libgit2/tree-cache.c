@@ -266,6 +266,40 @@ int git_tree_cache_new(git_tree_cache **out, const char *name, git_oid_t oid_typ
 	return 0;
 }
 
+int git_tree_cache_dup(git_tree_cache **out, const git_tree_cache *src, git_pool *pool)
+{
+	git_tree_cache *tree;
+	size_t i, alloc_size;
+	int error;
+
+	if (src == NULL) {
+		*out = NULL;
+		return 0;
+	}
+
+	if ((error = git_tree_cache_new(&tree, src->name, src->oid_type, pool)) < 0)
+		return error;
+
+	tree->children_count = src->children_count;
+	tree->entry_count = src->entry_count;
+	git_oid_cpy(&tree->oid, &src->oid);
+
+	if (tree->children_count > 0) {
+		GIT_ERROR_CHECK_ALLOC_MULTIPLY(&alloc_size, tree->children_count, sizeof(git_tree_cache *));
+
+		tree->children = git_pool_mallocz(pool, alloc_size);
+		GIT_ERROR_CHECK_ALLOC(tree->children);
+
+		for (i = 0; i < tree->children_count; i++) {
+			if ((error = git_tree_cache_dup(&tree->children[i], src->children[i], pool)) < 0)
+				return error;
+		}
+	}
+
+	*out = tree;
+	return 0;
+}
+
 static void write_tree(git_str *out, git_tree_cache *tree)
 {
 	size_t i;
