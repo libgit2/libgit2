@@ -13,6 +13,9 @@ static void clear_git_env(void)
 	cl_setenv("GIT_ALTERNATE_OBJECT_DIRECTORIES", NULL);
 	cl_setenv("GIT_WORK_TREE", NULL);
 	cl_setenv("GIT_COMMON_DIR", NULL);
+	cl_setenv("GIT_CONFIG_NOSYSTEM", NULL);
+	cl_setenv("GIT_CONFIG_SYSTEM", NULL);
+	cl_setenv("GIT_CONFIG_GLOBAL", NULL);
 }
 
 void test_repo_env__initialize(void)
