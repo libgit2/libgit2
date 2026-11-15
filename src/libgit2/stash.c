@@ -275,7 +275,7 @@ static int build_untracked_tree(
 	git_tree **tree_out,
 	git_repository *repo,
 	git_commit *i_commit,
-	uint32_t flags)
+	const git_stash_save_options *save_opts)
 {
 	git_index *i_index = NULL;
 	git_tree *i_tree = NULL;
@@ -288,16 +288,21 @@ static int build_untracked_tree(
 	if ((error = git_index_new_ext(&i_index, &index_opts)) < 0)
 		goto cleanup;
 
-	if (flags & GIT_STASH_INCLUDE_UNTRACKED) {
+	if (save_opts->flags & GIT_STASH_INCLUDE_UNTRACKED) {
 		opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED |
 			GIT_DIFF_RECURSE_UNTRACKED_DIRS;
 		data.include_untracked = true;
 	}
 
-	if (flags & GIT_STASH_INCLUDE_IGNORED) {
+	if (save_opts->flags & GIT_STASH_INCLUDE_IGNORED) {
 		opts.flags |= GIT_DIFF_INCLUDE_IGNORED |
 			GIT_DIFF_RECURSE_IGNORED_DIRS;
 		data.include_ignored = true;
+	}
+
+	if (save_opts->paths.count > 0) {
+		opts.pathspec = save_opts->paths;
+		opts.flags |= GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	}
 
 	if ((error = git_commit_tree(&i_tree, i_commit)) < 0)
@@ -321,17 +326,16 @@ cleanup:
 static int commit_untracked(
 	git_commit **u_commit,
 	git_repository *repo,
-	const git_signature *stasher,
 	const char *message,
 	git_commit *i_commit,
-	uint32_t flags)
+	const git_stash_save_options *save_opts)
 {
 	git_tree *u_tree = NULL;
 	git_oid u_commit_oid;
 	git_str msg = GIT_STR_INIT;
 	int error;
 
-	if ((error = build_untracked_tree(&u_tree, repo, i_commit, flags)) < 0)
+	if ((error = build_untracked_tree(&u_tree, repo, i_commit, save_opts)) < 0)
 		goto cleanup;
 
 	if ((error = git_str_printf(&msg, "untracked files on %s\n", message)) < 0)
@@ -341,8 +345,8 @@ static int commit_untracked(
 		&u_commit_oid,
 		repo,
 		NULL,
-		stasher,
-		stasher,
+		save_opts->stasher,
+		save_opts->stasher,
 		NULL,
 		git_str_cstr(&msg),
 		u_tree,
@@ -681,7 +685,11 @@ static int ensure_there_are_changes_to_stash_paths(
 	return error;
 }
 
-static int reset_index_and_workdir(git_repository *repo, git_commit *commit, uint32_t flags)
+static int reset_index_and_workdir(
+	git_repository *repo,
+	git_commit *commit,
+	const git_strarray *paths,
+	uint32_t flags)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
@@ -690,6 +698,10 @@ static int reset_index_and_workdir(git_repository *repo, git_commit *commit, uin
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_UNTRACKED;
 	if (flags & GIT_STASH_INCLUDE_IGNORED)
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_IGNORED;
+	if (paths && paths->count > 0) {
+		opts.paths = *paths;
+		opts.checkout_strategy |= GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+	}
 
 	return git_checkout_tree(repo, (git_object *)commit, &opts);
 }
@@ -759,8 +771,8 @@ int git_stash_save_with_opts(
 		goto cleanup;
 
 	if ((opts->flags & (GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED)) &&
-	    (error = commit_untracked(&u_commit, repo, opts->stasher,
-			  git_str_cstr(&msg), i_commit, opts->flags)) < 0)
+	    (error = commit_untracked(&u_commit, repo,
+			  git_str_cstr(&msg), i_commit, opts)) < 0)
 		goto cleanup;
 
 	if ((error = prepare_worktree_commit_message(&msg, opts->message)) < 0)
@@ -788,7 +800,9 @@ int git_stash_save_with_opts(
 
 	if (!(opts->flags & GIT_STASH_KEEP_ALL) &&
 	    (error = reset_index_and_workdir(repo,
-		  (opts->flags & GIT_STASH_KEEP_INDEX) ? i_commit : b_commit,opts->flags)) < 0)
+		  (opts->flags & GIT_STASH_KEEP_INDEX) ? i_commit : b_commit,
+		  has_paths ? &opts->paths : NULL,
+		  opts->flags)) < 0)
 		goto cleanup;
 
 cleanup:
