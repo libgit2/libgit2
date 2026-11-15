@@ -342,6 +342,61 @@ void test_stash_save__cannot_stash_when_there_are_no_local_change(void)
 		git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
 }
 
+/*
+ * Leaves the workdir with no tracked changes and no untracked files;
+ * only 'just.ignore' remains, which is ignored.
+ */
+static void commit_tracked_changes_and_remove_untracked(void)
+{
+	git_index *index;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add_bypath(index, "what"));
+	cl_git_pass(git_index_add_bypath(index, "where"));
+	cl_git_pass(git_index_add_bypath(index, "who"));
+	cl_repo_commit_from_index(NULL, repo, signature, 0, "Initial commit");
+	git_index_free(index);
+
+	cl_must_pass(p_unlink("stash/when"));
+}
+
+void test_stash_save__can_stash_only_ignored_files(void)
+{
+	commit_tracked_changes_and_remove_untracked();
+
+	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_IGNORED));
+
+	assert_blob_oid("stash^3:just.ignore", "78925fb1236b98b37a35e9723033e627f97aa88b");
+	cl_assert_equal_b(false, git_fs_path_exists("stash/just.ignore"));
+}
+
+void test_stash_save__cannot_stash_untracked_dir_holding_only_ignored_files(void)
+{
+	commit_tracked_changes_and_remove_untracked();
+
+	cl_must_pass(p_mkdir("stash/dir", 0777));
+	cl_git_mkfile("stash/dir/also.ignore", "me too\n");
+
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+}
+
+void test_stash_save__can_stash_untracked_file_in_untracked_dir(void)
+{
+	commit_tracked_changes_and_remove_untracked();
+
+	cl_must_pass(p_mkdir("stash/dir", 0777));
+	cl_git_mkfile("stash/dir/file", "now\n");
+
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
+
+	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+
+	assert_blob_oid("stash^3:dir/file", "b6ed15e81e2593d7bb6265eb4a991d29dc3e628b");
+	cl_assert_equal_b(false, git_fs_path_exists("stash/dir/file"));
+}
+
 void test_stash_save__can_stage_normal_then_stage_untracked(void)
 {
 	/*
