@@ -580,3 +580,45 @@ void test_stash_save__option_paths(void)
 	assert_blob_oid("refs/stash:.gitignore", "ac4d88de61733173d9959e4b77c69b9f17a00980");
 	assert_blob_oid("refs/stash:just.ignore", NULL);
 }
+
+void test_stash_save__option_paths_leaves_other_changes_in_place(void)
+{
+	git_stash_save_options options = GIT_STASH_SAVE_OPTIONS_INIT;
+	char *paths[1] = { "who" };
+
+	options.paths = (git_strarray){ paths, 1 };
+	options.stasher = signature;
+
+	cl_git_pass(git_stash_save_with_opts(&stash_tip_oid, repo, &options));
+
+	/* Only the stashed path is reset */
+	assert_status(repo, "who", GIT_STATUS_CURRENT);
+
+	/* Changes to paths that were not stashed are kept in the index and workdir */
+	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "how", GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "where", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "just.ignore", GIT_STATUS_IGNORED);
+
+	cl_assert_equal_file("see you later\n", 0, "stash/what");
+	cl_assert_equal_file("....\n", 0, "stash/where");
+}
+
+void test_stash_save__option_paths_only_stashes_untracked_files_in_paths(void)
+{
+	git_stash_save_options options = GIT_STASH_SAVE_OPTIONS_INIT;
+	char *paths[1] = { "who" };
+
+	options.paths = (git_strarray){ paths, 1 };
+	options.stasher = signature;
+	options.flags = GIT_STASH_INCLUDE_UNTRACKED;
+
+	cl_git_pass(git_stash_save_with_opts(&stash_tip_oid, repo, &options));
+
+	/* 'when' is untracked but outside the paths, so it is neither stashed nor removed */
+	assert_blob_oid("refs/stash^3:when", NULL);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	cl_assert_equal_file("now\n", 0, "stash/when");
+}
