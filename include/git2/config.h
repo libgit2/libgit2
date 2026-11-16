@@ -119,7 +119,10 @@ typedef struct git_config_entry {
 } git_config_entry;
 
 /**
- * Free a config entry.
+ * Free a config entry returned by `git_config_get_entry()`.
+ *
+ * Entries returned by `git_config_next()` are owned by the iterator
+ * and must not be freed by the caller.
  *
  * @param entry The entry to free.
  */
@@ -529,8 +532,9 @@ GIT_EXTERN(int) git_config_multivar_iterator_new(
 /**
  * Return the current entry and advance the iterator
  *
- * The pointers returned by this function are valid until the next call
- * to `git_config_next` or until the iterator is freed.
+ * The returned entry is owned by the iterator and must not be freed
+ * with `git_config_entry_free()`. The entry and its strings are valid
+ * until the next call to `git_config_next` or until the iterator is freed.
  *
  * @param[out] entry pointer to store the entry
  * @param iter the iterator
