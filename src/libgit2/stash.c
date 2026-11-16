@@ -706,6 +706,55 @@ static int reset_index_and_workdir(
 	return git_checkout_tree(repo, (git_object *)commit, &opts);
 }
 
+static int paths_to_reset(git_vector *out, const git_diff *diff)
+{
+	int error = 0;
+	size_t d, max_d;
+
+	GIT_ASSERT(out);
+	GIT_ASSERT(diff);
+
+	max_d = git_diff_num_deltas(diff);
+
+	for (d = 0; !error && d < max_d; ++d) {
+		const git_diff_delta *delta = git_diff_get_delta(diff, d);
+
+		if (delta->status != GIT_DELTA_UNTRACKED &&
+		    delta->status != GIT_DELTA_IGNORED) {
+			error = git_vector_insert(out, (char *)delta->new_file.path);
+		}
+	}
+
+	return error;
+}
+
+static int reset_stashed_changes(
+	git_repository *repo,
+	git_commit *commit,
+	const git_stash_save_options *save_opts,
+	const git_diff *diff)
+{
+	git_vector paths = GIT_VECTOR_INIT;
+	git_strarray reset_paths;
+	int error = 0;
+
+	if (save_opts->paths.count > 0) {
+		return reset_index_and_workdir(repo,
+		                               commit,
+		                               &save_opts->paths,
+		                               save_opts->flags);
+	} else if (save_opts->flags & (GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED)) {
+		return reset_index_and_workdir(repo, commit, NULL, save_opts->flags);
+	} else if ((error = paths_to_reset(&paths, diff)) == 0) {
+		reset_paths.count = paths.length;
+		reset_paths.strings = (char **)paths.contents;
+		error = reset_index_and_workdir(repo, commit, &reset_paths, save_opts->flags);
+	}
+
+	git_vector_dispose(&paths);
+	return error;
+}
+
 int git_stash_save(
 	git_oid *out,
 	git_repository *repo,
@@ -799,10 +848,10 @@ int git_stash_save_with_opts(
 		goto cleanup;
 
 	if (!(opts->flags & GIT_STASH_KEEP_ALL) &&
-	    (error = reset_index_and_workdir(repo,
+	    (error = reset_stashed_changes(repo,
 		  (opts->flags & GIT_STASH_KEEP_INDEX) ? i_commit : b_commit,
-		  has_paths ? &opts->paths : NULL,
-		  opts->flags)) < 0)
+		  opts,
+		  head_to_idx)) < 0)
 		goto cleanup;
 
 cleanup:
