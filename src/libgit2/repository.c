@@ -3573,7 +3573,7 @@ int git_repository_hashfile(
 	git_filter_list *fl = NULL;
 	git_file fd = -1;
 	uint64_t len;
-	git_str full_path = GIT_STR_INIT;
+	git_str full_path = GIT_STR_INIT, normalized_path = GIT_STR_INIT;
 	const char *workdir = git_repository_workdir(repo);
 
 	 /* as_path can be NULL */
@@ -3583,15 +3583,28 @@ int git_repository_hashfile(
 
 	if ((error = git_fs_path_join_unrooted(&full_path, path, workdir, NULL)) < 0 ||
 	    (error = git_path_validate_str_length(repo, &full_path)) < 0)
-		return error;
+		goto cleanup;
 
 	/*
 	 * NULL as_path means that we should derive it from the
 	 * given path.
 	 */
 	if (!as_path) {
-		if (workdir && !git__prefixcmp(full_path.ptr, workdir))
-			as_path = full_path.ptr + strlen(workdir);
+		const char *path_for_filters = full_path.ptr;
+
+#ifdef GIT_WIN32
+		/* Keep the native path for opening the file. */
+		if (workdir && strchr(path_for_filters, '\\')) {
+			if ((error = git_str_sets(&normalized_path, path_for_filters)) < 0)
+				goto cleanup;
+
+			git_fs_path_mkposix(normalized_path.ptr);
+			path_for_filters = normalized_path.ptr;
+		}
+#endif
+
+		if (workdir && !git__prefixcmp(path_for_filters, workdir))
+			as_path = path_for_filters + strlen(workdir);
 		else
 			as_path = "";
 	}
@@ -3603,7 +3616,7 @@ int git_repository_hashfile(
 			GIT_FILTER_TO_ODB, GIT_FILTER_DEFAULT);
 
 		if (error < 0)
-			return error;
+			goto cleanup;
 	}
 
 	/* at this point, error is a count of the number of loaded filters */
@@ -3633,6 +3646,7 @@ cleanup:
 	if (fd >= 0)
 		p_close(fd);
 	git_filter_list_free(fl);
+	git_str_dispose(&normalized_path);
 	git_str_dispose(&full_path);
 
 	return error;
