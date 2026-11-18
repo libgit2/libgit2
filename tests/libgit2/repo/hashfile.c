@@ -168,3 +168,35 @@ void test_repo_hashfile__filtered_outside_workdir(void)
 	git_str_dispose(&bin);
 	git_str_dispose(&root);
 }
+
+void test_repo_hashfile__filtered_with_native_absolute_path(void)
+{
+#ifdef GIT_WIN32
+	git_str full = GIT_STR_INIT;
+	git_oid raw, filtered, native;
+	char *p;
+
+	cl_repo_set_bool(_repo, "core.autocrlf", true);
+	cl_git_append2file("status/.gitattributes", "native.txt text\n");
+	cl_git_mkfile("status/native.txt", "content\r\n");
+
+	cl_git_pass(git_object_id_from_file(&raw, "status/native.txt", NULL));
+	cl_git_pass(git_repository_hashfile(&filtered, _repo, "native.txt",
+		GIT_OBJECT_BLOB, NULL));
+	cl_assert(git_oid_cmp(&raw, &filtered));
+
+	cl_git_pass(git_str_joinpath(&full, git_repository_workdir(_repo), "native.txt"));
+	for (p = full.ptr; *p; p++) {
+		if (*p == '/')
+			*p = '\\';
+	}
+
+	cl_git_pass(git_repository_hashfile(&native, _repo, full.ptr,
+		GIT_OBJECT_BLOB, NULL));
+	cl_assert_equal_oid(&filtered, &native);
+
+	git_str_dispose(&full);
+#else
+	cl_skip();
+#endif
+}
