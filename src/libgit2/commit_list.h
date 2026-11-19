@@ -27,11 +27,13 @@ typedef struct git_commit_list_node {
 	git_oid oid;
 	int64_t time;
 	uint32_t generation;
+	uint32_t graph_id;
 	unsigned int seen:1,
 			 uninteresting:1,
 			 topo_delay:1,
 			 parsed:1,
 			 added:1,
+			 in_graph:1,
 			 flags : FLAG_BITS;
 
 	uint16_t in_degree;

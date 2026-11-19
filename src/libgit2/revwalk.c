@@ -8,6 +8,7 @@
 #include "revwalk.h"
 
 #include "commit.h"
+#include "commit_graph.h"
 #include "odb.h"
 #include "pathspec.h"
 #include "pool.h"
@@ -613,11 +614,38 @@ static bool include_path_exact(git_revwalk *walk, git_commit *commit, git_tree *
 	}
 }
 
+/**
+ * @return int Return 0 if the commit definitly doesn't touch the pathspec
+ */
+static int check_bloom_filter(git_revwalk *walk, git_commit_list_node *commit)
+{
+	git_commit_graph_file *cgfile = NULL;
+
+	if (!commit->in_graph)
+		return 1;
+
+	/* The odb may reload the commit-graph, so don't keep it */
+	if (git_odb__get_commit_graph_file(&cgfile, walk->odb) < 0) {
+		git_error_clear();
+		return 1;
+	}
+	if (!cgfile->bloom_filter_data || !cgfile->bloom_filter_indexes)
+		return 1;
+	/* graph_id is stale if the commit-graph was reloaded after parsing */
+	if (!git_commit_graph_file_has_oid_at(cgfile, commit->graph_id, &commit->oid))
+		return 1;
+	return git_bloom_filter__check(walk->pathspec_cache, cgfile, commit->graph_id);
+}
+
 static bool include_path(git_revwalk *walk, git_commit_list_node *commit_node)
 {
 	git_commit *commit = NULL;
 	git_tree *commit_tree = NULL;
 	bool include = false;
+
+	/* Use bloom filter if available */
+	if (walk->pathspec_cache && check_bloom_filter(walk, commit_node) == 0)
+		return false;
 
 	if (git_commit_lookup(&commit, walk->repo, &commit_node->oid) == 0
 		&& git_commit_tree(&commit_tree, commit) == 0) {
@@ -896,6 +924,7 @@ void git_revwalk_free(git_revwalk *walk)
 	git_revwalk_oidmap_dispose(&walk->commits);
 	git_pool_clear(&walk->commit_pool);
 	git_pqueue_free(&walk->iterator_time);
+	git_bloom_filter__cache_free(walk->pathspec_cache);
 	git__free(walk);
 }
 
@@ -986,14 +1015,24 @@ int git_revwalk_pathspec(git_revwalk *walk, git_pathspec *pathspec) {
 	if (walk->walking)
 		git_revwalk_reset(walk);
 
-	if (pathspec) {
+	if (pathspec && pathspec->pathspec.length > 0) {
 		walk->pathspec = pathspec;
 		walk->pathspec_wildcard = pathspec_has_wildcard(pathspec);
+
+		/* Clear previous cache if it exists */
+		git_bloom_filter__cache_free(walk->pathspec_cache);
+		walk->pathspec_cache = NULL;
+
+		/* The bloom filter is optional, so failing to set it up is not an error */
+		if (git_bloom_filter__cache_new(&walk->pathspec_cache, pathspec) < 0)
+			git_error_clear();
 	}
 	/* Reset previously set pathspec */ 
 	else if (walk->pathspec) {
 		walk->pathspec = NULL;
 		walk->pathspec_wildcard = false;
+		git_bloom_filter__cache_free(walk->pathspec_cache);
+		walk->pathspec_cache = NULL;
 	}
 
 	return 0;
