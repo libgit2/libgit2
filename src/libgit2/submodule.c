@@ -378,7 +378,7 @@ int git_submodule__lookup_with_cache(
 	}
 
 	/* If it's not configured or we're looking by path  */
-	if (location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
+	if ((location & GIT_SUBMODULE_STATUS_IN_CONFIG) == 0) {
 		git_config_backend *mods;
 		const char *pattern = "^submodule\\..*\\.path$";
 		git_str path = GIT_STR_INIT;
@@ -404,14 +404,26 @@ int git_submodule__lookup_with_cache(
 		}
 
 		if (data.name) {
-			git__free(sm->name);
-			sm->name = data.name;
-			sm->path = git_str_detach(&path);
-
-			/* Try to load again with the right name */
-			if ((error = git_submodule_reload(sm, false)) < 0) {
+			int isvalid = git_submodule_name_is_valid(repo, data.name, 0);
+			if (isvalid < 0) {
+				git__free(data.name);
+				git_str_dispose(&path);
 				git_submodule_free(sm);
-				return error;
+				return isvalid;
+			}
+
+			if (isvalid > 0 || location == 0 || location == GIT_SUBMODULE_STATUS_IN_WD) {
+				git__free(sm->name);
+				sm->name = data.name;
+				sm->path = git_str_detach(&path);
+
+				/* Try to load again with the right name */
+				if ((error = git_submodule_reload(sm, false)) < 0) {
+					git_submodule_free(sm);
+					return error;
+				}
+			} else {
+				git__free(data.name);
 			}
 		}
 
