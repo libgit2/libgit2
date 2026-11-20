@@ -4,6 +4,8 @@
 #include "grafts.h"
 #include "repository.h"
 
+#include "git2/worktree.h"
+
 static git_repository *g_repo;
 static git_oid g_shallow_oid;
 
@@ -15,6 +17,7 @@ void test_grafts_shallow__initialize(void)
 void test_grafts_shallow__cleanup(void)
 {
 	cl_git_sandbox_cleanup();
+	cl_fixture_cleanup("wt");
 }
 
 void test_grafts_shallow__no_shallow_file(void)
@@ -131,4 +134,60 @@ void test_grafts_shallow__grafted_object(void)
 	cl_assert_equal_i(0, git_commit_parentcount(commit));
 
 	git_commit_free(commit);
+}
+
+static void add_worktree(git_repository **wt_repo, git_worktree **wt)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_str_joinpath(&path, git_repository_path(g_repo), "../wt"));
+	cl_git_pass(git_worktree_add(wt, g_repo, "wt", path.ptr, NULL));
+	cl_git_pass(git_repository_open_from_worktree(wt_repo, *wt));
+
+	git_str_dispose(&path);
+}
+
+void test_grafts_shallow__worktree_reads_shallow_from_commondir(void)
+{
+	git_repository *wt_repo;
+	git_worktree *wt;
+	git_revwalk *walk;
+	git_oid oid;
+	size_t count = 0;
+	int error;
+
+	g_repo = cl_git_sandbox_init("shallow.git");
+	add_worktree(&wt_repo, &wt);
+
+	cl_git_pass(git_revwalk_new(&walk, wt_repo));
+	cl_git_pass(git_revwalk_push_head(walk));
+	while ((error = git_revwalk_next(&oid, walk)) == 0)
+		count++;
+	cl_assert_equal_i(GIT_ITEROVER, error);
+	cl_assert_equal_i(2, count);
+
+	git_revwalk_free(walk);
+	git_repository_free(wt_repo);
+	git_worktree_free(wt);
+}
+
+void test_grafts_shallow__worktree_writes_shallow_to_commondir(void)
+{
+	git_repository *wt_repo;
+	git_worktree *wt;
+	git_oidarray roots = { &g_shallow_oid, 1 };
+	git_str contents = GIT_STR_INIT;
+
+	g_repo = cl_git_sandbox_init("testrepo.git");
+	add_worktree(&wt_repo, &wt);
+
+	cl_git_pass(git_repository__shallow_roots_write(wt_repo, &roots));
+
+	cl_git_pass(git_futils_readbuffer(&contents, "testrepo.git/shallow"));
+	cl_assert_equal_s("be3563ae3f795b2b4353bcce3a527ad0a4f7f644\n", contents.ptr);
+	cl_assert(!git_fs_path_exists("testrepo.git/worktrees/wt/shallow"));
+
+	git_str_dispose(&contents);
+	git_repository_free(wt_repo);
+	git_worktree_free(wt);
 }

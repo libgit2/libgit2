@@ -48,8 +48,8 @@ void test_repo_shallow__worktree_of_shallow_parent(void)
 
 	g_repo = cl_git_sandbox_init("testrepo");
 
-	/* any non-empty content marks the parent as shallow */
-	cl_git_mkfile("testrepo/.git/shallow", "x");
+	/* the worktree reads this file too, so it needs a valid commit id */
+	cl_git_mkfile("testrepo/.git/shallow", "099fabac3a9ea935598528c27f866e34089c2eff\n");
 
 	cl_git_pass(git_str_joinpath(&path, git_repository_workdir(g_repo), "../wt"));
 	cl_git_pass(git_worktree_add(&wt, g_repo, "wt", path.ptr, NULL));
