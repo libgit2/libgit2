@@ -2943,7 +2943,7 @@ int git_repository_init_ext(
 
 	wd = (opts->flags & GIT_REPOSITORY_INIT_BARE) ? NULL : git_str_cstr(&wd_path);
 
-	if ((error = is_valid_repository_path(&is_valid, &repo_path, &common_path, opts->flags)) < 0)
+	if ((error = is_valid_repository_path(&is_valid, &repo_path, &common_path, 0)) < 0)
 		goto out;
 
 	if (is_valid) {

@@ -13,6 +13,8 @@ enum repo_mode {
 
 static git_repository *g_repo = NULL;
 static git_str g_global_path = GIT_STR_INIT;
+static char *g_orig_common_dir = NULL;
+static bool g_common_dir_set = false;
 
 void test_repo_init__initialize(void)
 {
@@ -27,6 +29,13 @@ void test_repo_init__cleanup(void)
 	git_libgit2_opts(GIT_OPT_SET_SEARCH_PATH, GIT_CONFIG_LEVEL_GLOBAL,
 		g_global_path.ptr);
 	git_str_dispose(&g_global_path);
+
+	if (g_common_dir_set) {
+		cl_setenv("GIT_COMMON_DIR", g_orig_common_dir);
+		git__free(g_orig_common_dir);
+		g_orig_common_dir = NULL;
+		g_common_dir_set = false;
+	}
 
 	cl_fixture_cleanup("tmp_global_path");
 }
@@ -183,6 +192,26 @@ void test_repo_init__reinit_unsupported_version(void)
 	/* Try and fail to reinitialize the repository */
 	cl_git_fail(git_repository_init(&g_repo, "reinit.git", 1));
 	cl_fixture_cleanup("reinit.git");
+}
+
+void test_repo_init__reinit_ignores_common_dir_env(void)
+{
+	cl_set_cleanup(&cleanup_repository, "reinit.git");
+
+	/* Initialize the repository with a non-default version */
+	cl_git_pass(git_repository_init(&g_repo, "reinit.git", 1));
+	cl_repo_set_string(g_repo, "core.repositoryformatversion", "1");
+	git_repository_free(g_repo);
+	g_repo = NULL;
+
+	/* Point GIT_COMMON_DIR elsewhere; init does not read the environment */
+	g_orig_common_dir = cl_getenv("GIT_COMMON_DIR");
+	g_common_dir_set = true;
+	cl_setenv("GIT_COMMON_DIR", "nonexistent-common-dir");
+
+	/* Reinitializing must find the existing repository and keep its version */
+	cl_git_pass(git_repository_init(&g_repo, "reinit.git", 1));
+	cl_assert_equal_i(1, cl_repo_get_int(g_repo, "core.repositoryformatversion"));
 }
 
 void test_repo_init__additional_templates(void)
