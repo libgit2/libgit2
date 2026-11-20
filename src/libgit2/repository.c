@@ -63,7 +63,8 @@ static const struct {
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "logs", true },
 	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM__LAST, "modules", true },
 	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "worktrees", true },
-	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM_GITDIR, "config.worktree", false }
+	{ GIT_REPOSITORY_ITEM_GITDIR, GIT_REPOSITORY_ITEM_GITDIR, "config.worktree", false },
+	{ GIT_REPOSITORY_ITEM_COMMONDIR, GIT_REPOSITORY_ITEM_GITDIR, "shallow", false }
 };
 
 static int check_repositoryformatversion(int *version, git_config *config);
@@ -950,7 +951,7 @@ static int load_grafts(git_repository *repo)
 
 	git_str_clear(&path);
 
-	if ((error = git_str_joinpath(&path, repo->gitdir, "shallow")) < 0 ||
+	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_SHALLOW)) < 0 ||
 	    (error = git_grafts_open_or_refresh(&repo->shallow_grafts, path.ptr, repo->oid_type)) < 0)
 		goto error;
 
@@ -3956,7 +3957,7 @@ int git_repository__shallow_roots_write(git_repository *repo, git_oidarray *root
 	filebuf_hash = git_filebuf_hash_flags(git_oid_algorithm(repo->oid_type));
 	GIT_ASSERT(filebuf_hash);
 
-	if ((error = git_str_joinpath(&path, repo->gitdir, "shallow")) < 0)
+	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_SHALLOW)) < 0)
 		goto on_error;
 
 	if ((error = git_filebuf_open(&file, git_str_cstr(&path), filebuf_hash, 0666)) < 0)
@@ -3990,10 +3991,9 @@ int git_repository_is_shallow(git_repository *repo)
 	struct stat st;
 	int error;
 
-	if ((error = git_str_joinpath(&path, repo->commondir, "shallow")) < 0)
-		return error;
+	if ((error = git_repository__item_path(&path, repo, GIT_REPOSITORY_ITEM_SHALLOW)) == 0)
+		error = git_fs_path_lstat(path.ptr, &st);
 
-	error = git_fs_path_lstat(path.ptr, &st);
 	git_str_dispose(&path);
 
 	if (error == GIT_ENOTFOUND) {
