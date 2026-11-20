@@ -3984,6 +3984,12 @@ on_error:
 	return error;
 }
 
+bool git_repository__commit_graph_compatible(git_repository *repo)
+{
+	return (!repo->grafts || !git_grafts_size(repo->grafts)) &&
+	       (!repo->shallow_grafts || !git_grafts_size(repo->shallow_grafts));
+}
+
 int git_repository_is_shallow(git_repository *repo)
 {
 	git_str path = GIT_STR_INIT;

@@ -257,6 +257,12 @@ int git_repository__shallow_roots(git_oid **out, size_t *out_len, git_repository
 int git_repository__shallow_roots_write(git_repository *repo, git_oidarray *roots);
 
 /*
+ * Whether the commit-graph can be used in place of parsing commits.  Like
+ * git, it can't when grafts or shallow roots rewrite commit parents.
+ */
+bool git_repository__commit_graph_compatible(git_repository *repo);
+
+/*
  * The default branch for the repository; the `init.defaultBranch`
  * configuration option, if set, or `master` if it is not.
  */
