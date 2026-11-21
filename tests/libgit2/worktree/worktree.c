@@ -5,6 +5,7 @@
 #include "checkout.h"
 #include "repository.h"
 #include "worktree.h"
+#include "git2/sys/repository.h"
 
 #define COMMON_REPO "testrepo"
 #define WORKTREE_REPO "testrepo-worktree"
@@ -95,6 +96,25 @@ void test_worktree_worktree__list_without_worktrees(void)
 	cl_assert_equal_i(wts.count, 0);
 
 	git_repository_free(repo);
+}
+
+void test_worktree_worktree__lookup_without_git_directory(void)
+{
+	git_odb *odb;
+	git_repository *repo;
+	git_worktree *wt, *existing;
+
+	cl_git_pass(git_odb_new(&odb));
+	cl_git_pass(git_repository_wrap_odb(&repo, odb));
+	cl_git_pass(git_worktree_lookup(&existing, fixture.repo, WORKTREE_REPO));
+	wt = existing;
+	cl_git_fail_with(GIT_ENOTFOUND, git_worktree_lookup(&wt, repo, "missing"));
+	cl_assert_equal_p(NULL, wt);
+	cl_assert_equal_s(existing->name, WORKTREE_REPO);
+
+	git_worktree_free(existing);
+	git_repository_free(repo);
+	git_odb_free(odb);
 }
 
 void test_worktree_worktree__lookup(void)
