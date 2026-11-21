@@ -547,7 +547,7 @@ static int parse_date_basic(const char *date, git_time_t *timestamp, int *offset
  * Relative time update (eg "2 days ago").  If we haven't set the time
  * yet, we need to set it from current time.
  */
-static git_time_t update_tm(struct tm *tm, struct tm *now, unsigned long sec)
+static git_time_t update_tm(struct tm *tm, struct tm *now, git_time_t sec)
 {
 	time_t n;
 
@@ -561,7 +561,7 @@ static git_time_t update_tm(struct tm *tm, struct tm *now, unsigned long sec)
 			tm->tm_year--;
 	}
 
-	n = mktime(tm) - sec;
+	n = (time_t)(mktime(tm) - sec);
 	p_localtime_r(&n, tm);
 	return n;
 }
@@ -723,7 +723,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	while (tl->type) {
 		size_t len = strlen(tl->type);
 		if (match_string(date, tl->type) >= len-1) {
-			update_tm(tm, now, tl->length * (unsigned long)*num);
+			update_tm(tm, now, tl->length * (git_time_t)*num);
 			*num = 0;
 			*touched = 1;
 			return end;
@@ -734,7 +734,7 @@ static const char *approxidate_alpha(const char *date, struct tm *tm, struct tm 
 	for (i = 0; i < 7; i++) {
 		size_t match = match_string(date, weekday_names[i]);
 		if (match >= 3) {
-			int diff, n = *num -1;
+			git_time_t diff, n = (git_time_t)*num - 1;
 			*num = 0;
 
 			diff = tm->tm_wday - i;
@@ -790,9 +790,13 @@ static const char *approxidate_digit(const char *date, struct tm *tm, int *num)
 		}
 	}
 
-	/* Accept zero-padding only for small numbers ("Dec 02", never "Dec 0002") */
-	if (date[0] != '0' || end - date <= 2)
-		*num = number;
+	/*
+	 * Accept zero-padding only for small numbers ("Dec 02", never "Dec 0002"),
+	 * and ignore a number that doesn't fit: cut down to an int, it would be a
+	 * different number.
+	 */
+	if (number <= INT_MAX && (date[0] != '0' || end - date <= 2))
+		*num = (int)number;
 	return end;
 }
 
