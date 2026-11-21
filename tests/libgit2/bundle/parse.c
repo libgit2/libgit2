@@ -298,6 +298,41 @@ void test_bundle_parse__long_and_chunk_spanning_lines(void)
 	git_str_dispose(&name);
 }
 
+/* the parser's limit on a header line, excluding its newline */
+#define HEADER_LINE_MAX (1024 * 1024)
+
+static void build_long_prerequisite(git_str *out, size_t linelen)
+{
+	git_str_clear(out);
+
+	cl_git_pass(git_str_puts(out, "# v2 git bundle\n"));
+	cl_git_pass(git_str_printf(out, "-%s ", SHA1_A));
+
+	while (out->size < CONST_STRLEN("# v2 git bundle\n") + linelen)
+		cl_git_pass(git_str_putc(out, 'c'));
+
+	cl_git_pass(git_str_printf(out, "\n%s refs/heads/master\n\n", SHA1_B));
+}
+
+void test_bundle_parse__header_line_length_limit(void)
+{
+	git_bundle_parser parser = GIT_BUNDLE_PARSER_INIT;
+	git_str data = GIT_STR_INIT;
+
+	/* a line of exactly the maximum length is accepted */
+	build_long_prerequisite(&data, HEADER_LINE_MAX);
+	cl_git_pass(parse_both(&parser, data.ptr, data.size));
+	cl_assert_equal_i(1, (int)parser.header.prerequisites.size);
+	cl_assert_equal_i((int)data.size, (int)parser.header.pack_offset);
+	git_bundle_parser_dispose(&parser);
+
+	/* one byte more is not */
+	build_long_prerequisite(&data, HEADER_LINE_MAX + 1);
+	assert_invalid(data.ptr);
+
+	git_str_dispose(&data);
+}
+
 void test_bundle_parse__rejects_bad_signature(void)
 {
 	assert_invalid("");

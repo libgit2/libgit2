@@ -91,8 +91,11 @@ typedef struct {
  *
  * A `GIT_ENOTSUPPORTED` result is only returned once the rest of the
  * header has been validated, so callers can rely on it meaning "a real
- * bundle that we cannot use"; its header is parsed and retained.  A hard
- * failure releases the partial result.
+ * bundle that we cannot use"; its header is parsed and retained.  The
+ * exception is an unknown object format: it fixes the width of every
+ * remaining object id, so it is reported as soon as it is seen and the
+ * retained header holds only what preceded it.  A hard failure releases
+ * the partial result.
  */
 int git_bundle_parser_parse(git_bundle_parser *parser);
 
