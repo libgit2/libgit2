@@ -781,6 +781,50 @@ cleanup:
 	return error;
 }
 
+/*
+ * Sort the commits a limited walk starts from by date, newest first, like
+ * git does. Limiting goes on as long as interesting commits are left to
+ * look at: if the commits to show came after the commits to hide (e.g.
+ * many of them, like a remote's advertised references), we would walk the
+ * history of the hidden ones until we got there, however far that goes.
+ */
+static int sort_by_date(git_commit_list **list)
+{
+	git_vector commits = GIT_VECTOR_INIT;
+	git_commit_list *item, *sorted = NULL, **p = &sorted;
+	git_commit_list_node *commit;
+	size_t i;
+	int error;
+
+	if ((error = git_vector_init(&commits, 0, git_commit_list_time_cmp)) < 0)
+		return error;
+
+	for (item = *list; item; item = item->next) {
+		if ((error = git_vector_insert(&commits, item->item)) < 0)
+			goto done;
+	}
+
+	git_vector_sort(&commits);
+
+	git_vector_foreach(&commits, i, commit) {
+		if ((item = git_commit_list_insert(commit, p)) == NULL) {
+			error = -1;
+			goto done;
+		}
+
+		p = &item->next;
+	}
+
+	git_commit_list_free(list);
+	*list = sorted;
+	sorted = NULL;
+
+done:
+	git_commit_list_free(&sorted);
+	git_vector_dispose(&commits);
+	return error;
+}
+
 static int prepare_walk(git_revwalk *walk)
 {
 	int error = 0;
@@ -824,7 +868,9 @@ static int prepare_walk(git_revwalk *walk)
 		}
 	}
 
-	if (walk->limited && (error = limit_list(&commits, walk, commits)) < 0)
+	if (walk->limited &&
+	    ((error = sort_by_date(&commits)) < 0 ||
+	     (error = limit_list(&commits, walk, commits)) < 0))
 		return error;
 
 	if (walk->sorting & GIT_SORT_TOPOLOGICAL) {

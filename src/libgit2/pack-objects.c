@@ -1676,21 +1676,37 @@ cleanup:
 }
 
 /*
- * Mark the edges of the graph uninteresting. Since we start from a
- * git_revwalk, the commits are already uninteresting, but we need to
- * mark the trees and blobs.
+ * Mark the trees of the uninteresting parents of the given commit (one
+ * that is inserted) uninteresting: these commits are the edges of the
+ * walk, the other side has them and everything they reference. Like git,
+ * we only look at the edges rather than at all the uninteresting commits
+ * the walk started from: their trees may be many and large (e.g. one for
+ * every reference a remote advertises), and marking them all would read
+ * each of them in full, no matter how few objects end up in the pack.
+ * The flip side is that an object the other side only has through an
+ * uninteresting commit that is not an edge (e.g. after cherry-picking a
+ * change from another branch) is inserted again.
  */
-static int mark_edges_uninteresting(git_packbuilder *pb, git_commit_list *commits)
+static int mark_edge_parents_uninteresting(
+	git_packbuilder *pb,
+	git_revwalk *walk,
+	const git_oid *id)
 {
-	int error;
-	git_commit_list *list;
+	git_commit_list_node *node, *parent;
 	git_commit *commit;
+	uint16_t i;
+	int error;
 
-	for (list = commits; list; list = list->next) {
-		if (!list->item->uninteresting)
+	if ((node = git_revwalk__commit_lookup(walk, id)) == NULL)
+		return -1;
+
+	for (i = 0; i < node->out_degree; i++) {
+		parent = node->parents[i];
+
+		if (!parent->uninteresting)
 			continue;
 
-		if ((error = git_commit_lookup(&commit, pb->repo, &list->item->oid)) < 0)
+		if ((error = git_commit_lookup(&commit, pb->repo, &parent->oid)) < 0)
 			return error;
 
 		error = mark_tree_uninteresting(pb, git_commit_tree_id(commit));
@@ -1784,38 +1800,51 @@ cleanup:
 
 int git_packbuilder_insert_walk(git_packbuilder *pb, git_revwalk *walk)
 {
-	int error;
-	git_oid id;
+	git_array_t(git_oid) commits = GIT_ARRAY_INIT;
+	git_oid id, *commit_id;
 	struct walk_object *obj;
+	size_t i;
+	int error;
 
 	GIT_ASSERT_ARG(pb);
 	GIT_ASSERT_ARG(walk);
 
-	if ((error = mark_edges_uninteresting(pb, walk->user_input)) < 0)
-		return error;
-
 	/*
-	 * TODO: git marks the parents of the edges
-	 * uninteresting. This may provide a speed advantage, but does
-	 * seem to assume the remote does not have a single-commit
-	 * history on the other end.
+	 * Walk first, marking what the edges reference uninteresting before
+	 * inserting anything. This has to happen during the walk: when it
+	 * ends, the walk resets, and forgets which commits are uninteresting.
 	 */
+	while ((error = git_revwalk_next(&id, walk)) == 0) {
+		if ((commit_id = git_array_alloc(commits)) == NULL) {
+			error = -1;
+			goto done;
+		}
+
+		git_oid_cpy(commit_id, &id);
+
+		if ((error = mark_edge_parents_uninteresting(pb, walk, &id)) < 0)
+			goto done;
+	}
+
+	if (error != GIT_ITEROVER)
+		goto done;
 
 	/* walk down each tree up to the blobs and insert them, stopping when uninteresting */
-	while ((error = git_revwalk_next(&id, walk)) == 0) {
-		if ((error = retrieve_object(&obj, pb, &id)) < 0)
-			return error;
+	git_array_foreach(commits, i, commit_id) {
+		if ((error = retrieve_object(&obj, pb, commit_id)) < 0)
+			goto done;
 
 		if (obj->seen || obj->uninteresting)
 			continue;
 
 		if ((error = pack_objects_insert_commit(pb, obj)) < 0)
-			return error;
+			goto done;
 	}
 
-	if (error == GIT_ITEROVER)
-		error = 0;
+	error = 0;
 
+done:
+	git_array_dispose(commits);
 	return error;
 }
 
