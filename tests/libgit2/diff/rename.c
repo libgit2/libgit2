@@ -2078,3 +2078,163 @@ void test_diff_rename__break_rewrite(void)
 	git_tree_free(old_tree);
 	git_tree_free(new_tree);
 }
+
+#define CONTENT_A "foobar\nfoo\nbar\nboom\nbaz\n"
+#define CONTENT_B "one\ntwo\nthree\nfour\nfive\n"
+#define CONTENT_C "this\nis\na\nsentence\n"
+
+typedef struct {
+	const char *path;
+	const char *content;
+} tree_file;
+
+static git_tree *build_tree(const tree_file *files, size_t files_size)
+{
+	git_treebuilder *builder;
+	git_tree *tree;
+	git_oid blob_id, tree_id;
+	size_t i;
+
+	cl_git_pass(git_treebuilder_new(&builder, g_repo, NULL));
+
+	for (i = 0; i < files_size; i++) {
+		cl_git_pass(git_blob_create_from_buffer(&blob_id, g_repo,
+			files[i].content, strlen(files[i].content)));
+		cl_git_pass(git_treebuilder_insert(NULL, builder,
+			files[i].path, &blob_id, GIT_FILEMODE_BLOB));
+	}
+
+	cl_git_pass(git_treebuilder_write(&tree_id, builder));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+
+	git_treebuilder_free(builder);
+	return tree;
+}
+
+static git_diff *diff_trees_find_similar(
+	const tree_file *old_files,
+	size_t old_files_size,
+	const tree_file *new_files,
+	size_t new_files_size,
+	const git_diff_options *diff_opts,
+	const git_diff_find_options *find_opts)
+{
+	git_tree *old_tree = build_tree(old_files, old_files_size);
+	git_tree *new_tree = build_tree(new_files, new_files_size);
+	git_diff *diff;
+
+	cl_git_pass(git_diff_tree_to_tree(&diff,
+		g_repo, old_tree, new_tree, diff_opts));
+	cl_git_pass(git_diff_find_similar(diff, find_opts));
+
+	git_tree_free(old_tree);
+	git_tree_free(new_tree);
+	return diff;
+}
+
+static void assert_delta(
+	git_diff *diff,
+	const char *new_path,
+	git_delta_t status,
+	const char *old_path,
+	uint16_t similarity)
+{
+	const git_diff_delta *delta;
+	size_t i;
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if (strcmp(delta->new_file.path, new_path) == 0) {
+			cl_assert_equal_i(status, delta->status);
+			cl_assert_equal_s(old_path, delta->old_file.path);
+			cl_assert_equal_i(similarity, delta->similarity);
+			return;
+		}
+	}
+
+	cl_fail("no delta found for the expected path");
+}
+
+/* Confirm that exact matching does renames beyond rename_limit */
+void test_diff_rename__exact_match_unlimited(void)
+{
+	tree_file old_files[] = {
+		{ "a.txt", CONTENT_A },
+		{ "b.txt", CONTENT_B },
+		{ "c.txt", CONTENT_C },
+	};
+	tree_file new_files[] = {
+		{ "z.txt", CONTENT_C },
+	};
+	git_diff_find_options find_opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	git_diff *diff;
+
+	find_opts.flags = GIT_DIFF_FIND_RENAMES;
+	find_opts.rename_limit = 1;
+
+	diff = diff_trees_find_similar(old_files, ARRAY_SIZE(old_files),
+		new_files, ARRAY_SIZE(new_files), NULL, &find_opts);
+
+	cl_assert_equal_i(3, git_diff_num_deltas(diff));
+	assert_delta(diff, "a.txt", GIT_DELTA_DELETED, "a.txt", 0);
+	assert_delta(diff, "b.txt", GIT_DELTA_DELETED, "b.txt", 0);
+	assert_delta(diff, "z.txt", GIT_DELTA_RENAMED, "c.txt", 100);
+
+	git_diff_free(diff);
+}
+
+/* Files with identical content are renamed one to one, in path order */
+void test_diff_rename__exact_match_duplicate_content(void)
+{
+	tree_file old_files[] = {
+		{ "a1.txt", CONTENT_A },
+		{ "a2.txt", CONTENT_A },
+	};
+	tree_file new_files[] = {
+		{ "b1.txt", CONTENT_A },
+		{ "b2.txt", CONTENT_A },
+	};
+	git_diff_find_options find_opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	git_diff *diff;
+
+	find_opts.flags = GIT_DIFF_FIND_RENAMES;
+
+	diff = diff_trees_find_similar(old_files, ARRAY_SIZE(old_files),
+		new_files, ARRAY_SIZE(new_files), NULL, &find_opts);
+
+	cl_assert_equal_i(2, git_diff_num_deltas(diff));
+	assert_delta(diff, "b1.txt", GIT_DELTA_RENAMED, "a1.txt", 100);
+	assert_delta(diff, "b2.txt", GIT_DELTA_RENAMED, "a2.txt", 100);
+
+	git_diff_free(diff);
+}
+
+/* Several identical new files are all copies of an unmodified source */
+void test_diff_rename__exact_match_with_copies(void)
+{
+	tree_file old_files[] = {
+		{ "src.txt", CONTENT_A },
+	};
+	tree_file new_files[] = {
+		{ "c1.txt", CONTENT_A },
+		{ "c2.txt", CONTENT_A },
+		{ "src.txt", CONTENT_A },
+	};
+	git_diff_options diff_opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff_find_options find_opts = GIT_DIFF_FIND_OPTIONS_INIT;
+	git_diff *diff;
+
+	diff_opts.flags = GIT_DIFF_INCLUDE_UNMODIFIED;
+	find_opts.flags = GIT_DIFF_FIND_COPIES_FROM_UNMODIFIED;
+
+	diff = diff_trees_find_similar(old_files, ARRAY_SIZE(old_files),
+		new_files, ARRAY_SIZE(new_files), &diff_opts, &find_opts);
+
+	cl_assert_equal_i(3, git_diff_num_deltas(diff));
+	assert_delta(diff, "c1.txt", GIT_DELTA_COPIED, "src.txt", 100);
+	assert_delta(diff, "c2.txt", GIT_DELTA_COPIED, "src.txt", 100);
+	assert_delta(diff, "src.txt", GIT_DELTA_UNMODIFIED, "src.txt", 0);
+
+	git_diff_free(diff);
+}
