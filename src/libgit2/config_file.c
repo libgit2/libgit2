@@ -635,6 +635,14 @@ static int do_match_gitdir(
 
 	*matches = wildmatch(pattern.ptr, gitdir.ptr,
 			     WM_PATHNAME | (case_insensitive ? WM_CASEFOLD : 0)) == WM_MATCH;
+	if (!*matches && repo->gitdir_unresolved) {
+		if ((error = git_str_sets(&gitdir, repo->gitdir_unresolved)) < 0)
+			goto out;
+		if (git_fs_path_is_dirsep(gitdir.ptr[gitdir.size - 1]))
+			git_str_truncate(&gitdir, gitdir.size - 1);
+		*matches = wildmatch(pattern.ptr, gitdir.ptr,
+			WM_PATHNAME | (case_insensitive ? WM_CASEFOLD : 0)) == WM_MATCH;
+	}
 out:
 	git_str_dispose(&pattern);
 	git_str_dispose(&gitdir);
