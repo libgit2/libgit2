@@ -51,6 +51,11 @@ const char *git_credential_get_username(git_credential *cred)
 		git_credential_ssh_custom *c = (git_credential_ssh_custom *) cred;
 		return c->username;
 	}
+	case GIT_CREDENTIAL_SSH_CUSTOM_SK:
+	{
+		git_credential_ssh_custom_sk *c = (git_credential_ssh_custom_sk *) cred;
+		return c->username;
+	}
 	case GIT_CREDENTIAL_SSH_INTERACTIVE:
 	{
 		git_credential_ssh_interactive *c = (git_credential_ssh_interactive *) cred;
@@ -164,6 +169,36 @@ static void ssh_custom_free(struct git_credential *cred)
 		size_t key_len = c->publickey_len;
 		git__memzero(c->publickey, key_len);
 		git__free(c->publickey);
+	}
+
+	git__free(c);
+}
+
+static void ssh_custom_sk_free(struct git_credential *cred)
+{
+	git_credential_ssh_custom_sk *c = (git_credential_ssh_custom_sk *)cred;
+
+	git__free(c->username);
+
+	if (c->publickey) {
+		/* Zero the memory which previously held the publickey */
+		size_t key_len = strlen(c->publickey);
+		git__memzero(c->publickey, key_len);
+		git__free(c->publickey);
+	}
+
+	if (c->privatekey) {
+		/* Zero the memory which previously held the privatekey */
+		size_t key_len = strlen(c->privatekey);
+		git__memzero(c->privatekey, key_len);
+		git__free(c->privatekey);
+	}
+
+	if (c->passphrase) {
+		/* Zero the memory which previously held the passphrase */
+		size_t pass_len = strlen(c->passphrase);
+		git__memzero(c->passphrase, pass_len);
+		git__free(c->passphrase);
 	}
 
 	git__free(c);
@@ -344,6 +379,58 @@ int git_credential_ssh_custom_new(
 	}
 
 	c->publickey_len = publickey_len;
+	c->sign_callback = sign_callback;
+	c->payload = payload;
+
+	*cred = &c->parent;
+	return 0;
+}
+
+int git_credential_ssh_custom_sk_new(
+	git_credential **cred,
+	const char *username,
+	const char *publickey,
+	size_t publickey_len,
+	const char *privatekey,
+	size_t privatekey_len,
+	const char *passphrase,
+	git_credential_sign_sk_cb sign_callback,
+	void *payload)
+{
+	git_credential_ssh_custom_sk *c;
+
+	GIT_ASSERT_ARG(username);
+	GIT_ASSERT_ARG(cred);
+
+	c = git__calloc(1, sizeof(git_credential_ssh_custom_sk));
+	GIT_ERROR_CHECK_ALLOC(c);
+
+	c->parent.credtype = GIT_CREDENTIAL_SSH_CUSTOM_SK;
+	c->parent.free = ssh_custom_sk_free;
+
+	c->username = git__strdup(username);
+	GIT_ERROR_CHECK_ALLOC(c->username);
+
+	if (publickey_len > 0) {
+		c->publickey = git__malloc(publickey_len);
+		GIT_ERROR_CHECK_ALLOC(c->publickey);
+
+		memcpy(c->publickey, publickey, publickey_len);
+	}
+
+	if (privatekey_len > 0) {
+		c->privatekey = git__malloc(privatekey_len);
+		GIT_ERROR_CHECK_ALLOC(c->privatekey);
+
+		memcpy(c->privatekey, privatekey, privatekey_len);
+	}
+
+	c->publickey_len = publickey_len;
+	c->privatekey_len = privatekey_len;
+
+	c->passphrase = git__strdup(passphrase);
+	GIT_ERROR_CHECK_ALLOC(c->passphrase);
+
 	c->sign_callback = sign_callback;
 	c->payload = payload;
 
