@@ -43,7 +43,8 @@ enum {
 	CHECKOUT_ACTION__CONFLICT = 8,
 	CHECKOUT_ACTION__REMOVE_CONFLICT = 16,
 	CHECKOUT_ACTION__UPDATE_CONFLICT = 32,
-	CHECKOUT_ACTION__MAX = 32,
+	CHECKOUT_ACTION__REMOVE_INDEX = 64,
+	CHECKOUT_ACTION__MAX = 64,
 	CHECKOUT_ACTION__REMOVE_AND_UPDATE =
 		(CHECKOUT_ACTION__UPDATE_BLOB | CHECKOUT_ACTION__REMOVE)
 };
@@ -271,7 +272,7 @@ static int checkout_action_common(
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
 
 	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0)
-		*action = (*action & ~CHECKOUT_ACTION__REMOVE);
+		*action &= ~(CHECKOUT_ACTION__REMOVE | CHECKOUT_ACTION__REMOVE_INDEX);
 
 	if ((*action & CHECKOUT_ACTION__UPDATE_BLOB) != 0) {
 		if (S_ISGITLINK(delta->new_file.mode))
@@ -638,6 +639,10 @@ static int checkout_action_with_wd_dir(
 				CHECKOUT_ACTION_IF(FORCE, REMOVE_AND_UPDATE, CONFLICT);
 		break;
 	case GIT_DELTA_DELETED: /* case 11 (and 27 for dir) */
+		/* Leave submodule contents on disk, but remove the gitlink. */
+		if (S_ISGITLINK(delta->old_file.mode))
+			*action = CHECKOUT_ACTION__REMOVE_INDEX;
+
 		if (delta->old_file.mode != GIT_FILEMODE_TREE)
 			GIT_ERROR_CHECK_ERROR(
 				checkout_notify(data, GIT_CHECKOUT_NOTIFY_UNTRACKED, NULL, wd));
@@ -1303,14 +1308,14 @@ static int checkout_verify_paths(
 {
 	unsigned int flags = GIT_PATH_REJECT_WORKDIR_DEFAULTS;
 
-	if (action & CHECKOUT_ACTION__REMOVE) {
+	if (action & (CHECKOUT_ACTION__REMOVE | CHECKOUT_ACTION__REMOVE_INDEX)) {
 		if (!git_path_is_valid(repo, delta->old_file.path, delta->old_file.mode, flags)) {
 			git_error_set(GIT_ERROR_CHECKOUT, "cannot remove invalid path '%s'", delta->old_file.path);
 			return -1;
 		}
 	}
 
-	if (action & ~CHECKOUT_ACTION__REMOVE) {
+	if (action & ~(CHECKOUT_ACTION__REMOVE | CHECKOUT_ACTION__REMOVE_INDEX)) {
 		if (!git_path_is_valid(repo, delta->new_file.path, delta->new_file.mode, flags)) {
 			git_error_set(GIT_ERROR_CHECKOUT, "cannot checkout to invalid path '%s'", delta->new_file.path);
 			return -1;
@@ -1366,6 +1371,8 @@ static int checkout_get_actions(
 
 		if (act & CHECKOUT_ACTION__REMOVE)
 			counts[CHECKOUT_ACTION__REMOVE]++;
+		if (act & CHECKOUT_ACTION__REMOVE_INDEX)
+			counts[CHECKOUT_ACTION__REMOVE_INDEX]++;
 		if (act & CHECKOUT_ACTION__UPDATE_BLOB)
 			counts[CHECKOUT_ACTION__UPDATE_BLOB]++;
 		if (act & CHECKOUT_ACTION__UPDATE_SUBMODULE)
@@ -1846,12 +1853,14 @@ static int checkout_remove_the_old(
 		return -1;
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
-		if (actions[i] & CHECKOUT_ACTION__REMOVE) {
-			error = git_futils_rmdir_r(
-				delta->old_file.path, fullpath->ptr, flg);
+		if (actions[i] & (CHECKOUT_ACTION__REMOVE | CHECKOUT_ACTION__REMOVE_INDEX)) {
+			if (actions[i] & CHECKOUT_ACTION__REMOVE) {
+				error = git_futils_rmdir_r(
+					delta->old_file.path, fullpath->ptr, flg);
 
-			if (error < 0)
-				return error;
+				if (error < 0)
+					return error;
+			}
 
 			data->completed_steps++;
 			report_progress(data, delta->old_file.path);
@@ -2652,6 +2661,7 @@ int git_checkout_iterator(
 		goto cleanup;
 
 	data.total_steps = counts[CHECKOUT_ACTION__REMOVE] +
+		counts[CHECKOUT_ACTION__REMOVE_INDEX] +
 		counts[CHECKOUT_ACTION__REMOVE_CONFLICT] +
 		counts[CHECKOUT_ACTION__UPDATE_BLOB] +
 		counts[CHECKOUT_ACTION__UPDATE_SUBMODULE] +
@@ -2662,7 +2672,8 @@ int git_checkout_iterator(
 	/* To deal with some order dependencies, perform remaining checkout
 	 * in three passes: removes, then update blobs, then update submodules.
 	 */
-	if (counts[CHECKOUT_ACTION__REMOVE] > 0 &&
+	if ((counts[CHECKOUT_ACTION__REMOVE] > 0 ||
+		counts[CHECKOUT_ACTION__REMOVE_INDEX] > 0) &&
 		(error = checkout_remove_the_old(actions, &data)) < 0)
 		goto cleanup;
 
