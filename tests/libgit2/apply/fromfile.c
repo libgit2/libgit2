@@ -447,3 +447,41 @@ void test_apply_fromfile__empty_file_not_allowed(void)
 	cl_git_fail(git_patch_from_buffer(&patch, "", 0, NULL));
 	cl_git_fail(git_patch_from_buffer(&patch, NULL, 0, NULL));
 }
+
+/*
+ * A hunk that strips the trailing newline from an empty line used to
+ * decrement that line's content_len below zero on a second application
+ * of the same patch, reading one byte before the heap allocation.
+ * Applying the same patch twice must succeed and be idempotent.
+ */
+void test_apply_fromfile__reapply_eofnl(void)
+{
+	const char *patchfile =
+		"diff --git a/file.txt b/file.txt\n"
+		"--- a/file.txt\n"
+		"+++ b/file.txt\n"
+		"@@ -1 +1,2 @@\n"
+		" a\n"
+		"+\n"
+		"\\ No newline at end of file\n";
+	git_patch *patch;
+	git_str first = GIT_STR_INIT, second = GIT_STR_INIT;
+	char *filename = NULL;
+	unsigned int mode;
+
+	cl_git_pass(git_patch_from_buffer(&patch, patchfile, strlen(patchfile), NULL));
+
+	cl_git_pass(git_apply__patch(&first, &filename, &mode, "a\n", 2, patch, NULL));
+	git__free(filename);
+	filename = NULL;
+
+	cl_git_pass(git_apply__patch(&second, &filename, &mode, "a\n", 2, patch, NULL));
+	git__free(filename);
+
+	cl_assert_equal_i(first.size, second.size);
+	cl_assert(memcmp(first.ptr, second.ptr, first.size) == 0);
+
+	git_str_dispose(&first);
+	git_str_dispose(&second);
+	git_patch_free(patch);
+}
