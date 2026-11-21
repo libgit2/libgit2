@@ -137,6 +137,58 @@ void test_clone_nonetwork__custom_origin_name(void)
 	cl_git_pass(git_remote_lookup(&g_remote, g_repo, "my_origin"));
 }
 
+static void assert_branch_upstream(
+	const char *branch,
+	const char *remote,
+	const char *merge)
+{
+	git_config *config;
+	git_str key = GIT_STR_INIT;
+	const char *str;
+
+	cl_git_pass(git_repository_config_snapshot(&config, g_repo));
+
+	cl_git_pass(git_str_printf(&key, "branch.%s.remote", branch));
+	cl_git_pass(git_config_get_string(&str, config, key.ptr));
+	cl_assert_equal_s(remote, str);
+
+	git_str_clear(&key);
+	cl_git_pass(git_str_printf(&key, "branch.%s.merge", branch));
+	cl_git_pass(git_config_get_string(&str, config, key.ptr));
+	cl_assert_equal_s(merge, str);
+
+	git_str_dispose(&key);
+	git_config_free(config);
+}
+
+void test_clone_nonetwork__custom_origin_name_sets_upstream(void)
+{
+	git_reference *remote_head;
+
+	g_options.remote_cb = custom_origin_name_remote_create;
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+
+	assert_branch_upstream("master", "my_origin", "refs/heads/master");
+
+	cl_git_pass(git_reference_lookup(&remote_head, g_repo, "refs/remotes/my_origin/HEAD"));
+	cl_assert_equal_s("refs/remotes/my_origin/master", git_reference_symbolic_target(remote_head));
+	git_reference_free(remote_head);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_remote_lookup(&g_remote, g_repo, "origin"));
+}
+
+void test_clone_nonetwork__custom_origin_name_with_checkout_branch(void)
+{
+	g_options.remote_cb = custom_origin_name_remote_create;
+	g_options.checkout_branch = "test";
+	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", &g_options));
+
+	cl_git_pass(git_repository_head(&g_ref, g_repo));
+	cl_assert_equal_s("refs/heads/test", git_reference_name(g_ref));
+
+	assert_branch_upstream("test", "my_origin", "refs/heads/test");
+}
+
 void test_clone_nonetwork__defaults(void)
 {
 	cl_git_pass(git_clone(&g_repo, cl_git_fixture_url("testrepo.git"), "./foo", NULL));
@@ -369,4 +421,19 @@ void test_clone_nonetwork__clone_from_empty_sets_upstream(void)
 	git_config_free(config);
 	git_repository_free(repo);
 	cl_fixture_cleanup("./repowithunborn");
+}
+
+void test_clone_nonetwork__clone_from_empty_sets_custom_upstream(void)
+{
+	git_repository *source;
+
+	/* Create an empty repo to clone from */
+	cl_git_pass(git_repository_init(&source, "./empty_source", 0));
+	git_repository_free(source);
+	cl_set_cleanup(&cleanup_repository, "./empty_source");
+
+	g_options.remote_cb = custom_origin_name_remote_create;
+	cl_git_pass(git_clone(&g_repo, "./empty_source", "./foo", &g_options));
+
+	assert_branch_upstream("master", "my_origin", "refs/heads/master");
 }
