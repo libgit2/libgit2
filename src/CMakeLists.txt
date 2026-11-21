@@ -124,8 +124,8 @@ endif()
 # platform libraries
 
 if(WIN32)
-	list(APPEND LIBGIT2_SYSTEM_LIBS "ws2_32" "secur32")
-	list(APPEND LIBGIT2_PC_LIBS "-lws2_32" "-lsecur32")
+	list(APPEND LIBGIT2_SYSTEM_LIBS "ws2_32" "secur32" "ole32")
+	list(APPEND LIBGIT2_PC_LIBS "-lws2_32" "-lsecur32" "-lole32")
 endif()
 
 if(CMAKE_SYSTEM_NAME MATCHES "(Solaris|SunOS)")

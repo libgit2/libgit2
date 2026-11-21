@@ -17,14 +17,11 @@
 #include "remote.h"
 #include "repository.h"
 #include "http.h"
+#include "auth_default.h"
 #include "git2/sys/credential.h"
 
 #include <wincrypt.h>
 #include <winhttp.h>
-
-/* For IInternetSecurityManager zone check */
-#include <objbase.h>
-#include <urlmon.h>
 
 #define WIDEN2(s) L ## s
 #define WIDEN(s) WIDEN2(s)
@@ -223,62 +220,6 @@ static int acquire_url_cred(
 		return git_credential_default_new(cred);
 
 	return 1;
-}
-
-static int acquire_fallback_cred(
-	git_credential **cred,
-	const char *url,
-	unsigned int allowed_types)
-{
-	int error = 1;
-
-	/* If the target URI supports integrated Windows authentication
-	 * as an authentication mechanism */
-	if (GIT_CREDENTIAL_DEFAULT & allowed_types) {
-		wchar_t *wide_url;
-		HRESULT hCoInitResult;
-
-		/* Convert URL to wide characters */
-		if (git_utf8_to_16_alloc(&wide_url, url) < 0) {
-			git_error_set(GIT_ERROR_OS, "failed to convert string to wide form");
-			return -1;
-		}
-
-		hCoInitResult = CoInitializeEx(NULL, COINIT_MULTITHREADED);
-
-		if (SUCCEEDED(hCoInitResult) || hCoInitResult == RPC_E_CHANGED_MODE) {
-			IInternetSecurityManager *pISM;
-
-			/* And if the target URI is in the My Computer, Intranet, or Trusted zones */
-			if (SUCCEEDED(CoCreateInstance(&CLSID_InternetSecurityManager, NULL,
-				CLSCTX_ALL, &IID_IInternetSecurityManager, (void **)&pISM))) {
-				DWORD dwZone;
-
-				if (SUCCEEDED(pISM->lpVtbl->MapUrlToZone(pISM, wide_url, &dwZone, 0)) &&
-					(URLZONE_LOCAL_MACHINE == dwZone ||
-					URLZONE_INTRANET == dwZone ||
-					URLZONE_TRUSTED == dwZone)) {
-					git_credential *existing = *cred;
-
-					if (existing)
-						existing->free(existing);
-
-					/* Then use default Windows credentials to authenticate this request */
-					error = git_credential_default_new(cred);
-				}
-
-				pISM->lpVtbl->Release(pISM);
-			}
-
-			/* Only uninitialize if the call to CoInitializeEx was successful. */
-			if (SUCCEEDED(hCoInitResult))
-				CoUninitialize();
-		}
-
-		git__free(wide_url);
-	}
-
-	return error;
 }
 
 static int certificate_check(winhttp_stream *s, int valid)
@@ -1032,7 +973,7 @@ static int acquire_credentials(
 
 		/* Finally, invoke the fallback default credential lookup. */
 		if (error > 0) {
-			error = acquire_fallback_cred(&server->cred, url_str, allowed_types);
+			error = git_http_auth_default_fallback(&server->cred, url_str, allowed_types);
 
 			if (error < 0)
 				return error;
