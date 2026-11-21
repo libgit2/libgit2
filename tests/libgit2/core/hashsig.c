@@ -180,3 +180,26 @@ void test_core_hashsig__similarity_metric_whitespace(void)
 
 	git_str_dispose(&buf);
 }
+
+void test_core_hashsig__large_input_order_independent(void)
+{
+	git_hashsig *forward, *reverse;
+	git_str a = GIT_STR_INIT, b = GIT_STR_INIT;
+	int i, similarity;
+
+	for (i = 0; i < 600; ++i)
+		cl_git_pass(git_str_printf(&a, "run-%03d\n", i));
+	for (i = 599; i >= 0; --i)
+		cl_git_pass(git_str_printf(&b, "run-%03d\n", i));
+
+	cl_git_pass(git_hashsig_create(&forward, a.ptr, a.size, GIT_HASHSIG_NORMAL));
+	cl_git_pass(git_hashsig_create(&reverse, b.ptr, b.size, GIT_HASHSIG_NORMAL));
+
+	similarity = git_hashsig_compare(forward, reverse);
+	cl_assert_equal_i(100, similarity);
+
+	git_hashsig_free(forward);
+	git_hashsig_free(reverse);
+	git_str_dispose(&a);
+	git_str_dispose(&b);
+}

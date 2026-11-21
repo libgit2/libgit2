@@ -119,10 +119,9 @@ static void hashsig_heap_insert(hashsig_heap *h, hashsig_t val)
 		hashsig_heap_up(h, h->size - 1);
 	}
 
-	/* if heap is full, pop top if new element should replace it */
+	/* if heap is full, replace top if new element should replace it */
 	else if (h->cmp(&val, &h->values[0], NULL) > 0) {
-		h->size--;
-		h->values[0] = h->values[h->size];
+		h->values[0] = val;
 		hashsig_heap_down(h, 0);
 	}
 
