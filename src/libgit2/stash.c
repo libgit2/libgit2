@@ -275,7 +275,7 @@ static int build_untracked_tree(
 	git_tree **tree_out,
 	git_repository *repo,
 	git_commit *i_commit,
-	uint32_t flags)
+	const git_stash_save_options *save_opts)
 {
 	git_index *i_index = NULL;
 	git_tree *i_tree = NULL;
@@ -288,16 +288,21 @@ static int build_untracked_tree(
 	if ((error = git_index_new_ext(&i_index, &index_opts)) < 0)
 		goto cleanup;
 
-	if (flags & GIT_STASH_INCLUDE_UNTRACKED) {
+	if (save_opts->flags & GIT_STASH_INCLUDE_UNTRACKED) {
 		opts.flags |= GIT_DIFF_INCLUDE_UNTRACKED |
 			GIT_DIFF_RECURSE_UNTRACKED_DIRS;
 		data.include_untracked = true;
 	}
 
-	if (flags & GIT_STASH_INCLUDE_IGNORED) {
+	if (save_opts->flags & GIT_STASH_INCLUDE_IGNORED) {
 		opts.flags |= GIT_DIFF_INCLUDE_IGNORED |
 			GIT_DIFF_RECURSE_IGNORED_DIRS;
 		data.include_ignored = true;
+	}
+
+	if (save_opts->paths.count > 0) {
+		opts.pathspec = save_opts->paths;
+		opts.flags |= GIT_DIFF_DISABLE_PATHSPEC_MATCH;
 	}
 
 	if ((error = git_commit_tree(&i_tree, i_commit)) < 0)
@@ -321,17 +326,16 @@ cleanup:
 static int commit_untracked(
 	git_commit **u_commit,
 	git_repository *repo,
-	const git_signature *stasher,
 	const char *message,
 	git_commit *i_commit,
-	uint32_t flags)
+	const git_stash_save_options *save_opts)
 {
 	git_tree *u_tree = NULL;
 	git_oid u_commit_oid;
 	git_str msg = GIT_STR_INIT;
 	int error;
 
-	if ((error = build_untracked_tree(&u_tree, repo, i_commit, flags)) < 0)
+	if ((error = build_untracked_tree(&u_tree, repo, i_commit, save_opts)) < 0)
 		goto cleanup;
 
 	if ((error = git_str_printf(&msg, "untracked files on %s\n", message)) < 0)
@@ -341,8 +345,8 @@ static int commit_untracked(
 		&u_commit_oid,
 		repo,
 		NULL,
-		stasher,
-		stasher,
+		save_opts->stasher,
+		save_opts->stasher,
 		NULL,
 		git_str_cstr(&msg),
 		u_tree,
@@ -377,41 +381,44 @@ static git_diff_delta *stash_delta_merge(
 	return git_diff__merge_like_cgit(a, b, pool);
 }
 
-static int build_workdir_tree(
-	git_tree **tree_out,
+static int diff_index_and_workdir(
+	git_diff **head_to_idx,
+	git_diff **idx_to_wd,
 	git_repository *repo,
-	git_index *i_index,
+	git_index *index,
 	git_commit *b_commit)
 {
 	git_tree *b_tree = NULL;
-	git_diff *diff = NULL, *idx_to_wd = NULL;
 	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
-	struct stash_update_rules data = {0};
 	int error;
 
 	opts.flags = GIT_DIFF_IGNORE_SUBMODULES | GIT_DIFF_INCLUDE_UNTRACKED;
 
 	if ((error = git_commit_tree(&b_tree, b_commit)) < 0)
-		goto cleanup;
+		return error;
 
-	if ((error = git_diff_tree_to_index(&diff, repo, b_tree, i_index, &opts)) < 0 ||
-		(error = git_diff_index_to_workdir(&idx_to_wd, repo, i_index, &opts)) < 0 ||
-		(error = git_diff__merge(diff, idx_to_wd, stash_delta_merge)) < 0)
-		goto cleanup;
+	if ((error = git_diff_tree_to_index(head_to_idx, repo, b_tree, index, &opts)) == 0)
+		error = git_diff_index_to_workdir(idx_to_wd, repo, index, &opts);
+
+	git_tree_free(b_tree);
+	return error;
+}
+
+static int build_workdir_tree(
+	git_tree **tree_out,
+	git_repository *repo,
+	git_index *i_index,
+	const git_diff *diff)
+{
+	struct stash_update_rules data = {0};
+	int error;
 
 	data.include_changed = true;
 
 	if ((error = stash_update_index_from_diff(repo, i_index, diff, &data)) < 0)
-		goto cleanup;
+		return error;
 
-	error = build_tree_from_index(tree_out, repo, i_index);
-
-cleanup:
-	git_diff_free(idx_to_wd);
-	git_diff_free(diff);
-	git_tree_free(b_tree);
-
-	return error;
+	return build_tree_from_index(tree_out, repo, i_index);
 }
 
 static int build_stash_commit_from_tree(
@@ -481,22 +488,24 @@ static int commit_worktree(
 	const char *message,
 	git_commit *i_commit,
 	git_commit *b_commit,
-	git_commit *u_commit)
+	git_commit *u_commit,
+	const git_diff *diff)
 {
 	git_index *i_index = NULL, *r_index = NULL;
 	git_tree *w_tree = NULL;
 	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	int error = 0, ignorecase;
 
-	if ((error = git_repository_index(&r_index, repo) < 0) ||
+	if ((error = git_repository_index(&r_index, repo)) < 0 ||
 	    (error = git_index_new_ext(&i_index, &index_opts)) < 0 ||
-	    (error = git_index__fill(i_index, &r_index->entries) < 0) ||
+	    (error = git_index__fill(i_index, &r_index->entries)) < 0 ||
+	    (error = git_tree_cache_dup(&i_index->tree, r_index->tree, &i_index->tree_pool)) < 0 ||
 	    (error = git_repository__configmap_lookup(&ignorecase, repo, GIT_CONFIGMAP_IGNORECASE)) < 0)
 		goto cleanup;
 
 	git_index__set_ignore_case(i_index, ignorecase);
 
-	if ((error = build_workdir_tree(&w_tree, repo, i_index, b_commit)) < 0)
+	if ((error = build_workdir_tree(&w_tree, repo, i_index, diff)) < 0)
 		goto cleanup;
 
 	error = build_stash_commit_from_tree(
@@ -574,26 +583,53 @@ static int is_dirty_cb(const char *path, unsigned int status, void *payload)
 	return GIT_PASSTHROUGH;
 }
 
-static int ensure_there_are_changes_to_stash(git_repository *repo, uint32_t flags)
+static bool workdir_has_changes_to_stash(const git_diff *diff, bool include_untracked)
 {
-	int error;
-	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	size_t d, max_d = git_diff_num_deltas(diff);
 
-	opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
-	opts.flags = GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
+	for (d = 0; d < max_d; d++) {
+		const git_diff_delta *delta = git_diff_get_delta(diff, d);
 
-	if (flags & GIT_STASH_INCLUDE_UNTRACKED)
-		opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED |
-			GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+		if (delta->status != GIT_DELTA_UNTRACKED || include_untracked)
+			return true;
+	}
 
-	if (flags & GIT_STASH_INCLUDE_IGNORED)
+	return false;
+}
+
+static int ensure_there_are_changes_to_stash(
+	git_repository *repo,
+	const git_diff *head_to_idx,
+	const git_diff *idx_to_wd,
+	uint32_t flags)
+{
+	int error = 0;
+
+	/* The incoming diffs don't include ignored files, so fall back to status
+	 * iteration to include them. This is essentially creating new diffs,
+	 * so we only want to do this when it's strictly needed.
+	 */
+	if (flags & GIT_STASH_INCLUDE_IGNORED) {
+		git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+
+		opts.show  = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+		opts.flags = GIT_STATUS_OPT_EXCLUDE_SUBMODULES;
+
 		opts.flags |= GIT_STATUS_OPT_INCLUDE_IGNORED |
 			GIT_STATUS_OPT_RECURSE_IGNORED_DIRS;
 
-	error = git_status_foreach_ext(repo, &opts, is_dirty_cb, NULL);
+		if (flags & GIT_STASH_INCLUDE_UNTRACKED)
+			opts.flags |= GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+				GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
 
-	if (error == GIT_PASSTHROUGH)
+		error = git_status_foreach_ext(repo, &opts, is_dirty_cb, NULL);
+
+		if (error == GIT_PASSTHROUGH)
+			return 0;
+	} else if (git_diff_num_deltas(head_to_idx) > 0 ||
+	           workdir_has_changes_to_stash(idx_to_wd, flags & GIT_STASH_INCLUDE_UNTRACKED)) {
 		return 0;
+	}
 
 	if (!error)
 		return create_error(GIT_ENOTFOUND, "there is nothing to stash.");
@@ -649,7 +685,11 @@ static int ensure_there_are_changes_to_stash_paths(
 	return error;
 }
 
-static int reset_index_and_workdir(git_repository *repo, git_commit *commit, uint32_t flags)
+static int reset_index_and_workdir(
+	git_repository *repo,
+	git_commit *commit,
+	const git_strarray *paths,
+	uint32_t flags)
 {
 	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
 
@@ -658,8 +698,61 @@ static int reset_index_and_workdir(git_repository *repo, git_commit *commit, uin
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_UNTRACKED;
 	if (flags & GIT_STASH_INCLUDE_IGNORED)
 		opts.checkout_strategy |= GIT_CHECKOUT_REMOVE_IGNORED;
+	if (paths && paths->count > 0) {
+		opts.paths = *paths;
+		opts.checkout_strategy |= GIT_CHECKOUT_DISABLE_PATHSPEC_MATCH;
+	}
 
 	return git_checkout_tree(repo, (git_object *)commit, &opts);
+}
+
+static int paths_to_reset(git_vector *out, const git_diff *diff)
+{
+	int error = 0;
+	size_t d, max_d;
+
+	GIT_ASSERT(out);
+	GIT_ASSERT(diff);
+
+	max_d = git_diff_num_deltas(diff);
+
+	for (d = 0; !error && d < max_d; ++d) {
+		const git_diff_delta *delta = git_diff_get_delta(diff, d);
+
+		if (delta->status != GIT_DELTA_UNTRACKED &&
+		    delta->status != GIT_DELTA_IGNORED) {
+			error = git_vector_insert(out, (char *)delta->new_file.path);
+		}
+	}
+
+	return error;
+}
+
+static int reset_stashed_changes(
+	git_repository *repo,
+	git_commit *commit,
+	const git_stash_save_options *save_opts,
+	const git_diff *diff)
+{
+	git_vector paths = GIT_VECTOR_INIT;
+	git_strarray reset_paths;
+	int error = 0;
+
+	if (save_opts->paths.count > 0) {
+		return reset_index_and_workdir(repo,
+		                               commit,
+		                               &save_opts->paths,
+		                               save_opts->flags);
+	} else if (save_opts->flags & (GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED)) {
+		return reset_index_and_workdir(repo, commit, NULL, save_opts->flags);
+	} else if ((error = paths_to_reset(&paths, diff)) == 0) {
+		reset_paths.count = paths.length;
+		reset_paths.strings = (char **)paths.contents;
+		error = reset_index_and_workdir(repo, commit, &reset_paths, save_opts->flags);
+	}
+
+	git_vector_dispose(&paths);
+	return error;
 }
 
 int git_stash_save(
@@ -690,6 +783,7 @@ int git_stash_save_with_opts(
 	git_str msg = GIT_STR_INIT;
 	git_tree *tree = NULL;
 	git_reference *head = NULL;
+	git_diff *head_to_idx = NULL, *idx_to_wd = NULL;
 	git_index_options index_opts = GIT_INDEX_OPTIONS_FOR_REPO(repo);
 	bool has_paths = false;
 
@@ -707,15 +801,18 @@ int git_stash_save_with_opts(
 	if ((error = retrieve_base_commit_and_message(&b_commit, &msg, repo)) < 0)
 		goto cleanup;
 
+	if ((error = git_repository_index(&index, repo)) < 0 ||
+	    (error = git_index_read_safely(index)) < 0)
+		goto cleanup;
+
 	if (!has_paths &&
-		  (error = ensure_there_are_changes_to_stash(repo, opts->flags)) < 0)
+		  ((error = diff_index_and_workdir(&head_to_idx, &idx_to_wd, repo, index, b_commit)) < 0 ||
+		   (error = ensure_there_are_changes_to_stash(repo, head_to_idx, idx_to_wd, opts->flags)) < 0 ||
+		   (error = git_diff__merge(head_to_idx, idx_to_wd, stash_delta_merge)) < 0))
 		goto cleanup;
 	else if (has_paths &&
 		  (error = ensure_there_are_changes_to_stash_paths(
 			  repo, opts->flags, &opts->paths)) < 0)
-		goto cleanup;
-
-	if ((error = git_repository_index(&index, repo)) < 0)
 		goto cleanup;
 
 	if ((error = commit_index(&i_commit, repo, index, opts->stasher,
@@ -723,8 +820,8 @@ int git_stash_save_with_opts(
 		goto cleanup;
 
 	if ((opts->flags & (GIT_STASH_INCLUDE_UNTRACKED | GIT_STASH_INCLUDE_IGNORED)) &&
-	    (error = commit_untracked(&u_commit, repo, opts->stasher,
-			  git_str_cstr(&msg), i_commit, opts->flags)) < 0)
+	    (error = commit_untracked(&u_commit, repo,
+			  git_str_cstr(&msg), i_commit, opts)) < 0)
 		goto cleanup;
 
 	if ((error = prepare_worktree_commit_message(&msg, opts->message)) < 0)
@@ -732,7 +829,7 @@ int git_stash_save_with_opts(
 
 	if (!has_paths) {
 		if ((error = commit_worktree(out, repo, opts->stasher, git_str_cstr(&msg),
-					     i_commit, b_commit, u_commit)) < 0)
+					     i_commit, b_commit, u_commit, head_to_idx)) < 0)
 			goto cleanup;
 	} else {
 		if ((error = git_index_new_ext(&paths_index, &index_opts)) < 0 ||
@@ -751,8 +848,10 @@ int git_stash_save_with_opts(
 		goto cleanup;
 
 	if (!(opts->flags & GIT_STASH_KEEP_ALL) &&
-	    (error = reset_index_and_workdir(repo,
-		  (opts->flags & GIT_STASH_KEEP_INDEX) ? i_commit : b_commit,opts->flags)) < 0)
+	    (error = reset_stashed_changes(repo,
+		  (opts->flags & GIT_STASH_KEEP_INDEX) ? i_commit : b_commit,
+		  opts,
+		  head_to_idx)) < 0)
 		goto cleanup;
 
 cleanup:
@@ -762,6 +861,8 @@ cleanup:
 	git_commit_free(u_commit);
 	git_tree_free(tree);
 	git_reference_free(head);
+	git_diff_free(idx_to_wd);
+	git_diff_free(head_to_idx);
 	git_index_free(index);
 	git_index_free(paths_index);
 

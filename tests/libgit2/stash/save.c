@@ -342,6 +342,61 @@ void test_stash_save__cannot_stash_when_there_are_no_local_change(void)
 		git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
 }
 
+/*
+ * Leaves the workdir with no tracked changes and no untracked files;
+ * only 'just.ignore' remains, which is ignored.
+ */
+static void commit_tracked_changes_and_remove_untracked(void)
+{
+	git_index *index;
+
+	cl_git_pass(git_repository_index(&index, repo));
+	cl_git_pass(git_index_add_bypath(index, "what"));
+	cl_git_pass(git_index_add_bypath(index, "where"));
+	cl_git_pass(git_index_add_bypath(index, "who"));
+	cl_repo_commit_from_index(NULL, repo, signature, 0, "Initial commit");
+	git_index_free(index);
+
+	cl_must_pass(p_unlink("stash/when"));
+}
+
+void test_stash_save__can_stash_only_ignored_files(void)
+{
+	commit_tracked_changes_and_remove_untracked();
+
+	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_IGNORED));
+
+	assert_blob_oid("stash^3:just.ignore", "78925fb1236b98b37a35e9723033e627f97aa88b");
+	cl_assert_equal_b(false, git_fs_path_exists("stash/just.ignore"));
+}
+
+void test_stash_save__cannot_stash_untracked_dir_holding_only_ignored_files(void)
+{
+	commit_tracked_changes_and_remove_untracked();
+
+	cl_must_pass(p_mkdir("stash/dir", 0777));
+	cl_git_mkfile("stash/dir/also.ignore", "me too\n");
+
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+}
+
+void test_stash_save__can_stash_untracked_file_in_untracked_dir(void)
+{
+	commit_tracked_changes_and_remove_untracked();
+
+	cl_must_pass(p_mkdir("stash/dir", 0777));
+	cl_git_mkfile("stash/dir/file", "now\n");
+
+	cl_assert_equal_i(GIT_ENOTFOUND,
+		git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_DEFAULT));
+
+	cl_git_pass(git_stash_save(&stash_tip_oid, repo, signature, NULL, GIT_STASH_INCLUDE_UNTRACKED));
+
+	assert_blob_oid("stash^3:dir/file", "b6ed15e81e2593d7bb6265eb4a991d29dc3e628b");
+	cl_assert_equal_b(false, git_fs_path_exists("stash/dir/file"));
+}
+
 void test_stash_save__can_stage_normal_then_stage_untracked(void)
 {
 	/*
@@ -524,4 +579,46 @@ void test_stash_save__option_paths(void)
 	assert_blob_oid("refs/stash:why", NULL);
 	assert_blob_oid("refs/stash:.gitignore", "ac4d88de61733173d9959e4b77c69b9f17a00980");
 	assert_blob_oid("refs/stash:just.ignore", NULL);
+}
+
+void test_stash_save__option_paths_leaves_other_changes_in_place(void)
+{
+	git_stash_save_options options = GIT_STASH_SAVE_OPTIONS_INIT;
+	char *paths[1] = { "who" };
+
+	options.paths = (git_strarray){ paths, 1 };
+	options.stasher = signature;
+
+	cl_git_pass(git_stash_save_with_opts(&stash_tip_oid, repo, &options));
+
+	/* Only the stashed path is reset */
+	assert_status(repo, "who", GIT_STATUS_CURRENT);
+
+	/* Changes to paths that were not stashed are kept in the index and workdir */
+	assert_status(repo, "what", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "how", GIT_STATUS_INDEX_MODIFIED);
+	assert_status(repo, "why", GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "where", GIT_STATUS_WT_MODIFIED | GIT_STATUS_INDEX_NEW);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	assert_status(repo, "just.ignore", GIT_STATUS_IGNORED);
+
+	cl_assert_equal_file("see you later\n", 0, "stash/what");
+	cl_assert_equal_file("....\n", 0, "stash/where");
+}
+
+void test_stash_save__option_paths_only_stashes_untracked_files_in_paths(void)
+{
+	git_stash_save_options options = GIT_STASH_SAVE_OPTIONS_INIT;
+	char *paths[1] = { "who" };
+
+	options.paths = (git_strarray){ paths, 1 };
+	options.stasher = signature;
+	options.flags = GIT_STASH_INCLUDE_UNTRACKED;
+
+	cl_git_pass(git_stash_save_with_opts(&stash_tip_oid, repo, &options));
+
+	/* 'when' is untracked but outside the paths, so it is neither stashed nor removed */
+	assert_blob_oid("refs/stash^3:when", NULL);
+	assert_status(repo, "when", GIT_STATUS_WT_NEW);
+	cl_assert_equal_file("now\n", 0, "stash/when");
 }
