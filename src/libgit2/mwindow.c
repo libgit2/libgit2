@@ -59,7 +59,7 @@ int git_mwindow_get_pack(
 	const char *path,
 	git_oid_t oid_type)
 {
-	struct git_pack_file *pack;
+	struct git_pack_file *pack, *existing;
 	char *packname;
 	int error;
 
@@ -68,6 +68,7 @@ int git_mwindow_get_pack(
 
 	if (git_mutex_lock(&git_mwindow__mutex) < 0) {
 		git_error_set(GIT_ERROR_OS, "failed to lock mwindow mutex");
+		git__free(packname);
 		return -1;
 	}
 
@@ -79,13 +80,37 @@ int git_mwindow_get_pack(
 		git_mutex_unlock(&git_mwindow__mutex);
 		*out = pack;
 		return 0;
-	} else if (error != GIT_ENOTFOUND) {
-		return error;
 	}
 
+	git_mutex_unlock(&git_mwindow__mutex);
+
+	if (error != GIT_ENOTFOUND)
+		return error;
+
 	/* If we didn't find it, we need to create it */
-	if ((error = git_packfile_alloc(&pack, path, oid_type)) < 0) {
+	if ((error = git_packfile_alloc(&pack, path, oid_type)) < 0)
+		return error;
+
+	if (git_mutex_lock(&git_mwindow__mutex) < 0) {
+		git_error_set(GIT_ERROR_OS, "failed to lock mwindow mutex");
+		git_packfile_free(pack, false);
+		return -1;
+	}
+
+	/*
+	 * Another thread may have inserted the same pack into the cache while we
+	 * were allocating without holding the mutex.
+	 */
+	error = git_mwindow_packmap_get(&existing, &git_mwindow__pack_cache, pack->pack_name);
+	if (error == 0) {
+		git_atomic32_inc(&existing->refcount);
 		git_mutex_unlock(&git_mwindow__mutex);
+		git_packfile_free(pack, false);
+		*out = existing;
+		return 0;
+	} else if (error != GIT_ENOTFOUND) {
+		git_mutex_unlock(&git_mwindow__mutex);
+		git_packfile_free(pack, false);
 		return error;
 	}
 
@@ -325,7 +350,8 @@ static int git_mwindow_find_lru_file_locked(git_mwindow_file **out)
 }
 
 /* This gets called under lock from git_mwindow_open */
-static git_mwindow *new_window_locked(
+static int setup_new_window_locked(
+	git_mwindow *w,
 	git_file fd,
 	off64_t size,
 	off64_t offset)
@@ -333,12 +359,6 @@ static git_mwindow *new_window_locked(
 	git_mwindow_ctl *ctl = &git_mwindow__mem_ctl;
 	size_t walign = git_mwindow__window_size / 2;
 	off64_t len;
-	git_mwindow *w;
-
-	w = git__calloc(1, sizeof(*w));
-
-	if (w == NULL)
-		return NULL;
 
 	w->offset = (offset / walign) * walign;
 
@@ -367,8 +387,8 @@ static git_mwindow *new_window_locked(
 			/* nop */;
 
 		if (git_futils_mmap_ro(&w->window_map, fd, w->offset, (size_t)len) < 0) {
-			git__free(w);
-			return NULL;
+			ctl->mapped -= (size_t)len;
+			return -1;
 		}
 	}
 
@@ -381,7 +401,7 @@ static git_mwindow *new_window_locked(
 	if (ctl->open_windows > ctl->peak_open_windows)
 		ctl->peak_open_windows = ctl->open_windows;
 
-	return w;
+	return 0;
 }
 
 /*
@@ -396,7 +416,7 @@ unsigned char *git_mwindow_open(
 	unsigned int *left)
 {
 	git_mwindow_ctl *ctl = &git_mwindow__mem_ctl;
-	git_mwindow *w = *cursor;
+	git_mwindow *w = *cursor, *target_w = NULL;
 
 	if (git_mutex_lock(&git_mwindow__mutex)) {
 		git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
@@ -408,8 +428,8 @@ unsigned char *git_mwindow_open(
 			w->inuse_cnt--;
 		}
 
-		for (w = mwf->windows; w; w = w->next) {
-			if (git_mwindow_contains(w, offset, extra))
+		for (target_w = mwf->windows; target_w; target_w = target_w->next) {
+			if (git_mwindow_contains(target_w, offset, extra))
 				break;
 		}
 
@@ -417,14 +437,39 @@ unsigned char *git_mwindow_open(
 		 * If there isn't a suitable window, we need to create a new
 		 * one.
 		 */
-		if (!w) {
-			w = new_window_locked(mwf->fd, mwf->size, offset);
-			if (w == NULL) {
-				git_mutex_unlock(&git_mwindow__mutex);
+		if (!target_w) {
+			git_mutex_unlock(&git_mwindow__mutex);
+
+			w = git__calloc(1, sizeof(*w));
+			if (w == NULL)
+				return NULL;
+
+			if (git_mutex_lock(&git_mwindow__mutex)) {
+				git_error_set(GIT_ERROR_THREAD, "unable to lock mwindow mutex");
+				git__free(w);
 				return NULL;
 			}
-			w->next = mwf->windows;
-			mwf->windows = w;
+
+			/* Check again in case another thread created it */
+			for (target_w = mwf->windows; target_w; target_w = target_w->next) {
+				if (git_mwindow_contains(target_w, offset, extra))
+					break;
+			}
+
+			if (target_w) {
+				git__free(w);
+				w = target_w;
+			} else {
+				if (setup_new_window_locked(w, mwf->fd, mwf->size, offset) < 0) {
+					git_mutex_unlock(&git_mwindow__mutex);
+					git__free(w);
+					return NULL;
+				}
+				w->next = mwf->windows;
+				mwf->windows = w;
+			}
+		} else {
+			w = target_w;
 		}
 	}
 
