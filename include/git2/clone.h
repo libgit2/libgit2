@@ -137,7 +137,10 @@ typedef struct git_clone_options {
 	git_clone_local_t local;
 
 	/**
-	 * The name of the branch to checkout. NULL means use the
+	 * The name of the branch or tag to checkout. Branches are preferred
+	 * when a branch and tag have the same name. Full references under
+	 * refs/heads/ or refs/tags/ may be used to select one explicitly.
+	 * A tag is checked out with a detached HEAD. NULL means use the
 	 * remote's default branch.
 	 */
 	const char *checkout_branch;

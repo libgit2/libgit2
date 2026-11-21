@@ -263,7 +263,7 @@ static int update_head_to_branch(
 		const char *branch,
 		const char *reflog_message)
 {
-	int retcode;
+	int retcode, branch_only = 0;
 	git_str remote_branch_name = GIT_STR_INIT;
 	git_reference *remote_ref = NULL;
 	git_str default_branch = GIT_STR_INIT;
@@ -271,15 +271,32 @@ static int update_head_to_branch(
 	GIT_ASSERT_ARG(remote);
 	GIT_ASSERT_ARG(branch);
 
-	if ((retcode = git_str_printf(&remote_branch_name, GIT_REFS_REMOTES_DIR "%s/%s",
-		git_remote_name(remote), branch)) < 0 )
-		goto cleanup;
+	if (!git__prefixcmp(branch, GIT_REFS_HEADS_DIR)) {
+		branch += strlen(GIT_REFS_HEADS_DIR);
+		branch_only = 1;
+	}
 
-	if ((retcode = git_reference_lookup(&remote_ref, repo, git_str_cstr(&remote_branch_name))) < 0)
-		goto cleanup;
+	if (!branch_only && !git__prefixcmp(branch, GIT_REFS_TAGS_DIR)) {
+		retcode = git_repository_set_head(repo, branch);
+	} else {
+		if ((retcode = git_str_printf(&remote_branch_name, GIT_REFS_REMOTES_DIR "%s/%s",
+			git_remote_name(remote), branch)) < 0)
+			goto cleanup;
 
-	if ((retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref), branch,
-			reflog_message)) < 0)
+		retcode = git_reference_lookup(&remote_ref, repo, git_str_cstr(&remote_branch_name));
+		if (retcode == GIT_ENOTFOUND && !branch_only) {
+			git_error_clear();
+			git_str_clear(&remote_branch_name);
+			if ((retcode = git_str_printf(&remote_branch_name, GIT_REFS_TAGS_DIR "%s", branch)) < 0)
+				goto cleanup;
+			retcode = git_repository_set_head(repo, git_str_cstr(&remote_branch_name));
+		} else if (!retcode) {
+			retcode = update_head_to_new_branch(repo, git_reference_target(remote_ref), branch,
+				reflog_message);
+		}
+	}
+
+	if (retcode < 0)
 		goto cleanup;
 
 	retcode = git_remote__default_branch(&default_branch, remote);
