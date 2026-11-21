@@ -573,3 +573,253 @@ void test_diff_tree__diff_tree_with_empty_dir_entry_succeeds(void)
 	git_treebuilder_free(builder);
 	git_buf_dispose(&patch);
 }
+
+static git_tree *create_tree(const char **paths_and_contents)
+{
+	git_tree_update updates[8];
+	git_tree *tree;
+	git_oid id;
+	size_t i;
+
+	for (i = 0; paths_and_contents[i * 2]; i++) {
+		const char *content = paths_and_contents[i * 2 + 1];
+
+		cl_assert(i < ARRAY_SIZE(updates));
+
+		memset(&updates[i], 0, sizeof(git_tree_update));
+		updates[i].action = GIT_TREE_UPDATE_UPSERT;
+		updates[i].filemode = GIT_FILEMODE_BLOB;
+		updates[i].path = paths_and_contents[i * 2];
+		cl_git_pass(git_blob_create_from_buffer(&updates[i].id,
+			g_repo, content, strlen(content)));
+	}
+
+	cl_git_pass(git_tree_create_updated(&id, g_repo, NULL, i, updates));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
+
+	return tree;
+}
+
+/* entries must be added in git order */
+static void add_raw_tree_entry(
+	git_str *raw, const char *mode, const char *name, const git_oid *id)
+{
+	git_str_printf(raw, "%s %s", mode, name);
+	git_str_putc(raw, '\0');
+	git_str_put(raw, (const char *)id->id, GIT_OID_SHA1_SIZE);
+	cl_assert(!git_str_oom(raw));
+}
+
+static git_tree *write_raw_tree(git_str *raw)
+{
+	git_odb *odb;
+	git_tree *tree;
+	git_oid id;
+
+	cl_git_pass(git_repository_odb(&odb, g_repo));
+	cl_git_pass(git_odb_write(&id, odb, raw->ptr, raw->size, GIT_OBJECT_TREE));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &id));
+
+	git_odb_free(odb);
+	git_str_clear(raw);
+
+	return tree;
+}
+
+void test_diff_tree__does_not_load_unmodified_subtrees(void)
+{
+	git_str raw = GIT_STR_INIT;
+	git_oid missing, one, two;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	cl_git_pass(git_blob_create_from_buffer(&one, g_repo, "one\n", 4));
+	cl_git_pass(git_blob_create_from_buffer(&two, g_repo, "two\n", 4));
+
+	/* both trees point to the same subtree, which is not in the odb */
+	git_oid_cpy(&missing, &one);
+	missing.id[0] ^= 0xff;
+
+	add_raw_tree_entry(&raw, "100644", "file", &one);
+	add_raw_tree_entry(&raw, "40000", "missing", &missing);
+	a = write_raw_tree(&raw);
+
+	add_raw_tree_entry(&raw, "100644", "file", &two);
+	add_raw_tree_entry(&raw, "40000", "missing", &missing);
+	b = write_raw_tree(&raw);
+
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, NULL));
+
+	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, git_diff_get_delta(diff, 0)->status);
+	cl_assert_equal_s("file", git_diff_get_delta(diff, 0)->new_file.path);
+
+	git_diff_free(diff);
+	diff = NULL;
+
+	/* unmodified entries can only be listed by reading the subtree */
+	opts.flags = GIT_DIFF_INCLUDE_UNMODIFIED;
+	cl_git_fail(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+
+	git_str_dispose(&raw);
+}
+
+static int notify_only_files_cb(
+	const git_diff *diff_so_far,
+	const git_diff_delta *delta,
+	const char *matched_pathspec,
+	void *payload)
+{
+	size_t *calls = payload;
+
+	GIT_UNUSED(diff_so_far);
+	GIT_UNUSED(matched_pathspec);
+
+	cl_assert(!S_ISDIR(delta->old_file.mode));
+	cl_assert(!S_ISDIR(delta->new_file.mode));
+
+	(*calls)++;
+	return 0;
+}
+
+void test_diff_tree__notify_cb_is_not_called_for_trees(void)
+{
+	const char *old_paths[] = {
+		"dir/a", "one\n", "dir/b", "two\n", "same/c", "three\n", NULL
+	};
+	const char *new_paths[] = {
+		"dir/a", "uno\n", "dir/b", "dos\n", "same/c", "three\n", NULL
+	};
+	size_t calls = 0;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	a = create_tree(old_paths);
+	b = create_tree(new_paths);
+
+	opts.notify_cb = notify_only_files_cb;
+	opts.payload = &calls;
+
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+
+	cl_assert_equal_i(2, calls);
+	cl_assert_equal_i(2, git_diff_num_deltas(diff));
+	cl_assert_equal_s("dir/a", git_diff_get_delta(diff, 0)->new_file.path);
+	cl_assert_equal_s("dir/b", git_diff_get_delta(diff, 1)->new_file.path);
+}
+
+void test_diff_tree__ignore_case_with_trees_that_differ_in_case(void)
+{
+	const char *old_paths[] = {
+		"FOO/a", "same\n", "foo/b", "old\n", NULL
+	};
+	const char *new_paths[] = {
+		"FOO/a", "same\n", "foo/b", "new\n", NULL
+	};
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	a = create_tree(old_paths);
+	b = create_tree(new_paths);
+
+	opts.flags = GIT_DIFF_IGNORE_CASE;
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+
+	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, git_diff_get_delta(diff, 0)->status);
+	cl_assert_equal_s("foo/b", git_diff_get_delta(diff, 0)->new_file.path);
+}
+
+void test_diff_tree__ignore_case_with_casechange_of_tree(void)
+{
+	const char *old_paths[] = { "Dir/a", "content\n", NULL };
+	const char *new_paths[] = { "dir/a", "content\n", NULL };
+	const git_diff_delta *delta;
+	size_t i;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	a = create_tree(old_paths);
+	b = create_tree(new_paths);
+
+	opts.flags = GIT_DIFF_IGNORE_CASE | GIT_DIFF_INCLUDE_CASECHANGE;
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+
+	cl_assert_equal_i(2, git_diff_num_deltas(diff));
+
+	for (i = 0; i < git_diff_num_deltas(diff); i++) {
+		delta = git_diff_get_delta(diff, i);
+
+		if (delta->status == GIT_DELTA_DELETED)
+			cl_assert_equal_s("Dir/a", delta->old_file.path);
+		else if (delta->status == GIT_DELTA_ADDED)
+			cl_assert_equal_s("dir/a", delta->new_file.path);
+		else
+			cl_fail("unexpected delta status");
+	}
+}
+
+void test_diff_tree__tree_with_nonstandard_mode(void)
+{
+	const char *old_paths[] = { "file", "one\n", NULL };
+	const char *new_paths[] = { "file", "two\n", NULL };
+	git_str raw = GIT_STR_INIT;
+	git_tree *old_dir, *new_dir;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	old_dir = create_tree(old_paths);
+	new_dir = create_tree(new_paths);
+
+	add_raw_tree_entry(&raw, "40755", "dir", git_tree_id(old_dir));
+	a = write_raw_tree(&raw);
+
+	add_raw_tree_entry(&raw, "40755", "dir", git_tree_id(new_dir));
+	b = write_raw_tree(&raw);
+
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+
+	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+	cl_assert_equal_i(GIT_DELTA_MODIFIED, git_diff_get_delta(diff, 0)->status);
+	cl_assert_equal_s("dir/file", git_diff_get_delta(diff, 0)->new_file.path);
+
+	git_tree_free(old_dir);
+	git_tree_free(new_dir);
+	git_str_dispose(&raw);
+}
+
+void test_diff_tree__typechange_trees_with_empty_tree_in_between(void)
+{
+	const char *subdir_paths[] = { "bar", "bar\n", NULL };
+	git_str raw = GIT_STR_INIT;
+	git_tree *empty, *subdir;
+	git_oid blob;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+
+	empty = write_raw_tree(&raw);
+	subdir = create_tree(subdir_paths);
+	cl_git_pass(git_blob_create_from_buffer(&blob, g_repo, "foo\n", 4));
+
+	/* `foo.txt/` sorts between `foo` and `foo/` */
+	add_raw_tree_entry(&raw, "100644", "foo", &blob);
+	add_raw_tree_entry(&raw, "40000", "foo.txt", git_tree_id(empty));
+	a = write_raw_tree(&raw);
+
+	add_raw_tree_entry(&raw, "40000", "foo.txt", git_tree_id(empty));
+	add_raw_tree_entry(&raw, "40000", "foo", git_tree_id(subdir));
+	b = write_raw_tree(&raw);
+
+	opts.flags = GIT_DIFF_INCLUDE_TYPECHANGE_TREES;
+	cl_git_pass(git_diff_tree_to_tree(&diff, g_repo, a, b, &opts));
+
+	cl_assert_equal_i(2, git_diff_num_deltas(diff));
+	cl_assert_equal_i(GIT_DELTA_TYPECHANGE, git_diff_get_delta(diff, 0)->status);
+	cl_assert_equal_s("foo", git_diff_get_delta(diff, 0)->old_file.path);
+	cl_assert_equal_i(GIT_DELTA_ADDED, git_diff_get_delta(diff, 1)->status);
+	cl_assert_equal_s("foo/bar", git_diff_get_delta(diff, 1)->new_file.path);
+
+	git_tree_free(empty);
+	git_tree_free(subdir);
+	git_str_dispose(&raw);
+}
