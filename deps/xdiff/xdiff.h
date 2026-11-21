@@ -45,7 +45,7 @@ extern "C" {
 
 #define XDF_PATIENCE_DIFF (1 << 14)
 #define XDF_HISTOGRAM_DIFF (1 << 15)
-#define XDF_DIFF_ALGORITHM_MASK (XDF_PATIENCE_DIFF | XDF_HISTOGRAM_DIFF)
+#define XDF_DIFF_ALGORITHM_MASK (XDF_PATIENCE_DIFF | XDF_HISTOGRAM_DIFF | XDF_NEED_MINIMAL)
 #define XDF_DIFF_ALG(x) ((x) & XDF_DIFF_ALGORITHM_MASK)
 
 #define XDF_INDENT_HEURISTIC (1 << 23)
@@ -87,7 +87,7 @@ typedef struct s_xpparam {
 	xdl_regex_t **ignore_regex;
 	size_t ignore_regex_nr;
 
-	/* See Documentation/diff-options.txt. */
+	/* See Documentation/diff-options.adoc. */
 	char **anchors;
 	size_t anchors_nr;
 } xpparam_t;
