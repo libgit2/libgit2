@@ -2,6 +2,7 @@
 
 #include "path.h"
 #include "remote.h"
+#include "futils.h"
 
 static const char* tagger_name = "Vicent Marti";
 static const char* tagger_email = "vicent@github.com";
@@ -631,4 +632,196 @@ void test_network_fetchlocal__update_refs_is_preferred(void)
 	git_remote_free(remote);
 	git_repository_free(repo);
 #endif
+}
+
+static git_repository *setup_negative_fetch(
+	git_repository **repo, git_remote **remote)
+{
+	git_repository *source = cl_git_sandbox_init("testrepo.git");
+	git_reference *ref;
+	git_oid id;
+
+	cl_git_pass(git_reference_name_to_id(&id, source, "refs/heads/master"));
+	cl_git_pass(git_reference_create(&ref, source, "refs/heads/negative-private",
+		&id, false, NULL));
+	git_reference_free(ref);
+	cl_git_pass(git_reference_create(&ref, source, "refs/heads/negative-gone",
+		&id, false, NULL));
+	git_reference_free(ref);
+
+	cl_set_cleanup(&cleanup_local_repo, "negative-fetch");
+	cl_git_pass(git_repository_init(repo, "negative-fetch", true));
+	cl_git_pass(git_remote_create(remote, *repo, "origin",
+		cl_git_path_url(git_repository_path(source))));
+	return source;
+}
+
+static void fetch_excluding(
+	git_repository **repo, git_remote **remote, char *negative)
+{
+	char *strings[] = {
+		"+refs/heads/*:refs/remotes/origin/*",
+		negative,
+	};
+	git_strarray refspecs = { strings, ARRAY_SIZE(strings) };
+
+	setup_negative_fetch(repo, remote);
+	cl_git_pass(git_remote_fetch(*remote, &refspecs, NULL, NULL));
+}
+
+static void configure_negative_fetch(
+	git_repository *repo, git_remote **remote, const char *negative)
+{
+	cl_git_pass(git_remote_add_fetch(repo, "origin", negative));
+	git_remote_free(*remote);
+	cl_git_pass(git_remote_lookup(remote, repo, "origin"));
+}
+
+void test_network_fetchlocal__negative_refspec_does_not_create_reference(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+	git_oid id;
+
+	fetch_excluding(&repo, &remote, "^refs/heads/negative-private");
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_name_to_id(&id, repo,
+		"refs/remotes/origin/negative-private"));
+	assert_ref_exists(repo, "refs/remotes/origin/negative-gone");
+
+	git_remote_free(remote);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__negative_refspec_omits_fetchhead(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+	git_str path = GIT_STR_INIT, contents = GIT_STR_INIT;
+
+	fetch_excluding(&repo, &remote, "^refs/heads/negative-private");
+	cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "FETCH_HEAD"));
+	cl_git_pass(git_futils_readbuffer(&contents, path.ptr));
+	cl_assert(strstr(contents.ptr, "negative-private") == NULL);
+	cl_assert(strstr(contents.ptr, "negative-gone") != NULL);
+
+	git_str_dispose(&contents);
+	git_str_dispose(&path);
+	git_remote_free(remote);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__negative_wildcard_excludes_references(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+	git_oid id;
+
+	fetch_excluding(&repo, &remote, "^refs/heads/negative-*");
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_name_to_id(&id, repo,
+		"refs/remotes/origin/negative-private"));
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_name_to_id(&id, repo,
+		"refs/remotes/origin/negative-gone"));
+	assert_ref_exists(repo, "refs/remotes/origin/master");
+
+	git_remote_free(remote);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__negative_refspec_preserves_existing_reference(void)
+{
+	git_repository *repo, *source;
+	git_remote *remote;
+	git_reference *ref;
+	git_oid old, replacement, actual;
+
+	source = setup_negative_fetch(&repo, &remote);
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_git_pass(git_reference_name_to_id(&old, repo,
+		"refs/remotes/origin/negative-private"));
+	cl_git_pass(git_reference_name_to_id(&replacement, source, "refs/heads/haacked"));
+	cl_assert(!git_oid_equal(&old, &replacement));
+	cl_git_pass(git_reference_create(&ref, source, "refs/heads/negative-private",
+		&replacement, true, NULL));
+	git_reference_free(ref);
+
+	configure_negative_fetch(repo, &remote, "^refs/heads/negative-private");
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_git_pass(git_reference_name_to_id(&actual, repo,
+		"refs/remotes/origin/negative-private"));
+	cl_assert_equal_oid(&old, &actual);
+
+	git_remote_free(remote);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__negative_refspec_preserves_pruned_reference(void)
+{
+	git_repository *repo, *source;
+	git_remote *remote;
+	git_fetch_options opts = GIT_FETCH_OPTIONS_INIT;
+	git_oid id;
+
+	source = setup_negative_fetch(&repo, &remote);
+	cl_git_pass(git_remote_fetch(remote, NULL, NULL, NULL));
+	cl_git_pass(git_reference_remove(source, "refs/heads/negative-private"));
+	cl_git_pass(git_reference_remove(source, "refs/heads/negative-gone"));
+	configure_negative_fetch(repo, &remote, "^refs/heads/negative-private");
+
+	opts.prune = GIT_FETCH_PRUNE;
+	cl_git_pass(git_remote_fetch(remote, NULL, &opts, NULL));
+	assert_ref_exists(repo, "refs/remotes/origin/negative-private");
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_name_to_id(&id, repo,
+		"refs/remotes/origin/negative-gone"));
+
+	git_remote_free(remote);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__negative_passive_refspec_blocks_opportunistic_update(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+	git_oid id;
+	char *spec = "refs/heads/negative-private";
+	git_strarray refspecs = { &spec, 1 };
+
+	setup_negative_fetch(&repo, &remote);
+	configure_negative_fetch(repo, &remote, "^refs/heads/negative-private");
+	cl_git_pass(git_remote_fetch(remote, &refspecs, NULL, NULL));
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_name_to_id(&id, repo,
+		"refs/remotes/origin/negative-private"));
+
+	git_remote_free(remote);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__negative_active_refspec_blocks_opportunistic_update(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+	git_oid id;
+	char *strings[] = { "refs/heads/negative-private",
+		"refs/heads/negative-gone", "^refs/heads/negative-private" };
+	git_strarray refspecs = { strings, ARRAY_SIZE(strings) };
+
+	setup_negative_fetch(&repo, &remote);
+	cl_git_pass(git_remote_fetch(remote, &refspecs, NULL, NULL));
+	cl_git_fail_with(GIT_ENOTFOUND, git_reference_name_to_id(&id, repo,
+		"refs/remotes/origin/negative-private"));
+	assert_ref_exists(repo, "refs/remotes/origin/negative-gone");
+
+	git_remote_free(remote);
+	git_repository_free(repo);
+}
+
+void test_network_fetchlocal__negative_refspec_preserves_tag_autofollow(void)
+{
+	git_repository *repo;
+	git_remote *remote;
+
+	fetch_excluding(&repo, &remote, "^refs/tags/hard_tag");
+	assert_ref_exists(repo, "refs/tags/hard_tag");
+
+	git_remote_free(remote);
+	git_repository_free(repo);
 }

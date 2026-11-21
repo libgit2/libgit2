@@ -1597,6 +1597,33 @@ cleanup:
  * Generate a list of candidates for pruning by getting a list of
  * references which match the rhs of an active refspec.
  */
+static bool refspec_excludes(const git_vector *specs, const char *refname)
+{
+	git_refspec *spec;
+	size_t i;
+
+	git_vector_foreach(specs, i, spec) {
+		if (!spec->push && git_refspec_src_matches_negative(spec, refname))
+			return true;
+	}
+
+	return false;
+}
+
+static bool refspec_matches(
+	const git_vector *specs,
+	const git_refspec *spec,
+	const char *refname)
+{
+	return !spec->push && !git_refspec_is_negative(spec) &&
+		git_refspec_src_matches(spec, refname) &&
+		!refspec_excludes(specs, refname);
+}
+
+/*
+ * Generate a list of candidates for pruning by getting a list of
+ * references which match the rhs of an active refspec.
+ */
 static int prune_candidates(git_vector *candidates, git_remote *remote)
 {
 	git_strarray arr = { 0 };
@@ -1662,10 +1689,12 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 	 * can find a remote reference in at least one refspec.
 	 */
 	git_vector_foreach(&candidates, i, refname) {
+		bool stale = false;
+		char *src_name;
+
 		git_vector_foreach(&remote->active_refspecs, j, spec) {
 			git_str buf = GIT_STR_INIT;
 			size_t pos;
-			char *src_name;
 			git_remote_head key = {0};
 
 			if (!git_refspec_dst_matches(spec, refname))
@@ -1674,6 +1703,12 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 			if ((error = git_refspec__rtransform(&buf, spec, refname)) < 0)
 				goto cleanup;
 
+			if (refspec_excludes(&remote->active_refspecs, git_str_cstr(&buf))) {
+				git_str_dispose(&buf);
+				continue;
+			}
+
+			stale = true;
 			key.name = (char *) git_str_cstr(&buf);
 			error = git_vector_bsearch(&pos, &remote_refs, &key);
 			git_str_dispose(&buf);
@@ -1684,12 +1719,15 @@ int git_remote_prune(git_remote *remote, const git_remote_callbacks *callbacks)
 			if (error == GIT_ENOTFOUND)
 				continue;
 
-			/* If we did find a source, remove it from the candidates. */
+			stale = false;
+			break;
+		}
+
+		if (!stale) {
 			if ((error = git_vector_set((void **) &src_name, &candidates, i, NULL)) < 0)
 				goto cleanup;
 
 			git__free(src_name);
-			break;
 		}
 	}
 
@@ -1840,7 +1878,7 @@ static int update_one_tip(
 	}
 
 	/* If we didn't want to auto-follow the tag, check if the refspec matches */
-	if (!autotag && git_refspec_src_matches(spec, head->name)) {
+	if (!autotag && refspec_matches(&remote->active_refspecs, spec, head->name)) {
 		if (spec->dst) {
 			if ((error = git_refspec__transform(&refname, spec, head->name)) < 0)
 				goto done;
@@ -2022,13 +2060,13 @@ static int next_head(const git_remote *remote, git_vector *refs,
 		for (; j < active->length; j++) {
 			spec = git_vector_get(active, j);
 
-			if (!git_refspec_src_matches(spec, head->name))
+			if (!refspec_matches(active, spec, head->name))
 				continue;
 
 			for (; k < passive->length; k++) {
 				passive_spec = git_vector_get(passive, k);
 
-				if (!git_refspec_src_matches(passive_spec, head->name))
+				if (!refspec_matches(passive, passive_spec, head->name))
 				    continue;
 
 				*out_spec = passive_spec;
@@ -2148,7 +2186,7 @@ int git_remote_update_tips(
 	}
 
 	git_vector_foreach(&remote->active_refspecs, i, spec) {
-		if (spec->push)
+		if (spec->push || git_refspec_is_negative(spec))
 			continue;
 
 		if ((error = update_tips_for_spec(remote, callbacks, update_flags, tagopt, spec, &refs, reflog_message)) < 0)
