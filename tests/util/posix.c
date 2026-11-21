@@ -236,3 +236,66 @@ void test_posix__symlink_to_file_across_dirs(void)
 
 	git_str_dispose(&contents);
 }
+
+void test_posix__open_rejects_fifo(void)
+{
+#ifndef GIT_WIN32
+	int fd;
+
+	cl_assert(mkfifo("fifo", 0777) == 0);
+
+	cl_git_fail(fd = p_open("fifo", O_RDONLY));
+	cl_assert_equal_i(ENXIO, errno);
+
+	cl_git_fail(fd = p_open("fifo", O_WRONLY));
+	cl_assert_equal_i(ENXIO, errno);
+
+	cl_must_pass(p_unlink("fifo"));
+#else
+	cl_skip();
+#endif
+}
+
+void test_posix__open_allows_directory_and_character_device(void)
+{
+#ifndef GIT_WIN32
+	int fd;
+
+	cl_must_pass(git_futils_mkdir("dir", 0777, 0));
+	cl_must_pass(fd = p_open("dir", O_RDONLY));
+	cl_must_pass(p_close(fd));
+
+	/* People point their configuration at /dev/null. */
+	if (access("/dev/null", F_OK) == 0) {
+		cl_must_pass(fd = p_open("/dev/null", O_RDONLY));
+		cl_must_pass(p_close(fd));
+	}
+
+	cl_must_pass(p_rmdir("dir"));
+#else
+	cl_skip();
+#endif
+}
+
+void test_posix__open_keeps_nonblock_flag(void)
+{
+#ifndef GIT_WIN32
+	int fd, flags;
+
+	cl_git_mkfile("file", "Dummy file.");
+
+	cl_must_pass(fd = p_open("file", O_RDONLY));
+	cl_assert((flags = fcntl(fd, F_GETFL, 0)) >= 0);
+	cl_assert_equal_i(0, flags & O_NONBLOCK);
+	cl_must_pass(p_close(fd));
+
+	cl_must_pass(fd = p_open("file", O_RDONLY | O_NONBLOCK));
+	cl_assert((flags = fcntl(fd, F_GETFL, 0)) >= 0);
+	cl_assert(flags & O_NONBLOCK);
+	cl_must_pass(p_close(fd));
+
+	cl_must_pass(p_unlink("file"));
+#else
+	cl_skip();
+#endif
+}
