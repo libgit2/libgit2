@@ -179,7 +179,10 @@ static int parse_section_header(git_config_parser *reader, char **section_out)
 
 	GIT_ERROR_CHECK_ALLOC_ADD(&line_len, (size_t)(name_end - line), 1);
 	name = git__malloc(line_len);
-	GIT_ERROR_CHECK_ALLOC(name);
+	if (!name) {
+		git__free(line);
+		return -1;
+	}
 
 	name_length = 0;
 	pos = 0;
