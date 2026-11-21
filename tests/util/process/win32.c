@@ -57,7 +57,27 @@ void test_process_win32__cmdline_escapes_backslash(void)
 	const char *one[] = { "foo\\bar", "foo\\baz" };
 	const char *two[] = { "c:\\program files\\foo bar\\foo bar.exe", "c:\\path\\to\\other\\", "/a", "/b" };
 
-	assert_cmdline("foo\\\\bar foo\\\\baz", one);
-	assert_cmdline("c:\\\\program\" \"files\\\\foo\" \"bar\\\\foo\" \"bar.exe c:\\\\path\\\\to\\\\other\\\\ /a /b", two);
+	assert_cmdline("foo\\bar foo\\baz", one);
+	assert_cmdline("c:\\program\" \"files\\foo\" \"bar\\foo\" \"bar.exe c:\\path\\to\\other\\ /a /b", two);
+#endif
+}
+
+void test_process_win32__cmdline_escapes_backslash_before_quote(void)
+{
+#ifdef GIT_WIN32
+	const char *one[] = { "foo\\\"bar", "a\\ ", "b" };
+	const char *two[] = { "ssh", "git@host", "git-upload-pack 'x'\\''; touch pwned; '\\'''" };
+
+	assert_cmdline("foo\\\\\\\"bar a\\\\\" \" b", one);
+	assert_cmdline("ssh git@host git-upload-pack\" \"'x'\\'';\" \"touch\" \"pwned;\" \"'\\'''", two);
+#endif
+}
+
+void test_process_win32__cmdline_closes_quotes(void)
+{
+#ifdef GIT_WIN32
+	const char *one[] = { "trailing ", "space" };
+
+	assert_cmdline("trailing\" \" space", one);
 #endif
 }
