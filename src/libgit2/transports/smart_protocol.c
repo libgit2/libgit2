@@ -792,7 +792,7 @@ done:
 	return error;
 }
 
-static int gen_pktline(git_str *buf, git_push *push)
+static int gen_pktline(git_str *buf, git_push *push, const char *object_format)
 {
 	push_spec *spec;
 	char *option;
@@ -814,12 +814,18 @@ static int gen_pktline(git_str *buf, git_push *push)
 				len += strlen(GIT_CAP_PUSH_OPTIONS) + 1;
 
 			len += strlen(GIT_CAP_SIDE_BAND_64K) + 1;
+			if (object_format)
+				len += 1 + CONST_STRLEN(GIT_CAP_OBJECT_FORMAT) + strlen(object_format);
 		}
 
 		old_id_len = git_oid_hexsize(git_oid_type(&spec->roid));
 		new_id_len = git_oid_hexsize(git_oid_type(&spec->loid));
 
 		len += (old_id_len + new_id_len);
+		if (len > 0xffff) {
+			git_error_set(GIT_ERROR_NET, "push command exceeds maximum pkt-line length");
+			return -1;
+		}
 
 		git_oid_fmt(old_id, &spec->roid);
 		old_id[old_id_len] = '\0';
@@ -845,6 +851,11 @@ static int gen_pktline(git_str *buf, git_push *push)
 			}
 			git_str_putc(buf, ' ');
 			git_str_printf(buf, GIT_CAP_SIDE_BAND_64K);
+			if (object_format) {
+				git_str_putc(buf, ' ');
+				git_str_puts(buf, GIT_CAP_OBJECT_FORMAT);
+				git_str_puts(buf, object_format);
+			}
 		}
 
 		git_str_putc(buf, '\n');
@@ -1191,6 +1202,23 @@ int git_smart__push(git_transport *transport, git_push *push)
 	int error = 0, need_pack = 0;
 	push_spec *spec;
 	unsigned int i;
+	git_oid_t local_type = git_repository_oid_type(push->repo);
+	git_oid_t remote_type = t->caps.object_format ?
+		git_oid_type_fromstr(t->caps.object_format) : GIT_OID_SHA1;
+
+	if (!remote_type) {
+		git_error_set(GIT_ERROR_INVALID, "unknown remote object format '%s'",
+			t->caps.object_format);
+		return -1;
+	}
+
+	/* A missing advertisement means SHA-1; check before preparing or sending a pack. */
+	if (local_type != remote_type) {
+		git_error_set(GIT_ERROR_INVALID,
+			"the local object format '%s' does not match the remote object format '%s'",
+			git_oid_type_name(local_type), git_oid_type_name(remote_type));
+		return -1;
+	}
 
 	packbuilder_payload.pb = push->pb;
 
@@ -1235,7 +1263,7 @@ int git_smart__push(git_transport *transport, git_push *push)
 		goto done;
 
 	if ((error = git_smart__get_push_stream(t, &packbuilder_payload.stream)) < 0 ||
-		(error = gen_pktline(&pktline, push)) < 0 ||
+		(error = gen_pktline(&pktline, push, t->caps.object_format)) < 0 ||
 		(error = packbuilder_payload.stream->write(packbuilder_payload.stream, git_str_cstr(&pktline), git_str_len(&pktline))) < 0)
 		goto done;
 
