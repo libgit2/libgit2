@@ -35,8 +35,8 @@ typedef struct git_midx_file {
 	/* The table of Packfile Names. */
 	git_vector packfile_names;
 
-	/* The OID Fanout table. */
-	const uint32_t *oid_fanout;
+	/* The OID Fanout table: 256 4-byte entries in network byte order. */
+	const unsigned char *oid_fanout;
 	/* The total number of objects in the index. */
 	uint32_t num_objects;
 
