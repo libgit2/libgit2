@@ -225,6 +225,7 @@ static int start_ssh(
 	process_opts.capture_in = 1;
 	process_opts.capture_out = 1;
 	process_opts.capture_err = 0;
+	process_opts.create_no_window = 1;
 
 	switch (action) {
 	case GIT_SERVICE_UPLOADPACK_LS:
