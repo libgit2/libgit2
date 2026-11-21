@@ -276,3 +276,78 @@ void test_refs_iterator__concurrent_delete(void)
 
 	cl_assert_equal_i(full_count, concurrent_count);
 }
+
+void test_refs_iterator__skips_corrupted_loose_ref(void)
+{
+	git_reference_iterator *iter;
+	git_vector output;
+	const char *name;
+	int error;
+    if (!cl_repo_has_ref_format(repo, "files"))
+        cl_skip();
+
+    /* An empty ref file, as left behind by a crash during a write. */
+    cl_git_mkfile("testrepo.git/refs/heads/broken", "");
+
+    cl_git_pass(git_vector_init(&output, 33, &refcmp_cb));
+    cl_git_pass(git_reference_foreach(repo, refs_foreach_cb, &output));
+    assert_all_refnames_match(refnames, &output);
+
+    cl_git_pass(git_reference_iterator_new(&iter, repo));
+    while ((error = git_reference_next_name(&name, iter)) == 0)
+        cl_assert(strcmp(name, "refs/heads/broken") != 0);
+    git_reference_iterator_free(iter);
+    cl_assert_equal_i(GIT_ITEROVER, error);
+}
+
+void test_refs_iterator__unreadable_loose_ref_fails(void)
+{
+	git_reference_iterator *iter;
+	const char *name;
+	int error;
+
+#ifdef GIT_WIN32
+	cl_skip();
+#else
+	if (geteuid() == 0)
+	cl_skip();
+#endif
+	if (!cl_repo_has_ref_format(repo, "files"))
+		cl_skip();
+
+    cl_must_pass(p_chmod("testrepo.git/refs/heads/br2", 0000));
+
+    cl_git_pass(git_reference_iterator_new(&iter, repo));
+    while ((error = git_reference_next_name(&name, iter)) == 0)
+    ;
+    git_reference_iterator_free(iter);
+
+    cl_must_pass(p_chmod("testrepo.git/refs/heads/br2", 0644));
+    cl_git_fail(error);
+    cl_assert(error != GIT_ITEROVER);
+}
+
+void test_refs_iterator__long_loose_ref_path_fails(void)
+{
+#ifndef GIT_WIN32
+	cl_skip();
+#else
+	git_reference_iterator *iter;
+	git_str path = GIT_STR_INIT;
+
+    if (!cl_repo_has_ref_format(repo, "files"))
+    cl_skip();
+
+    /* A loose ref beyond MAX_PATH, as Git writes with core.longpaths. */
+    cl_git_pass(git_str_joinpath(&path, git_repository_path(repo), "refs/heads/long"));
+    while (path.size <= MAX_PATH)
+    cl_git_pass(git_str_puts(&path, "/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"));
+    cl_git_pass(git_futils_mkpath2file(path.ptr, 0777));
+    cl_git_mkfile(path.ptr, "a65fedf39aefe402d3bb6e24df4d4f5fe4547750\n");
+
+    cl_git_fail_with(git_reference_iterator_new(&iter, repo), GIT_ERROR);
+    cl_assert_equal_i(GIT_ERROR_FILESYSTEM, git_error_last()->klass);
+
+    git_str_dispose(&path);
+#endif
+}
