@@ -385,7 +385,7 @@ int git_submodule__lookup_with_cache(
 		fbp_data data = { NULL, NULL };
 
 		git_str_puts(&path, name);
-		while (path.ptr[path.size-1] == '/') {
+		while (path.size > 0 && path.ptr[path.size-1] == '/') {
 			path.ptr[--path.size] = '\0';
 		}
 		data.path = path.ptr;
