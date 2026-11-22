@@ -61,7 +61,7 @@ jobs:
             CMAKE_BUILD_OPTIONS: --config RelWithDebInfo
         - name: "macOS"
           id: macos
-          os: macos-14
+          os: macos-15
           setup-script: osx
           env:
             CC: clang
