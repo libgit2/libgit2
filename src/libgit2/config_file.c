@@ -828,8 +828,12 @@ static int read_on_variable(
 	entry->base.free = git_config_list_entry_free;
 	entry->config_list = parse_data->config_list;
 
-	if ((result = git_config_list_append(parse_data->config_list, entry)) < 0)
+	if ((result = git_config_list_append(parse_data->config_list, entry)) < 0) {
+		git__free((char *) entry->base.entry.name);
+		git__free((char *) entry->base.entry.value);
+		git__free(entry);
 		return result;
+	}
 
 	result = 0;
 

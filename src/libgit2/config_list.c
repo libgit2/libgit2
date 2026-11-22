@@ -160,6 +160,11 @@ int git_config_list_append(git_config_list *config_list, git_config_list_entry *
 	config_entry_list *list_head;
 	config_entry_map_head *map_head;
 
+	/* Complete all allocations before changing entries or sharing names. */
+	list_head = git__calloc(1, sizeof(config_entry_list));
+	GIT_ERROR_CHECK_ALLOC(list_head);
+	list_head->entry = entry;
+
 	if (git_config_list_headmap_get(&map_head, &config_list->map, entry->base.entry.name) == 0) {
 		map_head->multivar = true;
 		/*
@@ -172,14 +177,15 @@ int git_config_list_append(git_config_list *config_list, git_config_list_entry *
 		entry->base.entry.name = map_head->entry->base.entry.name;
 	} else {
 		map_head = git__calloc(1, sizeof(*map_head));
-		if ((git_config_list_headmap_put(&config_list->map, entry->base.entry.name, map_head)) < 0)
-			return -1;
+		if (!map_head)
+			goto on_error;
+
+		if (git_config_list_headmap_put(&config_list->map, entry->base.entry.name, map_head) < 0) {
+			git__free(map_head);
+			goto on_error;
+		}
 	}
 	map_head->entry = entry;
-
-	list_head = git__calloc(1, sizeof(config_entry_list));
-	GIT_ERROR_CHECK_ALLOC(list_head);
-	list_head->entry = entry;
 
 	if (config_list->entries)
 		config_list->entries->last->next = list_head;
@@ -188,6 +194,10 @@ int git_config_list_append(git_config_list *config_list, git_config_list_entry *
 	config_list->entries->last = list_head;
 
 	return 0;
+
+on_error:
+	git__free(list_head);
+	return -1;
 }
 
 int git_config_list_get(git_config_list_entry **out, git_config_list *config_list, const char *key)
