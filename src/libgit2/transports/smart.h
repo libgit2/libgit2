@@ -16,8 +16,12 @@
 #include "oidarray.h"
 #include "staticstr.h"
 #include "git2/sys/transport.h"
+#include "smart_api.h"
 
-#define GIT_SMART_BUFFER_SIZE  65536
+#define GIT_TRANSPORT_SMART_BUFFER_SIZE  65536
+
+#define GIT_TRANSPORT_SMART_CMD_UPLOADPACK  "git-upload-pack"
+#define GIT_TRANSPORT_SMART_CMD_RECEIVEPACK "git-receive-pack"
 
 #define GIT_SIDE_BAND_DATA     1
 #define GIT_SIDE_BAND_PROGRESS 2
@@ -40,7 +44,7 @@
 #define GIT_CAP_AGENT "agent="
 #define GIT_CAP_PUSH_OPTIONS "push-options"
 
-extern bool git_smart__ofs_delta_enabled;
+extern bool git_transport_smart__ofs_delta_enabled;
 
 typedef enum {
 	GIT_PKT_CMD,
@@ -155,14 +159,19 @@ typedef struct transport_smart_caps {
 
 typedef int (*packetsize_cb)(size_t received, void *payload);
 
-typedef struct {
-	git_transport parent;
+/*
+ * The state of a smart protocol conversation.  This has no knowledge of how
+ * the data moves; a transport owns a session and passes it the streams.
+ */
+struct git_transport_smart_session {
 	git_remote *owner;
-	char *url;
 	git_remote_connect_options connect_opts;
+	char *url;
 	int direction;
-	git_smart_subtransport *wrapped;
-	git_smart_subtransport_stream *current_stream;
+
+	/* The stream for the operation in progress; owned by the transport. */
+	git_transport_smart_stream *stream;
+
 	transport_smart_caps caps;
 	git_vector refs;
 	git_vector heads;
@@ -171,36 +180,49 @@ typedef struct {
 	git_atomic32 cancelled;
 	packetsize_cb packetsize_cb;
 	void *packetsize_payload;
-	unsigned rpc : 1,
+	unsigned stateless : 1,
 	         have_refs : 1,
 	         connected : 1;
-	git_staticstr_with_size(GIT_SMART_BUFFER_SIZE) buffer;
-} transport_smart;
+	git_staticstr_with_size(GIT_TRANSPORT_SMART_BUFFER_SIZE) buffer;
+};
+
+/*
+ * The base for transports that keep one stream open for the conversation.
+ * Those transports need only provide `connect`, which calls `begin_connect`,
+ * opens `stream` and calls `finish_connect`.
+ */
+typedef struct {
+	git_transport_smart_base parent;
+	git_transport_smart_stream *stream;
+} git_transport_smart_stateful;
+
+/* smart.c: sessions */
+int git_transport_smart__session_init(
+	git_transport_smart_session *s,
+	git_remote *owner,
+	bool stateless);
+void git_transport_smart__session_dispose(git_transport_smart_session *s);
+
+int git_transport_smart__recv(git_transport_smart_session *s);
+int git_transport_smart__update_heads(git_transport_smart_session *s, git_vector *symrefs);
+
+/* smart_stateful.c */
+int git_transport_smart_stateful__init(
+	git_transport_smart_stateful *t,
+	git_remote *owner);
+int git_transport_smart_stateful__begin_connect(
+	git_transport_smart_stateful *t,
+	const char *url,
+	int direction,
+	const git_remote_connect_options *connect_opts);
+int git_transport_smart_stateful__finish_connect(git_transport_smart_stateful *t);
+void git_transport_smart_stateful__free(git_transport *transport);
 
 /* smart_protocol.c */
-int git_smart__store_refs(transport_smart *t, int flushes);
-int git_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vector *symrefs);
-int git_smart__push(git_transport *transport, git_push *push);
+int git_transport_smart__store_refs(git_transport_smart_session *s, int flushes);
+int git_transport_smart__detect_caps(git_pkt_ref *pkt, transport_smart_caps *caps, git_vector *symrefs);
 
-int git_smart__negotiate_fetch(
-	git_transport *transport,
-	git_repository *repo,
-	const git_fetch_negotiation *wants);
-
-int git_smart__shallow_roots(git_oidarray *out, git_transport *transport);
-
-int git_smart__download_pack(
-	git_transport *transport,
-	git_repository *repo,
-	git_indexer_progress *stats);
-
-/* smart.c */
-int git_smart__recv(transport_smart *t);
-
-int git_smart__negotiation_step(git_transport *transport, void *data, size_t len);
-int git_smart__get_push_stream(transport_smart *t, git_smart_subtransport_stream **out);
-
-int git_smart__update_heads(transport_smart *t, git_vector *symrefs);
+int git_transport_smart__shallow_roots(git_oidarray *out, git_transport_smart_session *s);
 
 /* smart_pkt.c */
 typedef struct {

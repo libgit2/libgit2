@@ -90,7 +90,6 @@ static const IID IID_IInternetSecurityManager_mingw =
 # define IID_IInternetSecurityManager IID_IInternetSecurityManager_mingw
 #endif
 
-#define OWNING_SUBTRANSPORT(s) ((winhttp_subtransport *)(s)->parent.subtransport)
 
 typedef enum {
 	GIT_WINHTTP_AUTH_BASIC = 1,
@@ -100,7 +99,8 @@ typedef enum {
 } winhttp_authmechanism_t;
 
 typedef struct {
-	git_smart_subtransport_stream parent;
+	git_transport_smart_stream parent;
+	git_http_backend *backend;
 	const char *service;
 	const char *service_url;
 	const wchar_t *verb;
@@ -123,16 +123,15 @@ typedef struct {
 	bool url_cred_presented;
 } winhttp_server;
 
-typedef struct {
-	git_smart_subtransport parent;
-	transport_smart *owner;
+struct git_http_backend {
+	git_transport_smart_base *owner;
 
 	winhttp_server server;
 	winhttp_server proxy;
 
 	HINTERNET session;
 	HINTERNET connection;
-} winhttp_subtransport;
+};
 
 static int apply_userpass_credentials(HINTERNET request, DWORD target, int mechanisms, git_credential *cred)
 {
@@ -284,20 +283,20 @@ static int acquire_fallback_cred(
 static int certificate_check(winhttp_stream *s, int valid)
 {
 	int error;
-	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
+	git_http_backend *t = s->backend;
 	PCERT_CONTEXT cert_ctx;
 	DWORD cert_ctx_size = sizeof(cert_ctx);
 	git_cert_x509 cert;
 
 	/* If there is no override, we should fail if WinHTTP doesn't think it's fine */
-	if (t->owner->connect_opts.callbacks.certificate_check == NULL && !valid) {
+	if (t->owner->session->connect_opts.callbacks.certificate_check == NULL && !valid) {
 		if (git_error_last()->klass == GIT_ERROR_NONE)
 			git_error_set(GIT_ERROR_HTTP, "unknown certificate check failure");
 
 		return GIT_ECERTIFICATE;
 	}
 
-	if (t->owner->connect_opts.callbacks.certificate_check == NULL || git__strcmp(t->server.url.scheme, "https") != 0)
+	if (t->owner->session->connect_opts.callbacks.certificate_check == NULL || git__strcmp(t->server.url.scheme, "https") != 0)
 		return 0;
 
 	if (!WinHttpQueryOption(s->request, WINHTTP_OPTION_SERVER_CERT_CONTEXT, &cert_ctx, &cert_ctx_size)) {
@@ -309,7 +308,7 @@ static int certificate_check(winhttp_stream *s, int valid)
 	cert.parent.cert_type = GIT_CERT_X509;
 	cert.data = cert_ctx->pbCertEncoded;
 	cert.len = cert_ctx->cbCertEncoded;
-	error = t->owner->connect_opts.callbacks.certificate_check((git_cert *) &cert, valid, t->server.url.host, t->owner->connect_opts.callbacks.payload);
+	error = t->owner->session->connect_opts.callbacks.certificate_check((git_cert *) &cert, valid, t->server.url.host, t->owner->session->connect_opts.callbacks.payload);
 	CertFreeCertificateContext(cert_ctx);
 
 	if (error == GIT_PASSTHROUGH)
@@ -368,7 +367,7 @@ static int apply_credentials(
 
 static int winhttp_stream_connect(winhttp_stream *s)
 {
-	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
+	git_http_backend *t = s->backend;
 	git_str buf = GIT_STR_INIT;
 	char *proxy_url = NULL;
 	wchar_t ct[MAX_CONTENT_TYPE_LEN];
@@ -423,10 +422,10 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		goto on_error;
 	}
 
-	proxy_opts = &t->owner->connect_opts.proxy_opts;
+	proxy_opts = &t->owner->session->connect_opts.proxy_opts;
 	if (proxy_opts->type == GIT_PROXY_AUTO) {
 		/* Set proxy if necessary */
-		if (git_remote__http_proxy(&proxy_url, t->owner->owner, &t->server.url) < 0)
+		if (git_remote__http_proxy(&proxy_url, t->owner->session->owner, &t->server.url) < 0)
 			goto on_error;
 	}
 	else if (proxy_opts->type == GIT_PROXY_SPECIFIED) {
@@ -557,12 +556,12 @@ static int winhttp_stream_connect(winhttp_stream *s)
 		}
 	}
 
-	for (i = 0; i < t->owner->connect_opts.custom_headers.count; i++) {
-		if (t->owner->connect_opts.custom_headers.strings[i]) {
+	for (i = 0; i < t->owner->session->connect_opts.custom_headers.count; i++) {
+		if (t->owner->session->connect_opts.custom_headers.strings[i]) {
 			wchar_t *custom_header_wide = NULL;
 
 			git_str_clear(&buf);
-			git_str_puts(&buf, t->owner->connect_opts.custom_headers.strings[i]);
+			git_str_puts(&buf, t->owner->session->connect_opts.custom_headers.strings[i]);
 
 			/* Convert header to wide characters */
 			if ((error = git_utf8_to_16_alloc(&custom_header_wide, git_str_cstr(&buf))) < 0)
@@ -677,7 +676,7 @@ static int write_chunk(HINTERNET request, const char *buffer, size_t len)
 	return 0;
 }
 
-static int winhttp_close_connection(winhttp_subtransport *t)
+static int winhttp_close_connection(git_http_backend *t)
 {
 	int ret = 0;
 
@@ -772,7 +771,7 @@ static int user_agent(bool *exists, git_str *out)
 }
 
 static int winhttp_connect(
-	winhttp_subtransport *t)
+	git_http_backend *t)
 {
 	wchar_t *wide_host = NULL;
 	int32_t port;
@@ -1047,13 +1046,13 @@ static int acquire_credentials(
 }
 
 static int winhttp_stream_read(
-	git_smart_subtransport_stream *stream,
+	git_transport_smart_stream *stream,
 	char *buffer,
 	size_t buf_size,
 	size_t *bytes_read)
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
-	winhttp_subtransport *t = OWNING_SUBTRANSPORT(s);
+	git_http_backend *t = s->backend;
 	DWORD dw_bytes_read;
 	char replay_count = 0;
 	int error;
@@ -1219,7 +1218,7 @@ replay:
 			winhttp_stream_close(s);
 
 			if (!git__prefixcmp_icase(location8, prefix_https)) {
-				bool follow = (t->owner->connect_opts.follow_redirects != GIT_REMOTE_REDIRECT_NONE);
+				bool follow = (t->owner->session->connect_opts.follow_redirects != GIT_REMOTE_REDIRECT_NONE);
 
 				/* Upgrade to secure connection; disconnect and start over */
 				if (git_net_url_apply_redirect(&t->server.url, location8, follow, s->service_url) < 0) {
@@ -1241,9 +1240,9 @@ replay:
 		if (status_code == HTTP_STATUS_DENIED) {
 			int error = acquire_credentials(s->request,
 				&t->server,
-				t->owner->url,
-				t->owner->connect_opts.callbacks.credentials,
-				t->owner->connect_opts.callbacks.payload);
+				t->owner->session->url,
+				t->owner->session->connect_opts.callbacks.credentials,
+				t->owner->session->connect_opts.callbacks.payload);
 
 			if (error < 0) {
 				return error;
@@ -1255,9 +1254,9 @@ replay:
 		} else if (status_code == HTTP_STATUS_PROXY_AUTH_REQ) {
 			int error = acquire_credentials(s->request,
 				&t->proxy,
-				t->owner->connect_opts.proxy_opts.url,
-				t->owner->connect_opts.proxy_opts.credentials,
-				t->owner->connect_opts.proxy_opts.payload);
+				t->owner->session->connect_opts.proxy_opts.url,
+				t->owner->session->connect_opts.proxy_opts.credentials,
+				t->owner->session->connect_opts.proxy_opts.payload);
 
 			if (error < 0) {
 				return error;
@@ -1318,7 +1317,7 @@ replay:
 }
 
 static int winhttp_stream_write_single(
-	git_smart_subtransport_stream *stream,
+	git_transport_smart_stream *stream,
 	const char *buffer,
 	size_t len)
 {
@@ -1331,7 +1330,7 @@ static int winhttp_stream_write_single(
 
 	/* This implementation of write permits only a single call. */
 	if (s->sent_request) {
-		git_error_set(GIT_ERROR_HTTP, "subtransport configured for only one write");
+		git_error_set(GIT_ERROR_HTTP, "stream configured for only one write");
 		return -1;
 	}
 
@@ -1410,7 +1409,7 @@ static int get_temp_file(LPWSTR buffer, DWORD buffer_len_cch)
 }
 
 static int winhttp_stream_write_buffered(
-	git_smart_subtransport_stream *stream,
+	git_transport_smart_stream *stream,
 	const char *buffer,
 	size_t len)
 {
@@ -1455,7 +1454,7 @@ static int winhttp_stream_write_buffered(
 }
 
 static int winhttp_stream_write_chunked(
-	git_smart_subtransport_stream *stream,
+	git_transport_smart_stream *stream,
 	const char *buffer,
 	size_t len)
 {
@@ -1525,7 +1524,7 @@ static int winhttp_stream_write_chunked(
 	return 0;
 }
 
-static void winhttp_stream_free(git_smart_subtransport_stream *stream)
+static void winhttp_stream_free(git_transport_smart_stream *stream)
 {
 	winhttp_stream *s = (winhttp_stream *)stream;
 
@@ -1533,7 +1532,7 @@ static void winhttp_stream_free(git_smart_subtransport_stream *stream)
 	git__free(s);
 }
 
-static int winhttp_stream_alloc(winhttp_subtransport *t, winhttp_stream **stream)
+static int winhttp_stream_alloc(git_http_backend *t, winhttp_stream **stream)
 {
 	winhttp_stream *s;
 
@@ -1543,7 +1542,7 @@ static int winhttp_stream_alloc(winhttp_subtransport *t, winhttp_stream **stream
 	s = git__calloc(1, sizeof(winhttp_stream));
 	GIT_ERROR_CHECK_ALLOC(s);
 
-	s->parent.subtransport = &t->parent;
+	s->backend = t;
 	s->parent.read = winhttp_stream_read;
 	s->parent.write = winhttp_stream_write_single;
 	s->parent.free = winhttp_stream_free;
@@ -1554,7 +1553,7 @@ static int winhttp_stream_alloc(winhttp_subtransport *t, winhttp_stream **stream
 }
 
 static int winhttp_uploadpack_ls(
-	winhttp_subtransport *t,
+	git_http_backend *t,
 	winhttp_stream *s)
 {
 	GIT_UNUSED(t);
@@ -1567,7 +1566,7 @@ static int winhttp_uploadpack_ls(
 }
 
 static int winhttp_uploadpack(
-	winhttp_subtransport *t,
+	git_http_backend *t,
 	winhttp_stream *s)
 {
 	GIT_UNUSED(t);
@@ -1580,7 +1579,7 @@ static int winhttp_uploadpack(
 }
 
 static int winhttp_receivepack_ls(
-	winhttp_subtransport *t,
+	git_http_backend *t,
 	winhttp_stream *s)
 {
 	GIT_UNUSED(t);
@@ -1593,7 +1592,7 @@ static int winhttp_receivepack_ls(
 }
 
 static int winhttp_receivepack(
-	winhttp_subtransport *t,
+	git_http_backend *t,
 	winhttp_stream *s)
 {
 	GIT_UNUSED(t);
@@ -1614,13 +1613,12 @@ static int winhttp_receivepack(
 	return 0;
 }
 
-static int winhttp_action(
-	git_smart_subtransport_stream **stream,
-	git_smart_subtransport *subtransport,
+int git_http_backend__open(
+	git_transport_smart_stream **stream,
+	git_http_backend *t,
 	const char *url,
 	git_smart_service_t action)
 {
-	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
 	winhttp_stream *s;
 	int ret = -1;
 
@@ -1663,10 +1661,8 @@ static int winhttp_action(
 	return ret;
 }
 
-static int winhttp_close(git_smart_subtransport *subtransport)
+int git_http_backend__close(git_http_backend *t)
 {
-	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
-
 	git_net_url_dispose(&t->server.url);
 	git_net_url_dispose(&t->proxy.url);
 
@@ -1683,33 +1679,25 @@ static int winhttp_close(git_smart_subtransport *subtransport)
 	return winhttp_close_connection(t);
 }
 
-static void winhttp_free(git_smart_subtransport *subtransport)
+void git_http_backend__free(git_http_backend *t)
 {
-	winhttp_subtransport *t = (winhttp_subtransport *)subtransport;
-
-	winhttp_close(subtransport);
-
+	git_http_backend__close(t);
 	git__free(t);
 }
 
-int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *owner, void *param)
+int git_http_backend__new(git_http_backend **out, git_transport_smart_base *owner)
 {
-	winhttp_subtransport *t;
-
-	GIT_UNUSED(param);
+	git_http_backend *t;
 
 	if (!out)
 		return -1;
 
-	t = git__calloc(1, sizeof(winhttp_subtransport));
+	t = git__calloc(1, sizeof(git_http_backend));
 	GIT_ERROR_CHECK_ALLOC(t);
 
-	t->owner = (transport_smart *)owner;
-	t->parent.action = winhttp_action;
-	t->parent.close = winhttp_close;
-	t->parent.free = winhttp_free;
+	t->owner = owner;
 
-	*out = (git_smart_subtransport *) t;
+	*out = t;
 	return 0;
 }
 

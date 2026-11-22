@@ -41,7 +41,8 @@ typedef struct {
 } http_service;
 
 typedef struct {
-	git_smart_subtransport_stream parent;
+	git_transport_smart_stream parent;
+	git_http_backend *backend;
 	const http_service *service;
 	http_state state;
 	unsigned replay_count;
@@ -55,15 +56,14 @@ typedef struct {
 	unsigned url_cred_presented : 1;
 } http_server;
 
-typedef struct {
-	git_smart_subtransport parent;
-	transport_smart *owner;
+struct git_http_backend {
+	git_transport_smart_base *owner;
 
 	http_server server;
 	http_server proxy;
 
 	git_http_client *http_client;
-} http_subtransport;
+};
 
 static const http_service upload_pack_ls_service = {
 	GIT_HTTP_METHOD_GET, "/info/refs?service=git-upload-pack",
@@ -96,8 +96,6 @@ static const http_service receive_pack_service = {
 
 #define SERVER_TYPE_REMOTE "remote"
 #define SERVER_TYPE_PROXY  "proxy"
-
-#define OWNING_SUBTRANSPORT(s) ((http_subtransport *)(s)->parent.subtransport)
 
 static int apply_url_credentials(
 	git_credential **cred,
@@ -178,8 +176,8 @@ GIT_INLINE(int) handle_remote_auth(
 	http_stream *stream,
 	git_http_response *response)
 {
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
-	git_remote_connect_options *connect_opts = &transport->owner->connect_opts;
+	git_http_backend *transport = stream->backend;
+	git_remote_connect_options *connect_opts = &transport->owner->session->connect_opts;
 
 	if (response->server_auth_credtypes == 0) {
 		git_error_set(GIT_ERROR_HTTP, "server requires authentication that we do not support");
@@ -200,8 +198,8 @@ GIT_INLINE(int) handle_proxy_auth(
 	http_stream *stream,
 	git_http_response *response)
 {
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
-	git_remote_connect_options *connect_opts = &transport->owner->connect_opts;
+	git_http_backend *transport = stream->backend;
+	git_remote_connect_options *connect_opts = &transport->owner->session->connect_opts;
 
 	if (response->proxy_auth_credtypes == 0) {
 		git_error_set(GIT_ERROR_HTTP, "proxy requires authentication that we do not support");
@@ -220,9 +218,9 @@ GIT_INLINE(int) handle_proxy_auth(
 
 static bool allow_redirect(http_stream *stream)
 {
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_backend *transport = stream->backend;
 
-	switch (transport->owner->connect_opts.follow_redirects) {
+	switch (transport->owner->session->connect_opts.follow_redirects) {
 	case GIT_REMOTE_REDIRECT_INITIAL:
 		return (stream->service->initial == 1);
 	case GIT_REMOTE_REDIRECT_ALL:
@@ -238,7 +236,7 @@ static int handle_response(
 	git_http_response *response,
 	bool allow_replay)
 {
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_backend *transport = stream->backend;
 	int error;
 
 	*complete = false;
@@ -302,9 +300,9 @@ static int handle_response(
 
 static int lookup_proxy(
 	bool *out_use,
-	http_subtransport *transport)
+	git_http_backend *transport)
 {
-	git_remote_connect_options *connect_opts = &transport->owner->connect_opts;
+	git_remote_connect_options *connect_opts = &transport->owner->session->connect_opts;
 	const char *proxy;
 	git_remote *remote;
 	char *config = NULL;
@@ -319,7 +317,7 @@ static int lookup_proxy(
 		break;
 
 	case GIT_PROXY_AUTO:
-		remote = transport->owner->owner;
+		remote = transport->owner->session->owner;
 
 		error = git_remote__http_proxy(&config, remote, &transport->server.url);
 
@@ -356,7 +354,7 @@ static int generate_request(
 	http_stream *stream,
 	size_t len)
 {
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_backend *transport = stream->backend;
 	bool use_proxy = false;
 	int error;
 
@@ -370,7 +368,7 @@ static int generate_request(
 	request->credentials = transport->server.cred;
 	request->proxy = use_proxy ? &transport->proxy.url : NULL;
 	request->proxy_credentials = transport->proxy.cred;
-	request->custom_headers = &transport->owner->connect_opts.custom_headers;
+	request->custom_headers = &transport->owner->session->connect_opts.custom_headers;
 
 	if (stream->service->method == GIT_HTTP_METHOD_POST) {
 		request->chunked = stream->service->chunked;
@@ -390,13 +388,13 @@ static int generate_request(
  * calls.
  */
 static int http_stream_read(
-	git_smart_subtransport_stream *s,
+	git_transport_smart_stream *s,
 	char *buffer,
 	size_t buffer_size,
 	size_t *out_len)
 {
 	http_stream *stream = (http_stream *)s;
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_backend *transport = stream->backend;
 	git_net_url url = GIT_NET_URL_INIT;
 	git_net_url proxy_url = GIT_NET_URL_INIT;
 	git_http_request request = {0};
@@ -460,7 +458,7 @@ done:
 
 static bool needs_probe(http_stream *stream)
 {
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_backend *transport = stream->backend;
 
 	return (transport->server.auth_schemetypes == GIT_HTTP_AUTH_NTLM ||
 	        transport->server.auth_schemetypes == GIT_HTTP_AUTH_NEGOTIATE);
@@ -468,7 +466,7 @@ static bool needs_probe(http_stream *stream)
 
 static int send_probe(http_stream *stream)
 {
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_backend *transport = stream->backend;
 	git_http_client *client = transport->http_client;
 	const char *probe = "0000";
 	size_t len = 4;
@@ -517,12 +515,12 @@ done:
 * The caller should call http_stream_read_response to get the result.
 */
 static int http_stream_write(
-	git_smart_subtransport_stream *s,
+	git_transport_smart_stream *s,
 	const char *buffer,
 	size_t len)
 {
 	http_stream *stream = GIT_CONTAINER_OF(s, http_stream, parent);
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_backend *transport = stream->backend;
 	git_net_url url = GIT_NET_URL_INIT;
 	git_http_request request = {0};
 	git_http_response response = {0};
@@ -594,13 +592,13 @@ done:
 * response from a POST request made by http_stream_write.
 */
 static int http_stream_read_response(
-	git_smart_subtransport_stream *s,
+	git_transport_smart_stream *s,
 	char *buffer,
 	size_t buffer_size,
 	size_t *out_len)
 {
 	http_stream *stream = (http_stream *)s;
-	http_subtransport *transport = OWNING_SUBTRANSPORT(stream);
+	git_http_backend *transport = stream->backend;
 	git_http_client *client = transport->http_client;
 	git_http_response response = {0};
 	bool complete;
@@ -629,7 +627,7 @@ done:
 	return error;
 }
 
-static void http_stream_free(git_smart_subtransport_stream *stream)
+static void http_stream_free(git_transport_smart_stream *stream)
 {
 	http_stream *s = GIT_CONTAINER_OF(stream, http_stream, parent);
 	git__free(s);
@@ -651,21 +649,20 @@ static const http_service *select_service(git_smart_service_t action)
 	return NULL;
 }
 
-static int http_action(
-	git_smart_subtransport_stream **out,
-	git_smart_subtransport *t,
+int git_http_backend__open(
+	git_transport_smart_stream **out,
+	git_http_backend *transport,
 	const char *url,
 	git_smart_service_t action)
 {
-	http_subtransport *transport = GIT_CONTAINER_OF(t, http_subtransport, parent);
-	git_remote_connect_options *connect_opts = &transport->owner->connect_opts;
+	git_remote_connect_options *connect_opts = &transport->owner->session->connect_opts;
 	git_http_client_options opts = {0};
 	http_stream *stream;
 	const http_service *service;
 	int error;
 
 	GIT_ASSERT_ARG(out);
-	GIT_ASSERT_ARG(t);
+	GIT_ASSERT_ARG(transport);
 
 	*out = NULL;
 
@@ -685,9 +682,6 @@ static int http_action(
 		return -1;
 	}
 
-	stream = git__calloc(sizeof(http_stream), 1);
-	GIT_ERROR_CHECK_ALLOC(stream);
-
 	opts.server_certificate_check_cb = connect_opts->callbacks.certificate_check;
 	opts.server_certificate_check_payload = connect_opts->callbacks.payload;
 	opts.proxy_certificate_check_cb = connect_opts->proxy_opts.certificate_check;
@@ -700,8 +694,11 @@ static int http_action(
 			return -1;
 	}
 
+	stream = git__calloc(sizeof(http_stream), 1);
+	GIT_ERROR_CHECK_ALLOC(stream);
+
 	stream->service = service;
-	stream->parent.subtransport = &transport->parent;
+	stream->backend = transport;
 
 	if (service->method == GIT_HTTP_METHOD_GET) {
 		stream->parent.read = http_stream_read;
@@ -712,14 +709,12 @@ static int http_action(
 
 	stream->parent.free = http_stream_free;
 
-	*out = (git_smart_subtransport_stream *)stream;
+	*out = (git_transport_smart_stream *)stream;
 	return 0;
 }
 
-static int http_close(git_smart_subtransport *t)
+int git_http_backend__close(git_http_backend *transport)
 {
-	http_subtransport *transport = GIT_CONTAINER_OF(t, http_subtransport, parent);
-
 	free_cred(&transport->server.cred);
 	free_cred(&transport->proxy.cred);
 
@@ -736,46 +731,25 @@ static int http_close(git_smart_subtransport *t)
 	return 0;
 }
 
-static void http_free(git_smart_subtransport *t)
+void git_http_backend__free(git_http_backend *transport)
 {
-	http_subtransport *transport = GIT_CONTAINER_OF(t, http_subtransport, parent);
-
-	http_close(t);
+	git_http_backend__close(transport);
 	git__free(transport);
 }
 
-int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *owner, void *param)
+int git_http_backend__new(git_http_backend **out, git_transport_smart_base *owner)
 {
-	http_subtransport *transport;
-
-	GIT_UNUSED(param);
+	git_http_backend *transport;
 
 	GIT_ASSERT_ARG(out);
 
-	transport = git__calloc(sizeof(http_subtransport), 1);
+	transport = git__calloc(sizeof(git_http_backend), 1);
 	GIT_ERROR_CHECK_ALLOC(transport);
 
-	transport->owner = (transport_smart *)owner;
-	transport->parent.action = http_action;
-	transport->parent.close = http_close;
-	transport->parent.free = http_free;
+	transport->owner = owner;
 
-	*out = (git_smart_subtransport *) transport;
+	*out = transport;
 	return 0;
-}
-
-#elif !defined(GIT_HTTP)
-
-#include "git2/sys/transport.h"
-
-int git_smart_subtransport_http(git_smart_subtransport **out, git_transport *owner, void *param)
-{
-	GIT_UNUSED(out);
-	GIT_UNUSED(owner);
-	GIT_UNUSED(param);
-
-	git_error_set(GIT_ERROR_INVALID, "cannot create HTTP transport; library was built without HTTP support");
-	return -1;
 }
 
 #endif /* GIT_HTTP && !GIT_HTTPS_WINHTTP */

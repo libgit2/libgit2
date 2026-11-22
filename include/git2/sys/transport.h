@@ -446,11 +446,9 @@ typedef int GIT_CALLBACK(git_smart_subtransport_cb)(
  * or how to move data back and forth. For this, a subtransport interface is
  * declared, and the smart transport delegates this work to the subtransports.
  *
- * Three subtransports are provided by libgit2: ssh, git, http(s).
- *
  * Subtransports can either be RPC = 0 (persistent connection) or RPC = 1
  * (request/response). The smart transport handles the differences in its own
- * logic. The git subtransport is RPC = 0, while http is RPC = 1.
+ * logic.
  */
 typedef struct git_smart_subtransport_definition {
 	/** The function to use to create the git_smart_subtransport */
@@ -465,49 +463,6 @@ typedef struct git_smart_subtransport_definition {
 	/** User-specified parameter passed to the callback */
 	void *param;
 } git_smart_subtransport_definition;
-
-/* Smart transport subtransports that come with libgit2 */
-
-/**
- * Create an instance of the http subtransport.
- *
- * This subtransport also supports https.
- *
- * @param[out] out The newly created subtransport
- * @param owner The smart transport to own this subtransport
- * @param param custom parameters for the subtransport
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_smart_subtransport_http(
-	git_smart_subtransport **out,
-	git_transport *owner,
-	void *param);
-
-/**
- * Create an instance of the git subtransport.
- *
- * @param[out] out The newly created subtransport
- * @param owner The smart transport to own this subtransport
- * @param param custom parameters for the subtransport
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_smart_subtransport_git(
-	git_smart_subtransport **out,
-	git_transport *owner,
-	void *param);
-
-/**
- * Create an instance of the ssh subtransport.
- *
- * @param[out] out The newly created subtransport
- * @param owner The smart transport to own this subtransport
- * @param param custom parameters for the subtransport
- * @return 0 or an error code
- */
-GIT_EXTERN(int) git_smart_subtransport_ssh(
-	git_smart_subtransport **out,
-	git_transport *owner,
-	void *param);
 
 /** @} */
 GIT_END_DECL

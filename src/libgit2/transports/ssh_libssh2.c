@@ -21,15 +21,10 @@
 #include "git2/credential.h"
 #include "git2/sys/credential.h"
 
-#define OWNING_SUBTRANSPORT(s) ((ssh_subtransport *)(s)->parent.subtransport)
-
 extern int git_socket_stream__timeout;
 
-static const char cmd_uploadpack[] = "git-upload-pack";
-static const char cmd_receivepack[] = "git-receive-pack";
-
 typedef struct {
-	git_smart_subtransport_stream parent;
+	git_transport_smart_stream parent;
 	git_stream *io;
 	LIBSSH2_SESSION *session;
 	LIBSSH2_CHANNEL *channel;
@@ -37,15 +32,6 @@ typedef struct {
 	git_net_url url;
 	unsigned sent_command : 1;
 } ssh_stream;
-
-typedef struct {
-	git_smart_subtransport parent;
-	transport_smart *owner;
-	ssh_stream *current_stream;
-	git_credential *cred;
-	char *cmd_uploadpack;
-	char *cmd_receivepack;
-} ssh_subtransport;
 
 static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *username);
 
@@ -110,7 +96,7 @@ cleanup:
 }
 
 static int ssh_stream_read(
-	git_smart_subtransport_stream *stream,
+	git_transport_smart_stream *stream,
 	char *buffer,
 	size_t buf_size,
 	size_t *bytes_read)
@@ -149,7 +135,7 @@ static int ssh_stream_read(
 }
 
 static int ssh_stream_write(
-	git_smart_subtransport_stream *stream,
+	git_transport_smart_stream *stream,
 	const char *buffer,
 	size_t len)
 {
@@ -177,16 +163,12 @@ static int ssh_stream_write(
 	return 0;
 }
 
-static void ssh_stream_free(git_smart_subtransport_stream *stream)
+static void ssh_stream_free(git_transport_smart_stream *stream)
 {
 	ssh_stream *s = GIT_CONTAINER_OF(stream, ssh_stream, parent);
-	ssh_subtransport *t;
 
 	if (!stream)
 		return;
-
-	t = OWNING_SUBTRANSPORT(s);
-	t->current_stream = NULL;
 
 	if (s->channel) {
 		libssh2_channel_close(s->channel);
@@ -211,9 +193,8 @@ static void ssh_stream_free(git_smart_subtransport_stream *stream)
 }
 
 static int ssh_stream_alloc(
-	ssh_subtransport *t,
 	const char *cmd,
-	git_smart_subtransport_stream **stream)
+	git_transport_smart_stream **stream)
 {
 	ssh_stream *s;
 
@@ -222,7 +203,6 @@ static int ssh_stream_alloc(
 	s = git__calloc(sizeof(ssh_stream), 1);
 	GIT_ERROR_CHECK_ALLOC(s);
 
-	s->parent.subtransport = &t->parent;
 	s->parent.read = ssh_stream_read;
 	s->parent.write = ssh_stream_write;
 	s->parent.free = ssh_stream_free;
@@ -382,20 +362,20 @@ static int _git_ssh_authenticate_session(
 	return 0;
 }
 
-static int request_creds(git_credential **out, ssh_subtransport *t, const char *user, int auth_methods)
+static int request_creds(git_credential **out, git_transport_smart_base *t, const char *user, int auth_methods)
 {
 	int error, no_callback = 0;
 	git_credential *cred = NULL;
 
-	if (!t->owner->connect_opts.callbacks.credentials) {
+	if (!t->session->connect_opts.callbacks.credentials) {
 		no_callback = 1;
 	} else {
-		error = t->owner->connect_opts.callbacks.credentials(
+		error = t->session->connect_opts.callbacks.credentials(
 			&cred,
-			t->owner->url,
+			t->session->url,
 			user,
 			auth_methods,
-			t->owner->connect_opts.callbacks.payload);
+			t->session->connect_opts.callbacks.payload);
 
 		if (error == GIT_PASSTHROUGH) {
 			no_callback = 1;
@@ -771,11 +751,11 @@ static int check_certificate(
 
 #define SSH_DEFAULT_PORT "22"
 
-static int _git_ssh_setup_conn(
-	ssh_subtransport *t,
+int git_ssh_libssh2__open(
+	git_transport_smart_stream **stream,
+	git_transport_smart_base *t,
 	const char *url,
-	const char *cmd,
-	git_smart_subtransport_stream **stream)
+	const char *cmd)
 {
 	int auth_methods, error = 0, port;
 	ssh_stream *s;
@@ -784,10 +764,8 @@ static int _git_ssh_setup_conn(
 	LIBSSH2_CHANNEL *channel=NULL;
 	LIBSSH2_KNOWNHOSTS *known_hosts = NULL;
 
-	t->current_stream = NULL;
-
 	*stream = NULL;
-	if (ssh_stream_alloc(t, cmd, stream) < 0)
+	if (ssh_stream_alloc(cmd, stream) < 0)
 		return -1;
 
 	s = (ssh_stream *)*stream;
@@ -827,7 +805,7 @@ static int _git_ssh_setup_conn(
 	if ((error = _git_ssh_session_create(&session, &known_hosts, s->url.host, port, s->io)) < 0)
 		goto done;
 
-	if ((error = check_certificate(session, known_hosts, t->owner->connect_opts.callbacks.certificate_check, t->owner->connect_opts.callbacks.payload, s->url.host, port)) < 0)
+	if ((error = check_certificate(session, known_hosts, t->session->connect_opts.callbacks.certificate_check, t->session->connect_opts.callbacks.payload, s->url.host, port)) < 0)
 		goto done;
 
 	/* we need the username to ask for auth methods */
@@ -894,14 +872,13 @@ static int _git_ssh_setup_conn(
 	s->session = session;
 	s->channel = channel;
 
-	t->current_stream = s;
-
 done:
 	if (known_hosts)
 		libssh2_knownhost_free(known_hosts);
 
 	if (error < 0) {
 		ssh_stream_free(*stream);
+		*stream = NULL;
 
 		if (session)
 			libssh2_session_free(session);
@@ -911,105 +888,6 @@ done:
 		cred->free(cred);
 
 	return error;
-}
-
-static int ssh_uploadpack_ls(
-	ssh_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
-{
-	const char *cmd = t->cmd_uploadpack ? t->cmd_uploadpack : cmd_uploadpack;
-
-	return _git_ssh_setup_conn(t, url, cmd, stream);
-}
-
-static int ssh_uploadpack(
-	ssh_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
-{
-	GIT_UNUSED(url);
-
-	if (t->current_stream) {
-		*stream = &t->current_stream->parent;
-		return 0;
-	}
-
-	git_error_set(GIT_ERROR_NET, "must call UPLOADPACK_LS before UPLOADPACK");
-	return -1;
-}
-
-static int ssh_receivepack_ls(
-	ssh_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
-{
-	const char *cmd = t->cmd_receivepack ? t->cmd_receivepack : cmd_receivepack;
-
-
-	return _git_ssh_setup_conn(t, url, cmd, stream);
-}
-
-static int ssh_receivepack(
-	ssh_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
-{
-	GIT_UNUSED(url);
-
-	if (t->current_stream) {
-		*stream = &t->current_stream->parent;
-		return 0;
-	}
-
-	git_error_set(GIT_ERROR_NET, "must call RECEIVEPACK_LS before RECEIVEPACK");
-	return -1;
-}
-
-static int _ssh_action(
-	git_smart_subtransport_stream **stream,
-	git_smart_subtransport *subtransport,
-	const char *url,
-	git_smart_service_t action)
-{
-	ssh_subtransport *t = GIT_CONTAINER_OF(subtransport, ssh_subtransport, parent);
-
-	switch (action) {
-		case GIT_SERVICE_UPLOADPACK_LS:
-			return ssh_uploadpack_ls(t, url, stream);
-
-		case GIT_SERVICE_UPLOADPACK:
-			return ssh_uploadpack(t, url, stream);
-
-		case GIT_SERVICE_RECEIVEPACK_LS:
-			return ssh_receivepack_ls(t, url, stream);
-
-		case GIT_SERVICE_RECEIVEPACK:
-			return ssh_receivepack(t, url, stream);
-	}
-
-	*stream = NULL;
-	return -1;
-}
-
-static int _ssh_close(git_smart_subtransport *subtransport)
-{
-	ssh_subtransport *t = GIT_CONTAINER_OF(subtransport, ssh_subtransport, parent);
-
-	GIT_ASSERT(!t->current_stream);
-
-	GIT_UNUSED(t);
-
-	return 0;
-}
-
-static void _ssh_free(git_smart_subtransport *subtransport)
-{
-	ssh_subtransport *t = GIT_CONTAINER_OF(subtransport, ssh_subtransport, parent);
-
-	git__free(t->cmd_uploadpack);
-	git__free(t->cmd_receivepack);
-	git__free(t);
 }
 
 #define SSH_AUTH_PUBLICKEY "publickey"
@@ -1061,48 +939,6 @@ static int list_auth_methods(int *out, LIBSSH2_SESSION *session, const char *use
 		/* Skip it if we don't know it */
 		ptr = strchr(ptr, ',');
 	}
-
-	return 0;
-}
-
-int git_smart_subtransport_ssh_libssh2(
-	git_smart_subtransport **out,
-	git_transport *owner,
-	void *param)
-{
-	ssh_subtransport *t;
-
-	GIT_ASSERT_ARG(out);
-
-	GIT_UNUSED(param);
-
-	t = git__calloc(sizeof(ssh_subtransport), 1);
-	GIT_ERROR_CHECK_ALLOC(t);
-
-	t->owner = (transport_smart *)owner;
-	t->parent.action = _ssh_action;
-	t->parent.close = _ssh_close;
-	t->parent.free = _ssh_free;
-
-	*out = (git_smart_subtransport *) t;
-	return 0;
-}
-
-int git_smart_subtransport_ssh_libssh2_set_paths(
-	git_smart_subtransport *subtransport,
-	const char *cmd_uploadpack,
-	const char *cmd_receivepack)
-{
-	ssh_subtransport *t = (ssh_subtransport *)subtransport;
-
-	git__free(t->cmd_uploadpack);
-	git__free(t->cmd_receivepack);
-
-	t->cmd_uploadpack = git__strdup(cmd_uploadpack);
-	GIT_ERROR_CHECK_ALLOC(t->cmd_uploadpack);
-
-	t->cmd_receivepack = git__strdup(cmd_receivepack);
-	GIT_ERROR_CHECK_ALLOC(t->cmd_receivepack);
 
 	return 0;
 }

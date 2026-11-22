@@ -12,15 +12,13 @@
 #include "git2.h"
 #include "git2/transport.h"
 #include "git2/sys/transport.h"
+#include "smart.h"
 
-int git_smart_subtransport_ssh_exec(
-	git_smart_subtransport **out,
-	git_transport *owner,
-	void *param);
-
-int git_smart_subtransport_ssh_exec_set_paths(
-	git_smart_subtransport *subtransport,
-	const char *cmd_uploadpack,
-	const char *cmd_receivepack);
+/* Runs the given git command on the remote; closing the stream ends it. */
+int git_ssh_exec__open(
+	git_transport_smart_stream **out,
+	git_transport_smart_base *transport,
+	const char *url,
+	const char *cmd);
 
 #endif

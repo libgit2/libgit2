@@ -319,7 +319,7 @@ int git_libgit2_opts(int key, ...)
 		break;
 
 	case GIT_OPT_ENABLE_OFS_DELTA:
-		git_smart__ofs_delta_enabled = (va_arg(ap, int) != 0);
+		git_transport_smart__ofs_delta_enabled = (va_arg(ap, int) != 0);
 		break;
 
 	case GIT_OPT_ENABLE_FSYNC_GITDIR:

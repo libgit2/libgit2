@@ -5,32 +5,22 @@
  * a Linking Exception. For full terms see the included COPYING file.
  */
 
-#include "common.h"
+#include "git.h"
 
 #include "net.h"
 #include "stream.h"
 #include "streams/socket.h"
-#include "git2/sys/transport.h"
-
-#define OWNING_SUBTRANSPORT(s) ((git_subtransport *)(s)->parent.subtransport)
+#include "smart.h"
 
 static const char prefix_git[] = "git://";
-static const char cmd_uploadpack[] = "git-upload-pack";
-static const char cmd_receivepack[] = "git-receive-pack";
 
 typedef struct {
-	git_smart_subtransport_stream parent;
+	git_transport_smart_stream parent;
 	git_stream *io;
 	const char *cmd;
 	char *url;
 	unsigned sent_command : 1;
 } git_proto_stream;
-
-typedef struct {
-	git_smart_subtransport parent;
-	git_transport *owner;
-	git_proto_stream *current_stream;
-} git_subtransport;
 
 /*
  * Create a git protocol request.
@@ -90,7 +80,7 @@ cleanup:
 }
 
 static int git_proto_stream_read(
-	git_smart_subtransport_stream *stream,
+	git_transport_smart_stream *stream,
 	char *buffer,
 	size_t buf_size,
 	size_t *bytes_read)
@@ -114,7 +104,7 @@ static int git_proto_stream_read(
 }
 
 static int git_proto_stream_write(
-	git_smart_subtransport_stream *stream,
+	git_transport_smart_stream *stream,
 	const char *buffer,
 	size_t len)
 {
@@ -127,42 +117,31 @@ static int git_proto_stream_write(
 	return git_stream__write_full(s->io, buffer, len, 0);
 }
 
-static void git_proto_stream_free(git_smart_subtransport_stream *stream)
+static void git_proto_stream_free(git_transport_smart_stream *stream)
 {
-	git_proto_stream *s;
-	git_subtransport *t;
+	git_proto_stream *s = (git_proto_stream *)stream;
 
-	if (!stream)
-		return;
+	if (s->io) {
+		git_stream_close(s->io);
+		git_stream_free(s->io);
+	}
 
-	s = (git_proto_stream *)stream;
-	t = OWNING_SUBTRANSPORT(s);
-
-	t->current_stream = NULL;
-
-	git_stream_close(s->io);
-	git_stream_free(s->io);
 	git__free(s->url);
 	git__free(s);
 }
 
 static int git_proto_stream_alloc(
-	git_subtransport *t,
+	git_transport_smart_stream **out,
 	const char *url,
 	const char *cmd,
 	const char *host,
-	const char *port,
-	git_smart_subtransport_stream **stream)
+	const char *port)
 {
 	git_proto_stream *s;
-
-	if (!stream)
-		return -1;
 
 	s = git__calloc(1, sizeof(git_proto_stream));
 	GIT_ERROR_CHECK_ALLOC(s);
 
-	s->parent.subtransport = &t->parent;
 	s->parent.read = git_proto_stream_read;
 	s->parent.write = git_proto_stream_write;
 	s->parent.free = git_proto_stream_free;
@@ -171,31 +150,31 @@ static int git_proto_stream_alloc(
 	s->url = git__strdup(url);
 
 	if (!s->url) {
-		git__free(s);
+		git_proto_stream_free(&s->parent);
 		return -1;
 	}
 
-	if ((git_socket_stream_new(&s->io, host, port)) < 0)
+	if (git_socket_stream_new(&s->io, host, port) < 0) {
+		git_proto_stream_free(&s->parent);
 		return -1;
+	}
+
+	*out = &s->parent;
 
 	GIT_ERROR_CHECK_VERSION(s->io, GIT_STREAM_VERSION, "git_stream");
 
-	*stream = &s->parent;
 	return 0;
 }
 
-static int _git_uploadpack_ls(
-	git_subtransport *t,
+static int git_proto_open(
+	git_transport_smart_stream **out,
 	const char *url,
-	git_smart_subtransport_stream **stream)
+	const char *cmd)
 {
 	git_net_url urldata = GIT_NET_URL_INIT;
+	git_transport_smart_stream *stream = NULL;
 	const char *stream_url = url;
-	const char *host, *port;
-	git_proto_stream *s;
 	int error;
-
-	*stream = NULL;
 
 	if (!git__prefixcmp(url, prefix_git))
 		stream_url += strlen(prefix_git);
@@ -203,158 +182,66 @@ static int _git_uploadpack_ls(
 	if ((error = git_net_url_parse(&urldata, url)) < 0)
 		return error;
 
-	host = urldata.host;
-	port = urldata.port ? urldata.port : GIT_DEFAULT_PORT;
-
-	error = git_proto_stream_alloc(t, stream_url, cmd_uploadpack, host, port, stream);
+	error = git_proto_stream_alloc(&stream, stream_url, cmd,
+		urldata.host, urldata.port ? urldata.port : GIT_DEFAULT_PORT);
 
 	git_net_url_dispose(&urldata);
 
+	if (!error)
+		error = git_stream_connect(((git_proto_stream *)stream)->io);
+
 	if (error < 0) {
-		git_proto_stream_free(*stream);
+		if (stream)
+			stream->free(stream);
+
 		return error;
 	}
 
-	s = (git_proto_stream *) *stream;
-	if ((error = git_stream_connect(s->io)) < 0) {
-		git_proto_stream_free(*stream);
-		return error;
-	}
-
-	t->current_stream = s;
-
+	*out = stream;
 	return 0;
 }
 
-static int _git_uploadpack(
-	git_subtransport *t,
+static int git_proto_connect(
+	git_transport *transport,
 	const char *url,
-	git_smart_subtransport_stream **stream)
+	int direction,
+	const git_remote_connect_options *connect_opts)
 {
-	GIT_UNUSED(url);
-
-	if (t->current_stream) {
-		*stream = &t->current_stream->parent;
-		return 0;
-	}
-
-	git_error_set(GIT_ERROR_NET, "must call UPLOADPACK_LS before UPLOADPACK");
-	return -1;
-}
-
-static int _git_receivepack_ls(
-	git_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
-{
-	git_net_url urldata = GIT_NET_URL_INIT;
-	const char *stream_url = url;
-	git_proto_stream *s;
+	git_transport_smart_stateful *t = GIT_CONTAINER_OF(transport, git_transport_smart_stateful, parent.parent);
+	const char *cmd;
 	int error;
 
-	*stream = NULL;
-	if (!git__prefixcmp(url, prefix_git))
-		stream_url += strlen(prefix_git);
-
-	if ((error = git_net_url_parse(&urldata, url)) < 0)
+	if ((error = git_transport_smart_stateful__begin_connect(t, url, direction, connect_opts)) < 0)
 		return error;
 
-	error = git_proto_stream_alloc(t, stream_url, cmd_receivepack, urldata.host, urldata.port, stream);
+	cmd = (direction == GIT_DIRECTION_FETCH) ?
+		GIT_TRANSPORT_SMART_CMD_UPLOADPACK : GIT_TRANSPORT_SMART_CMD_RECEIVEPACK;
 
-	git_net_url_dispose(&urldata);
-
-	if (error < 0) {
-		git_proto_stream_free(*stream);
-		return error;
-	}
-
-	s = (git_proto_stream *) *stream;
-
-	if ((error = git_stream_connect(s->io)) < 0)
+	if ((error = git_proto_open(&t->stream, t->parent.session->url, cmd)) < 0)
 		return error;
 
-	t->current_stream = s;
-
-	return 0;
+	return git_transport_smart_stateful__finish_connect(t);
 }
 
-static int _git_receivepack(
-	git_subtransport *t,
-	const char *url,
-	git_smart_subtransport_stream **stream)
+int git_transport_git(git_transport **out, git_remote *owner, void *param)
 {
-	GIT_UNUSED(url);
-
-	if (t->current_stream) {
-		*stream = &t->current_stream->parent;
-		return 0;
-	}
-
-	git_error_set(GIT_ERROR_NET, "must call RECEIVEPACK_LS before RECEIVEPACK");
-	return -1;
-}
-
-static int _git_action(
-	git_smart_subtransport_stream **stream,
-	git_smart_subtransport *subtransport,
-	const char *url,
-	git_smart_service_t action)
-{
-	git_subtransport *t = (git_subtransport *) subtransport;
-
-	switch (action) {
-		case GIT_SERVICE_UPLOADPACK_LS:
-			return _git_uploadpack_ls(t, url, stream);
-
-		case GIT_SERVICE_UPLOADPACK:
-			return _git_uploadpack(t, url, stream);
-
-		case GIT_SERVICE_RECEIVEPACK_LS:
-			return _git_receivepack_ls(t, url, stream);
-
-		case GIT_SERVICE_RECEIVEPACK:
-			return _git_receivepack(t, url, stream);
-	}
-
-	*stream = NULL;
-	return -1;
-}
-
-static int _git_close(git_smart_subtransport *subtransport)
-{
-	git_subtransport *t = (git_subtransport *) subtransport;
-
-	GIT_ASSERT(!t->current_stream);
-
-	GIT_UNUSED(t);
-
-	return 0;
-}
-
-static void _git_free(git_smart_subtransport *subtransport)
-{
-	git_subtransport *t = (git_subtransport *) subtransport;
-
-	git__free(t);
-}
-
-int git_smart_subtransport_git(git_smart_subtransport **out, git_transport *owner, void *param)
-{
-	git_subtransport *t;
+	git_transport_smart_stateful *t;
 
 	GIT_UNUSED(param);
 
 	if (!out)
 		return -1;
 
-	t = git__calloc(1, sizeof(git_subtransport));
+	t = git__calloc(1, sizeof(git_transport_smart_stateful));
 	GIT_ERROR_CHECK_ALLOC(t);
 
-	t->owner = owner;
-	t->parent.action = _git_action;
-	t->parent.close = _git_close;
-	t->parent.free = _git_free;
+	if (git_transport_smart_stateful__init(t, owner) < 0) {
+		git_transport_smart_stateful__free(&t->parent.parent);
+		return -1;
+	}
 
-	*out = (git_smart_subtransport *) t;
+	t->parent.parent.connect = git_proto_connect;
+
+	*out = &t->parent.parent;
 	return 0;
 }
