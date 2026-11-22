@@ -361,6 +361,41 @@ void test_odb_loose__read_header_sha256(void)
 	test_read_header(&some_sha256);
 }
 
+/*
+ * The "one" blob in the pack-like format, but its size is followed by
+ * continuation bytes so that the last byte of the size only has bits
+ * beyond the size_t range.
+ */
+static unsigned char one_size_overflow_bytes[] = {
+	0xb1, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x80, 0x10,
+	0x78, 0x9c, 0xe3, 0x02, 0x00, 0x00, 0x0b, 0x00, 0x0b,
+};
+
+void test_odb_loose__packlike_size_overflow_fails(void)
+{
+	object_data data = one;
+	git_odb *odb;
+	git_odb_object *obj;
+	git_odb_stream *stream;
+	git_oid id;
+	size_t len;
+	git_object_t type;
+
+	data.bytes = one_size_overflow_bytes;
+	data.blen = sizeof(one_size_overflow_bytes);
+
+	write_object_files(&data);
+
+	cl_git_pass(git_odb_open_ext(&odb, "test-objects", NULL));
+	cl_git_pass(git_oid_from_string(&id, data.id, data.id_type));
+
+	cl_git_fail(git_odb_read(&obj, odb, &id));
+	cl_git_fail(git_odb_read_header(&len, &type, odb, &id));
+	cl_git_fail(git_odb_open_rstream(&stream, &len, &type, odb, &id));
+
+	git_odb_free(odb);
+}
+
 static void test_write_object_permission(
 	mode_t dir_mode, mode_t file_mode,
 	mode_t expected_dir_mode, mode_t expected_file_mode)

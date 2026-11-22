@@ -484,6 +484,13 @@ static int hdr_sz(
 			return -1;
 		}
 		c = *d++;
+
+		/* Reject sizes whose high bits would be shifted out. */
+		if ((((size_t)(c & 0x7f)) << shift) >> shift != (c & 0x7f)) {
+			git_error_set(GIT_ERROR_INVALID, "delta header overflow");
+			return -1;
+		}
+
 		r |= ((size_t)(c & 0x7f)) << shift;
 		shift += 7;
 	} while (c & 0x80);

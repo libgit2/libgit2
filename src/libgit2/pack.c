@@ -438,6 +438,14 @@ static int packfile_unpack_header1(
 		}
 
 		c = buf[used++];
+
+		/* Reject sizes whose high bits would be shifted out. */
+		if (((c & 0x7f) << shift) >> shift != (c & 0x7f)) {
+			*usedp = 0;
+			git_error_set(GIT_ERROR_ODB, "packfile corrupted");
+			return -1;
+		}
+
 		size += (c & 0x7f) << shift;
 		shift += 7;
 	}
