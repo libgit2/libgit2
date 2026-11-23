@@ -763,8 +763,8 @@ typedef enum {
 	 */
 	GIT_REMOTE_DOWNLOAD_TAGS_UNSPECIFIED = 0,
 	/**
-	 * Ask the server for tags pointing to objects we're already
-	 * downloading.
+	 * Auto-follow tags pointing to objects being downloaded, but only
+	 * if at least one fetch refspec has a destination.
 	 */
 	GIT_REMOTE_DOWNLOAD_TAGS_AUTO,
 	/**

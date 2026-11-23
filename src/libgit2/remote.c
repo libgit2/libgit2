@@ -2139,6 +2139,18 @@ int git_remote_update_tips(
 	else
 		tagopt = download_tags;
 
+	/* Auto-follow tags only when an active fetch refspec stores a ref. */
+	if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_AUTO) {
+		tagopt = GIT_REMOTE_DOWNLOAD_TAGS_NONE;
+
+		git_vector_foreach(&remote->active_refspecs, i, spec) {
+			if (!spec->push && spec->dst) {
+				tagopt = GIT_REMOTE_DOWNLOAD_TAGS_AUTO;
+				break;
+			}
+		}
+	}
+
 	if ((error = truncate_fetch_head(git_repository_path(remote->repo), update_flags)) < 0)
 		goto out;
 
