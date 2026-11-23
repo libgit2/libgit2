@@ -371,8 +371,9 @@ typedef struct {
 
 	/**
 	 * If this is non-NULL, then after the rest of the repository
-	 * initialization is completed, an "origin" remote will be added
-	 * pointing to this URL.
+	 * initialization is completed, a remote will be added pointing
+	 * to this URL.  The remote is named "origin" unless `origin_name`
+	 * is set.
 	 */
 	const char *origin_url;
 
@@ -388,6 +389,13 @@ typedef struct {
 	 * default (currently "files").
 	 */
 	git_refdb_t refdb_type;
+
+	/**
+	 * The name of the remote to create when `origin_url` is set, or
+	 * NULL to use the default name, "origin".  Ignored when
+	 * `origin_url` is NULL.
+	 */
+	const char *origin_name;
 } git_repository_init_options;
 
 /** Current version for the `git_repository_init_options` structure */

@@ -462,6 +462,65 @@ void test_repo_init__extended_1(void)
 	cl_fixture_cleanup("root");
 }
 
+void test_repo_init__origin_name(void)
+{
+	git_remote *remote;
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH;
+	opts.origin_url = "https://github.com/libgit2/libgit2.git";
+	opts.origin_name = "upstream";
+
+	cl_git_pass(git_repository_init_ext(&g_repo, "root/origin_name", &opts));
+
+	cl_git_pass(git_remote_lookup(&remote, g_repo, "upstream"));
+	cl_assert_equal_s("upstream", git_remote_name(remote));
+	cl_assert_equal_s(opts.origin_url, git_remote_url(remote));
+	git_remote_free(remote);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_remote_lookup(&remote, g_repo, "origin"));
+
+	git_repository_free(g_repo);
+	cl_fixture_cleanup("root");
+}
+
+void test_repo_init__origin_name_without_url(void)
+{
+	git_remote *remote;
+	git_strarray remotes;
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH;
+	opts.origin_name = "upstream";
+
+	cl_git_pass(git_repository_init_ext(&g_repo, "root/origin_name", &opts));
+
+	cl_git_pass(git_remote_list(&remotes, g_repo));
+	cl_assert_equal_i(0, remotes.count);
+	git_strarray_dispose(&remotes);
+
+	cl_git_fail_with(GIT_ENOTFOUND, git_remote_lookup(&remote, g_repo, "upstream"));
+
+	git_repository_free(g_repo);
+	cl_fixture_cleanup("root");
+}
+
+void test_repo_init__invalid_origin_name(void)
+{
+	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
+
+	opts.flags = GIT_REPOSITORY_INIT_MKPATH;
+	opts.origin_url = "https://github.com/libgit2/libgit2.git";
+	opts.origin_name = "not a valid remote name";
+
+	cl_git_fail_with(GIT_EINVALIDSPEC,
+		git_repository_init_ext(&g_repo, "root/origin_name", &opts));
+
+	git_repository_free(g_repo);
+	g_repo = NULL;
+	cl_fixture_cleanup("root");
+}
+
 void test_repo_init__relative_gitdir(void)
 {
 	git_repository_init_options opts = GIT_REPOSITORY_INIT_OPTIONS_INIT;
