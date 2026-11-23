@@ -249,3 +249,33 @@ void test_submodule_add__submodule_clone_twice_fails(void)
 
 	git_submodule_free(sm);
 }
+
+void test_submodule_add__odb_only_repository(void)
+{
+	git_repository *repo;
+	git_odb *odb;
+	git_submodule *sm = NULL;
+
+	cl_git_pass(git_odb_new(&odb));
+	cl_git_pass(git_repository_wrap_odb(&repo, odb));
+	cl_assert(!git_repository_is_bare(repo));
+	cl_git_fail_with(GIT_EBAREREPO,
+		git_submodule_add_setup(&sm, repo, "url", "submodule", 0));
+	cl_assert_equal_i(GIT_ERROR_SUBMODULE, git_error_last()->klass);
+	cl_assert(sm == NULL);
+
+	git_repository_free(repo);
+	git_odb_free(odb);
+}
+
+void test_submodule_add__bare_repository(void)
+{
+	git_submodule *sm = NULL;
+
+	g_repo = cl_git_sandbox_init("testrepo.git");
+	cl_assert(git_repository_is_bare(g_repo));
+	cl_git_fail_with(GIT_EBAREREPO,
+		git_submodule_add_setup(&sm, g_repo, "url", "submodule", 1));
+	cl_assert_equal_i(GIT_ERROR_SUBMODULE, git_error_last()->klass);
+	cl_assert(sm == NULL);
+}
