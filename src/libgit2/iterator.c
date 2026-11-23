@@ -1149,32 +1149,37 @@ static void filesystem_iterator_frame_push_ignores(
 	filesystem_iterator_frame *new_frame)
 {
 	filesystem_iterator_frame *previous_frame;
-	const char *path = frame_entry ? frame_entry->path : "";
+	const char *relative_path;
 
 	if (!iterator__honor_ignores(&iter->base))
 		return;
 
+	/*
+	 * The top level directory is never ignored itself; looking it
+	 * up as an empty path would let a rule that matches any
+	 * directory match it, and every file in it would inherit that.
+	 */
+	if (!frame_entry) {
+		new_frame->is_ignored = GIT_IGNORE_NOTFOUND;
+		return;
+	}
+
 	if (git_ignore__lookup(&new_frame->is_ignored,
-			&iter->ignores, path, GIT_DIR_FLAG_TRUE) < 0) {
+			&iter->ignores, frame_entry->path, GIT_DIR_FLAG_TRUE) < 0) {
 		git_error_clear();
 		new_frame->is_ignored = GIT_IGNORE_NOTFOUND;
 	}
 
-	/* if this is not the top level directory... */
-	if (frame_entry) {
-		const char *relative_path;
+	previous_frame = filesystem_iterator_parent_frame(iter);
 
-		previous_frame = filesystem_iterator_parent_frame(iter);
+	/* push new ignores for files in this directory */
+	relative_path = frame_entry->path + previous_frame->path_len;
 
-		/* push new ignores for files in this directory */
-		relative_path = frame_entry->path + previous_frame->path_len;
+	/* inherit ignored from parent if no rule specified */
+	if (new_frame->is_ignored <= GIT_IGNORE_NOTFOUND)
+		new_frame->is_ignored = previous_frame->is_ignored;
 
-		/* inherit ignored from parent if no rule specified */
-		if (new_frame->is_ignored <= GIT_IGNORE_NOTFOUND)
-			new_frame->is_ignored = previous_frame->is_ignored;
-
-		git_ignore__push_dir(&iter->ignores, relative_path);
-	}
+	git_ignore__push_dir(&iter->ignores, relative_path);
 }
 
 static void filesystem_iterator_frame_pop_ignores(
