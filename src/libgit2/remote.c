@@ -1828,8 +1828,9 @@ static int update_one_tip(
 	if (!valid)
 		goto done;
 
-	/* If we have a tag, see if the auto-follow rules say to update it */
-	if (git_refspec_src_matches(tagspec, head->name)) {
+	/* An explicit destination takes precedence over tag auto-following. */
+	if (git_refspec_src_matches(tagspec, head->name) &&
+	    !(spec->dst && git_refspec_src_matches(spec, head->name))) {
 		if (tagopt == GIT_REMOTE_DOWNLOAD_TAGS_AUTO)
 			autotag = true;
 
