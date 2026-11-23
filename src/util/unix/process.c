@@ -1,3 +1,4 @@
+#ifndef __wasi__ /* WASI has no processes (only the ssh exec transport uses this) */
 /*
  * Copyright (C) the libgit2 contributors. All rights reserved.
  *
@@ -706,3 +707,5 @@ void git_process_free(git_process *process)
 	git_strlist_free_with_null(process->env);
 	git__free(process);
 }
+
+#endif /* __wasi__ */

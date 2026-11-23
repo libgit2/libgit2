@@ -355,3 +355,30 @@ done:
 #else
 # error no poll compatible implementation
 #endif
+
+#ifdef __wasi__
+/*
+ * Some WASI runtimes (Node's, through uvwasi) fail readlink() with ENOBUFS
+ * when the link's target fills the buffer exactly, where POSIX truncates;
+ * libgit2 passes buffers of the target's length. Read into a buffer one
+ * byte longer.
+ */
+ssize_t p_readlink(const char *path, char *buf, size_t bufsize)
+{
+	char *tmp;
+	ssize_t n;
+
+	if ((tmp = git__malloc(bufsize + 1)) == NULL)
+		return -1;
+
+	n = readlink(path, tmp, bufsize + 1);
+	if (n > 0) {
+		if ((size_t)n > bufsize)
+			n = (ssize_t)bufsize;
+		memcpy(buf, tmp, (size_t)n);
+	}
+
+	git__free(tmp);
+	return n;
+}
+#endif

@@ -39,7 +39,7 @@ void llhttp_init(llhttp_t* parser, llhttp_type_t type,
 }
 
 
-#if defined(__wasm__)
+#if defined(__wasm__) && !defined(__wasi__) /* the wasm_on_* hooks are for llhttp's own JS-hosted build */
 
 extern int wasm_on_message_begin(llhttp_t * p);
 extern int wasm_on_url(llhttp_t* p, const char* at, size_t length);
