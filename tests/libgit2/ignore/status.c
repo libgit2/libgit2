@@ -1339,3 +1339,51 @@ void test_ignore_status__override_nested_wildcard_unignore(void)
 
 	git_status_list_free(statuslist);
 }
+
+void test_ignore_status__dir_wildcard_does_not_ignore_toplevel_files(void)
+{
+	static const char *rules[] = { "*/\n", "/*/\n", "**/\n", NULL };
+	git_repository *repo = cl_git_sandbox_init("empty_standard_repo");
+	git_status_list *statuslist;
+	git_status_options opts = GIT_STATUS_OPTIONS_INIT;
+	const git_status_entry *status;
+	const char **rule;
+
+	cl_git_pass(git_futils_mkdir_r("empty_standard_repo/dir", 0777));
+	cl_git_mkfile("empty_standard_repo/dir/file", "contents");
+	cl_git_mkfile("empty_standard_repo/file", "contents");
+
+	opts.show = GIT_STATUS_SHOW_INDEX_AND_WORKDIR;
+	opts.flags = GIT_STATUS_OPT_INCLUDE_UNTRACKED |
+		GIT_STATUS_OPT_INCLUDE_IGNORED |
+		GIT_STATUS_OPT_RECURSE_UNTRACKED_DIRS;
+
+	/*
+	 * These rules match every directory in the working directory,
+	 * but not the working directory itself: the files at the top
+	 * level are untracked, not ignored.
+	 */
+	for (rule = rules; *rule != NULL; rule++) {
+		cl_git_rewritefile("empty_standard_repo/.gitignore", *rule);
+
+		cl_git_pass(git_status_list_new(&statuslist, repo, &opts));
+		cl_assert_equal_sz(3, git_status_list_entrycount(statuslist));
+
+		status = git_status_byindex(statuslist, 0);
+		cl_assert(status != NULL);
+		cl_assert_equal_s(".gitignore", status->index_to_workdir->old_file.path);
+		cl_assert_equal_i(GIT_STATUS_WT_NEW, status->status);
+
+		status = git_status_byindex(statuslist, 1);
+		cl_assert(status != NULL);
+		cl_assert_equal_s("dir/", status->index_to_workdir->old_file.path);
+		cl_assert_equal_i(GIT_STATUS_IGNORED, status->status);
+
+		status = git_status_byindex(statuslist, 2);
+		cl_assert(status != NULL);
+		cl_assert_equal_s("file", status->index_to_workdir->old_file.path);
+		cl_assert_equal_i(GIT_STATUS_WT_NEW, status->status);
+
+		git_status_list_free(statuslist);
+	}
+}
