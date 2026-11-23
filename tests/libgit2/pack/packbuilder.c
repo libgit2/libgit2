@@ -1,6 +1,7 @@
 #include "clar_libgit2.h"
 #include "futils.h"
 #include "pack.h"
+#include "pack-objects.h"
 #include "hash.h"
 #include "iterator.h"
 #include "vector.h"
@@ -289,3 +290,186 @@ void test_pack_packbuilder__keep_file_check(void)
 	cl_git_pass(git_libgit2_opts(GIT_OPT_DISABLE_PACK_KEEP_FILE_CHECKS, true));
 	assert(git_disable_pack_keep_file_checks);
 }
+
+static void oid_set_add(git_array_oid_t *set, const git_oid *id)
+{
+	git_oid *existing;
+	size_t i;
+
+	git_array_foreach(*set, i, existing) {
+		if (git_oid_equal(existing, id))
+			return;
+	}
+
+	cl_assert((existing = git_array_alloc(*set)) != NULL);
+	git_oid_cpy(existing, id);
+}
+
+static bool oid_set_contains(git_array_oid_t *set, const git_oid *id)
+{
+	git_oid *existing;
+	size_t i;
+
+	git_array_foreach(*set, i, existing) {
+		if (git_oid_equal(existing, id))
+			return true;
+	}
+
+	return false;
+}
+
+static void add_tree_objects(git_array_oid_t *set, const git_oid *tree_id)
+{
+	git_tree *tree;
+	size_t i;
+
+	oid_set_add(set, tree_id);
+	cl_git_pass(git_tree_lookup(&tree, _repo, tree_id));
+
+	for (i = 0; i < git_tree_entrycount(tree); i++) {
+		const git_tree_entry *entry = git_tree_entry_byindex(tree, i);
+
+		if (git_tree_entry_type(entry) == GIT_OBJECT_TREE)
+			add_tree_objects(set, git_tree_entry_id(entry));
+		else if (git_tree_entry_type(entry) == GIT_OBJECT_BLOB)
+			oid_set_add(set, git_tree_entry_id(entry));
+	}
+
+	git_tree_free(tree);
+}
+
+static void walk_from(git_revwalk *walk, const char **push, const char **hide)
+{
+	git_oid id;
+
+	for (; *push; push++) {
+		cl_git_pass(git_oid_from_string(&id, *push, GIT_OID_SHA1));
+		cl_git_pass(git_revwalk_push(walk, &id));
+	}
+
+	for (; *hide; hide++) {
+		cl_git_pass(git_oid_from_string(&id, *hide, GIT_OID_SHA1));
+		cl_git_pass(git_revwalk_hide(walk, &id));
+	}
+}
+
+/*
+ * Check that inserting the walk from the `push` commits, hiding the
+ * `hide` commits, inserts exactly the commits of the walk and the objects
+ * they reference, except for the objects of the hidden parents of those
+ * commits (the edges of the walk), which the other side has.
+ */
+static void assert_insert_walk(const char **push, const char **hide)
+{
+	git_array_oid_t commits = GIT_ARRAY_INIT, objects = GIT_ARRAY_INIT,
+		edges = GIT_ARRAY_INIT, expected = GIT_ARRAY_INIT;
+	git_revwalk *walk;
+	git_commit *commit;
+	git_oid id, *object;
+	size_t i, j;
+
+	/* What to expect, worked out with a separate walk */
+	cl_git_pass(git_revwalk_new(&walk, _repo));
+	walk_from(walk, push, hide);
+
+	while (git_revwalk_next(&id, walk) == 0)
+		oid_set_add(&commits, &id);
+
+	git_revwalk_free(walk);
+
+	git_array_foreach(commits, i, object) {
+		cl_git_pass(git_commit_lookup(&commit, _repo, object));
+		oid_set_add(&objects, object);
+		add_tree_objects(&objects, git_commit_tree_id(commit));
+
+		for (j = 0; j < git_commit_parentcount(commit); j++) {
+			const git_oid *parent_id = git_commit_parent_id(commit, j);
+			git_commit *parent;
+
+			if (oid_set_contains(&commits, parent_id))
+				continue;
+
+			cl_git_pass(git_commit_lookup(&parent, _repo, parent_id));
+			add_tree_objects(&edges, git_commit_tree_id(parent));
+			git_commit_free(parent);
+		}
+
+		git_commit_free(commit);
+	}
+
+	git_array_foreach(objects, i, object) {
+		if (!oid_set_contains(&edges, object))
+			oid_set_add(&expected, object);
+	}
+
+	/* What gets inserted */
+	walk_from(_revwalker, push, hide);
+	cl_git_pass(git_packbuilder_insert_walk(_packbuilder, _revwalker));
+
+	cl_assert_equal_sz(git_array_size(expected), _packbuilder->nr_objects);
+	for (i = 0; i < _packbuilder->nr_objects; i++)
+		cl_assert(oid_set_contains(&expected, &_packbuilder->object_list[i].id));
+
+	git_array_dispose(commits);
+	git_array_dispose(objects);
+	git_array_dispose(edges);
+	git_array_dispose(expected);
+}
+
+void test_pack_packbuilder__insert_walk_omits_objects_of_hidden_parents(void)
+{
+	/* "Add some files into subdirectories", on top of "branch commit one" */
+	const char *push[] = { "763d71aadf09a7951596c9746c024e7eece7c7af", NULL };
+	const char *hide[] = { "c47800c7266a2be04c571c04d5a6614691ea99bd", NULL };
+
+	assert_insert_walk(push, hide);
+}
+
+void test_pack_packbuilder__insert_walk_with_merges(void)
+{
+	/*
+	 * The walk includes the merge be3563a and, from the merged branch,
+	 * c47800c: the hidden 9fd738e and 5b5b025 are their parents.
+	 */
+	const char *push[] = { "a65fedf39aefe402d3bb6e24df4d4f5fe4547750", NULL };
+	const char *hide[] = { "9fd738e8f7967c078dceed8190330fc8648ee56a", NULL };
+
+	assert_insert_walk(push, hide);
+}
+
+void test_pack_packbuilder__insert_walk_reads_only_hidden_parents(void)
+{
+	/*
+	 * Hidden commits that aren't parents of the inserted commits have no
+	 * influence on what gets inserted, and aren't read beyond what the
+	 * walk needs: here, one of them refers to a tree that doesn't exist.
+	 * (There may be many of them, e.g. one for every reference a remote
+	 * advertises, with large trees.)
+	 */
+	const char *broken_commit =
+		"tree 0123456789012345678901234567890123456789\n"
+		"author A U Thor <author@example.com> 1700000000 +0000\n"
+		"committer A U Thor <author@example.com> 1700000000 +0000\n"
+		"\n"
+		"refers to a tree that doesn't exist\n";
+	char broken_id[GIT_OID_SHA1_HEXSIZE + 1];
+	const char *push[] = { "763d71aadf09a7951596c9746c024e7eece7c7af", NULL };
+	const char *hide[] = {
+		"c47800c7266a2be04c571c04d5a6614691ea99bd",
+		/* "Test commit 2", on another branch */
+		"e90810b8df3e80c413d903f631643c716887138d",
+		broken_id,
+		NULL
+	};
+	git_odb *odb;
+	git_oid id;
+
+	cl_git_pass(git_repository_odb(&odb, _repo));
+	cl_git_pass(git_odb_write(&id, odb, broken_commit,
+		strlen(broken_commit), GIT_OBJECT_COMMIT));
+	git_odb_free(odb);
+	git_oid_tostr(broken_id, sizeof(broken_id), &id);
+
+	assert_insert_walk(push, hide);
+}
+
