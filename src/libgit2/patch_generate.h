@@ -28,6 +28,8 @@ struct git_patch_generated {
 	struct git_patch base;
 
 	git_diff *diff; /* for refcount purposes, maybe NULL for blob diffs */
+	git_diff_delta delta; /* patch-owned delta; base.delta points here */
+	git_diff_delta *diff_delta; /* the diff's delta, NULL for blob diffs */
 	size_t delta_index;
 	git_diff_file_content ofile;
 	git_diff_file_content nfile;

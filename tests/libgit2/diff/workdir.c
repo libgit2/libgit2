@@ -1268,6 +1268,43 @@ void test_diff_workdir__can_diff_empty_untracked_file(void)
 	git_diff_free(diff);
 }
 
+void test_diff_workdir__repeated_patch_from_diff_is_stable(void)
+{
+	git_diff_options opts = GIT_DIFF_OPTIONS_INIT;
+	git_diff *diff = NULL;
+	git_patch *patch = NULL;
+	git_index *index;
+	int i;
+
+	g_repo = cl_git_sandbox_init("empty_standard_repo");
+	cl_repo_set_bool(g_repo, "core.autocrlf", true);
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_mkfile("empty_standard_repo/test.txt", "one\ntwo\nthree\n");
+	cl_git_pass(git_index_add_bypath(index, "test.txt"));
+	cl_repo_commit_from_index(NULL, g_repo, NULL, 1372350000, "Base");
+	git_index_free(index);
+
+	cl_git_rewritefile("empty_standard_repo/test.txt", "one\r\ntwo\r\nthree\r\n");
+
+	cl_git_pass(git_diff_index_to_workdir(&diff, g_repo, NULL, &opts));
+	cl_assert_equal_i(1, git_diff_num_deltas(diff));
+
+	/* generating a patch does not modify the diff it comes from */
+	for (i = 0; i < 3; i++) {
+		cl_git_pass(git_patch_from_diff(&patch, diff, 0));
+		cl_assert(patch != NULL);
+		cl_assert_equal_i(
+			GIT_DELTA_MODIFIED, git_patch_get_delta(patch)->status);
+		cl_assert_equal_i(
+			GIT_DELTA_MODIFIED, git_diff_get_delta(diff, 0)->status);
+		git_patch_free(patch);
+		patch = NULL;
+	}
+
+	git_diff_free(diff);
+}
+
 void test_diff_workdir__can_diff_empty_file(void)
 {
 	git_diff *diff;

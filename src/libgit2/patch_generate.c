@@ -67,11 +67,23 @@ static void patch_generated_update_binary(git_patch_generated *patch)
 		patch->base.delta->flags |= GIT_DIFF_FLAG_NOT_BINARY;
 }
 
+/* the diff caches the binary determination and the sizes that loading resolved */
+static void patch_generated_update_diff_delta(git_patch_generated *patch)
+{
+	if (!patch->diff_delta)
+		return;
+
+	patch->diff_delta->flags |= (patch->delta.flags & DIFF_FLAGS_KNOWN_BINARY);
+	patch->diff_delta->old_file.size = patch->delta.old_file.size;
+	patch->diff_delta->new_file.size = patch->delta.new_file.size;
+}
+
 static void patch_generated_init_common(git_patch_generated *patch)
 {
 	patch->base.free_fn = patch_generated_free;
 
 	patch_generated_update_binary(patch);
+	patch_generated_update_diff_delta(patch);
 
 	patch->flags |= GIT_PATCH_GENERATED_INITIALIZED;
 
@@ -126,13 +138,21 @@ static int patch_generated_normalize_options(
 static int patch_generated_init(
 	git_patch_generated *patch, git_diff *diff, size_t delta_index)
 {
+	git_diff_delta *delta;
 	int error = 0;
 
 	memset(patch, 0, sizeof(*patch));
 
+	if ((delta = git_vector_get(&diff->deltas, delta_index)) == NULL)
+		return GIT_ENOTFOUND;
+
+	/* the patch owns its delta so that generating it does not modify the diff */
+	memcpy(&patch->delta, delta, sizeof(patch->delta));
+
 	patch->diff = diff;
+	patch->diff_delta = delta;
 	patch->base.repo = diff->repo;
-	patch->base.delta = git_vector_get(&diff->deltas, delta_index);
+	patch->base.delta = &patch->delta;
 	patch->delta_index = delta_index;
 
 	if ((error = patch_generated_normalize_options(
@@ -244,6 +264,7 @@ static int patch_generated_load(git_patch_generated *patch, git_patch_generated_
 
 cleanup:
 	patch_generated_update_binary(patch);
+	patch_generated_update_diff_delta(patch);
 
 	if (!error) {
 		if (patch_generated_diffable(patch))
@@ -419,7 +440,6 @@ static int diff_required(git_diff *diff, const char *action)
 
 typedef struct {
 	git_patch_generated patch;
-	git_diff_delta delta;
 	char paths[GIT_FLEX_ARRAY];
 } patch_generated_with_delta;
 
@@ -430,18 +450,18 @@ static int diff_single_generate(patch_generated_with_delta *pd, git_xdiff_output
 	bool has_old = ((patch->ofile.flags & GIT_DIFF_FLAG__NO_DATA) == 0);
 	bool has_new = ((patch->nfile.flags & GIT_DIFF_FLAG__NO_DATA) == 0);
 
-	pd->delta.status = has_new ?
+	pd->patch.delta.status = has_new ?
 		(has_old ? GIT_DELTA_MODIFIED : GIT_DELTA_ADDED) :
 		(has_old ? GIT_DELTA_DELETED : GIT_DELTA_UNTRACKED);
 
 	if (git_oid_equal(&patch->nfile.file->id, &patch->ofile.file->id))
-		pd->delta.status = GIT_DELTA_UNMODIFIED;
+		pd->patch.delta.status = GIT_DELTA_UNMODIFIED;
 
-	patch->base.delta = &pd->delta;
+	patch->base.delta = &patch->delta;
 
 	patch_generated_init_common(patch);
 
-	if (pd->delta.status == GIT_DELTA_UNMODIFIED &&
+	if (pd->patch.delta.status == GIT_DELTA_UNMODIFIED &&
 		!(patch->ofile.opts_flags & GIT_DIFF_INCLUDE_UNMODIFIED)) {
 
 		/* Even empty patches are flagged as binary, and even though
@@ -473,7 +493,7 @@ static int patch_generated_from_sources(
 	git_repository *repo =
 		oldsrc->blob ? git_blob_owner(oldsrc->blob) :
 		newsrc->blob ? git_blob_owner(newsrc->blob) : NULL;
-	git_diff_file *lfile = &pd->delta.old_file, *rfile = &pd->delta.new_file;
+	git_diff_file *lfile = &pd->patch.delta.old_file, *rfile = &pd->patch.delta.new_file;
 	git_diff_file_content *ldata = &pd->patch.ofile, *rdata = &pd->patch.nfile;
 	git_diff_options *opts = &pd->patch.base.diff_opts;
 
@@ -485,7 +505,7 @@ static int patch_generated_from_sources(
 		tmp = ldata; ldata = rdata; rdata = tmp;
 	}
 
-	pd->patch.base.delta = &pd->delta;
+	pd->patch.base.delta = &pd->patch.delta;
 
 	if (!oldsrc->as_path) {
 		if (newsrc->as_path)
