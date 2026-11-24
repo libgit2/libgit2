@@ -183,7 +183,7 @@ static int stash_to_index(
 		return error;
 
 	if ((error = git_blob__create_from_paths(
-	    &entry.id, &st, repo, NULL, path, 0, true)) < 0)
+	    &entry.id, &st, repo, NULL, path, 0, true, NULL)) < 0)
 		return error;
 
 	git_index_entry__init_from_stat(&entry, &st,

@@ -189,7 +189,8 @@ int git_blob__create_from_paths(
 	const char *content_path,
 	const char *hint_path,
 	mode_t hint_mode,
-	bool try_load_filters)
+	bool try_load_filters,
+	const struct stat *hint_st)
 {
 	int error;
 	struct stat st;
@@ -197,6 +198,7 @@ int git_blob__create_from_paths(
 	git_object_size_t size;
 	mode_t mode;
 	git_str path = GIT_STR_INIT;
+	const struct stat *st_ptr;
 
 	GIT_ASSERT_ARG(hint_path || !try_load_filters);
 
@@ -207,21 +209,23 @@ int git_blob__create_from_paths(
 		content_path = path.ptr;
 	}
 
-	if ((error = git_fs_path_lstat(content_path, &st)) < 0 ||
+	if ((!hint_st && (error = git_fs_path_lstat(content_path, &st)) < 0) ||
 		(error = git_repository_odb(&odb, repo)) < 0)
 		goto done;
+	
+	st_ptr = hint_st ? hint_st : &st;
 
-	if (S_ISDIR(st.st_mode)) {
+	if (S_ISDIR(st_ptr->st_mode)) {
 		git_error_set(GIT_ERROR_ODB, "cannot create blob from '%s': it is a directory", content_path);
 		error = GIT_EDIRECTORY;
 		goto done;
 	}
 
-	if (out_st)
+	if (!hint_st && out_st)
 		memcpy(out_st, &st, sizeof(st));
 
-	size = st.st_size;
-	mode = hint_mode ? hint_mode : st.st_mode;
+	size = st_ptr->st_size;
+	mode = hint_mode ? hint_mode : st_ptr->st_mode;
 
 	if (S_ISLNK(mode)) {
 		error = write_symlink(id, odb, content_path, (size_t)size);
@@ -272,7 +276,7 @@ done:
 int git_blob_create_from_workdir(
 	git_oid *id, git_repository *repo, const char *path)
 {
-	return git_blob__create_from_paths(id, NULL, repo, NULL, path, 0, true);
+	return git_blob__create_from_paths(id, NULL, repo, NULL, path, 0, true, NULL);
 }
 
 int git_blob_create_from_disk(
@@ -293,7 +297,7 @@ int git_blob_create_from_disk(
 		hintpath = full_path.ptr + strlen(workdir);
 
 	error = git_blob__create_from_paths(
-		id, NULL, repo, git_str_cstr(&full_path), hintpath, 0, !!hintpath);
+		id, NULL, repo, git_str_cstr(&full_path), hintpath, 0, !!hintpath, NULL);
 
 	git_str_dispose(&full_path);
 	return error;
@@ -384,7 +388,7 @@ int git_blob_create_from_stream_commit(git_oid *out, git_writestream *_stream)
 		goto cleanup;
 
 	error = git_blob__create_from_paths(out, NULL, stream->repo, stream->fbuf.path_lock,
-					    stream->hintpath, 0, !!stream->hintpath);
+					    stream->hintpath, 0, !!stream->hintpath, NULL);
 
 cleanup:
 	blob_writestream_free(_stream);
