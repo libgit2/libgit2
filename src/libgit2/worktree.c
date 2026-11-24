@@ -89,6 +89,9 @@ char *git_worktree__read_link(const char *base, const char *file)
 
 	git_str_rtrim(&buf);
 
+	/* apparently on Windows, some people use backslashes in paths */
+	git_fs_path_mkposix(buf.ptr);
+
 	if (!git_fs_path_is_relative(buf.ptr))
 		return git_str_detach(&buf);
 
