@@ -1,5 +1,6 @@
 #include "clar_libgit2.h"
 #include "posix.h"
+#include "fs_path.h"
 
 #ifdef GIT_WIN32
 # include "win32/reparse.h"
@@ -17,6 +18,8 @@ void test_link__cleanup(void)
 	RemoveDirectory("stat_dangling");
 	RemoveDirectory("stat_dangling_dir");
 	RemoveDirectory("stat_dangling_junction");
+
+	RemoveDirectory("readlink_dir_link");
 #endif
 }
 
@@ -627,4 +630,24 @@ void test_link__readlink_multiple(void)
 	git_str_dispose(&path2);
 	git_str_dispose(&path3);
 	git_str_dispose(&target_path);
+}
+
+void test_link__readlink_keeps_trailing_separator(void)
+{
+	int len;
+	char buf[2048];
+
+	if (!git_fs_path_supports_symlinks("readlink_supports_symlinks"))
+		clar__skip();
+
+	cl_must_pass(p_mkdir("readlink_dir_target", 0777));
+	cl_must_pass(p_symlink("readlink_dir_target/", "readlink_dir_link"));
+
+	/* git stores the target with the trailing separator, as written */
+	len = p_readlink("readlink_dir_link", buf, 2048);
+	cl_must_pass(len);
+
+	buf[len] = 0;
+
+	cl_assert_equal_s("readlink_dir_target/", buf);
 }

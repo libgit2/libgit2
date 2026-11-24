@@ -609,13 +609,32 @@ int git_win32_path_readlink_w(git_win32_path dest, const git_win32_path path)
 		errno = EINVAL;
 		error = -1;
 	} else if (target_len) {
+		/*
+		 * A symbolic link keeps its target as written, so a trailing
+		 * separator ("dir\") is part of it, as it is for git and on
+		 * POSIX.  (Junction targets always end in one; they are not.)
+		 */
+		bool trailing_separator =
+			reparse_buf->ReparseTag == IO_REPARSE_TAG_SYMLINK &&
+			target[target_len - 1] == L'\\';
+
 		/* The path may need to have a namespace prefix removed. */
 		target_len = git_win32_path_remove_namespace(target, target_len);
 
+		/* Removing the namespace also trims trailing separators. */
+		if (trailing_separator && target_len && target[target_len - 1] == L'\\')
+			trailing_separator = false;
+
 		/* Need one additional character in the target buffer
 		 * for the terminating NULL. */
-		if (GIT_WIN_PATH_UTF16 > target_len) {
+		if (GIT_WIN_PATH_UTF16 > target_len + trailing_separator) {
 			wcscpy(dest, target);
+
+			if (trailing_separator) {
+				dest[target_len++] = L'\\';
+				dest[target_len] = L'\0';
+			}
+
 			error = (int)target_len;
 		}
 	}
