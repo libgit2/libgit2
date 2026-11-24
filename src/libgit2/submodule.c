@@ -766,9 +766,40 @@ done:
 	return error;
 }
 
+/*
+ * The submodule's repository goes in <repo-dir>/modules/<name>/, where git
+ * looks for it.  Earlier versions of libgit2 used the submodule's path
+ * instead; keep using such a directory if it exists and the name-based one
+ * does not.
+ */
+static int submodule_repo_dir(
+	git_str *out,
+	git_repository *parent_repo,
+	const char *name,
+	const char *path)
+{
+	git_str legacy = GIT_STR_INIT;
+	int error;
+
+	if ((error = git_repository__item_path(out, parent_repo, GIT_REPOSITORY_ITEM_MODULES)) < 0 ||
+	    (error = git_str_joinpath(&legacy, out->ptr, path)) < 0 ||
+	    (error = git_str_joinpath(out, out->ptr, name)) < 0)
+		goto done;
+
+	if (strcmp(name, path) != 0 &&
+	    !git_fs_path_isdir(out->ptr) &&
+	    git_fs_path_isdir(legacy.ptr))
+		git_str_swap(out, &legacy);
+
+done:
+	git_str_dispose(&legacy);
+	return error;
+}
+
 static int submodule_repo_init(
 	git_repository **out,
 	git_repository *parent_repo,
+	const char *name,
 	const char *path,
 	const char *url,
 	bool use_gitlink)
@@ -793,10 +824,7 @@ static int submodule_repo_init(
 	 * Old style: sub-repo goes directly into repo/<name>/.git/
 	 */
 	 if (use_gitlink) {
-		error = git_repository__item_path(&repodir, parent_repo, GIT_REPOSITORY_ITEM_MODULES);
-		if (error < 0)
-			goto cleanup;
-		error = git_str_joinpath(&repodir, repodir.ptr, path);
+		error = submodule_repo_dir(&repodir, parent_repo, name, path);
 		if (error < 0)
 			goto cleanup;
 
@@ -941,7 +969,7 @@ int git_submodule_add_setup(
 		if ((error = git_submodule__resolve_url(&real_url, repo, url)) < 0)
 			goto cleanup;
 
-		 if ((error = submodule_repo_init(&subrepo, repo, path, real_url.ptr, use_gitlink)) < 0)
+		 if ((error = submodule_repo_init(&subrepo, repo, path, path, real_url.ptr, use_gitlink)) < 0)
 			goto cleanup;
 	}
 
@@ -984,7 +1012,7 @@ int git_submodule_repo_init(
 	if ((error = git_str_printf(&buf, "submodule.%s.url", sm->name)) < 0 ||
 		(error = git_repository_config_snapshot(&cfg, sm->repo)) < 0 ||
 		(error = git_config_get_string(&configured_url, cfg, buf.ptr)) < 0 ||
-		(error = submodule_repo_init(&sub_repo, sm->repo, sm->path, configured_url, use_gitlink)) < 0)
+		(error = submodule_repo_init(&sub_repo, sm->repo, sm->name, sm->path, configured_url, use_gitlink)) < 0)
 		goto done;
 
 	*out = sub_repo;
@@ -1330,6 +1358,7 @@ int git_submodule_set_fetch_recurse_submodules(git_repository *repo, const char 
 static int submodule_repo_create(
 	git_repository **out,
 	git_repository *parent_repo,
+	const char *name,
 	const char *path)
 {
 	int error = 0;
@@ -1354,10 +1383,7 @@ static int submodule_repo_create(
 	 * <repo-dir>/modules/<name>/ with a gitlink in the
 	 * sub-repo workdir directory to that repository.
 	 */
-	error = git_repository__item_path(&repodir, parent_repo, GIT_REPOSITORY_ITEM_MODULES);
-	if (error < 0)
-		goto cleanup;
-	error = git_str_joinpath(&repodir, repodir.ptr, path);
+	error = submodule_repo_dir(&repodir, parent_repo, name, path);
 	if (error < 0)
 		goto cleanup;
 
@@ -1388,7 +1414,7 @@ static int git_submodule_update_repo_init_cb(
 
 	sm = payload;
 
-	return submodule_repo_create(out, sm->repo, path);
+	return submodule_repo_create(out, sm->repo, sm->name, path);
 }
 
 int git_submodule_update_options_init(git_submodule_update_options *opts, unsigned int version)
