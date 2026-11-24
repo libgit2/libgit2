@@ -132,3 +132,39 @@ void test_grafts_shallow__grafted_object(void)
 
 	git_commit_free(commit);
 }
+
+/* testrepo.git has a commit-graph, which knows be3563a's real parents */
+static void assert_walk_stops_at_be3563a(void)
+{
+	git_revwalk *w;
+	git_oid oid_1, oid_2, oid_3;
+
+	g_repo = cl_git_sandbox_reopen();
+
+	cl_git_pass(git_revwalk_new(&w, g_repo));
+	cl_git_pass(git_revwalk_push_head(w));
+
+	cl_git_pass(git_revwalk_next(&oid_1, w));
+	cl_git_pass(git_revwalk_next(&oid_2, w));
+	cl_git_fail_with(GIT_ITEROVER, git_revwalk_next(&oid_3, w));
+
+	cl_assert_equal_s(git_oid_tostr_s(&oid_1), "a65fedf39aefe402d3bb6e24df4d4f5fe4547750");
+	cl_assert_equal_s(git_oid_tostr_s(&oid_2), "be3563ae3f795b2b4353bcce3a527ad0a4f7f644");
+
+	git_revwalk_free(w);
+}
+
+void test_grafts_shallow__shallow_root_ignores_commit_graph(void)
+{
+	g_repo = cl_git_sandbox_init("testrepo.git");
+	cl_git_mkfile("testrepo.git/shallow", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644\n");
+	assert_walk_stops_at_be3563a();
+}
+
+void test_grafts_shallow__graft_ignores_commit_graph(void)
+{
+	g_repo = cl_git_sandbox_init("testrepo.git");
+	cl_must_pass(p_mkdir("testrepo.git/info", 0777));
+	cl_git_mkfile("testrepo.git/info/grafts", "be3563ae3f795b2b4353bcce3a527ad0a4f7f644\n");
+	assert_walk_stops_at_be3563a();
+}

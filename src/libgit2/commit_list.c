@@ -177,7 +177,8 @@ int git_commit_list_parse(git_revwalk *walk, git_commit_list_node *commit)
 		return 0;
 
 	/* Let's try to use the commit graph first. */
-	git_odb__get_commit_graph_file(&cgraph_file, walk->odb);
+	if (git_repository__commit_graph_compatible(walk->repo))
+		git_odb__get_commit_graph_file(&cgraph_file, walk->odb);
 	if (cgraph_file) {
 		git_commit_graph_entry e;
 
