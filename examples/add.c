@@ -69,13 +69,13 @@ int lg2_add(git_repository *repo, int argc, char **argv)
 
 	/* Perform the requested action with the index and files */
 	if (options.add_update) {
-		git_index_update_all(index, &array, matched_cb, &options);
+		check_lg2(git_index_update_all(index, &array, matched_cb, &options), "Could not update files in index", NULL);
 	} else {
-		git_index_add_all(index, &array, 0, matched_cb, &options);
+		check_lg2(git_index_add_all(index, &array, 0, matched_cb, &options), "Could not add files to index", NULL);
 	}
 
 	/* Cleanup memory */
-	git_index_write(index);
+	check_lg2(git_index_write(index), "Could not write index", NULL);
 	git_index_free(index);
 
 	return 0;
