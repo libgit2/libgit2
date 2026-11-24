@@ -95,7 +95,7 @@ void test_worktree_worktree__list_without_worktrees(void)
 	cl_git_pass(git_worktree_list(&wts, repo));
 	cl_assert_equal_i(wts.count, 0);
 
-	git_repository_free(repo);
+	cl_git_sandbox_cleanup();
 }
 
 void test_worktree_worktree__lookup_without_git_directory(void)

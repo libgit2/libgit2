@@ -298,7 +298,7 @@ void test_clone_nonetwork__clone_tag_to_tree(void)
 
 	g_options.local = GIT_CLONE_NO_LOCAL;
 	cl_git_pass(git_clone(&g_repo, cl_git_path_url(git_repository_path(stage)), "./foo", &g_options));
-	git_repository_free(stage);
+	cl_git_sandbox_cleanup();
 
 	cl_git_pass(git_reference_lookup(&tag, g_repo, tag_name));
 	cl_git_pass(git_tree_lookup(&tree, g_repo, git_reference_target(tag)));
