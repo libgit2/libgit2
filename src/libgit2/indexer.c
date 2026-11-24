@@ -60,6 +60,7 @@ struct git_indexer {
 	unsigned int fanout[256];
 	git_hash_ctx hash_ctx;
 	unsigned char checksum[GIT_HASH_MAX_SIZE];
+	git_oid checksum_oid;
 	char name[(GIT_HASH_MAX_SIZE * 2) + 1];
 	git_indexer_progress_cb progress_cb;
 	void *progress_payload;
@@ -84,7 +85,7 @@ struct delta_info {
 #ifndef GIT_DEPRECATE_HARD
 const git_oid *git_indexer_hash(const git_indexer *idx)
 {
-	return (git_oid *)idx->checksum;
+	return &idx->checksum_oid;
 }
 #endif
 
@@ -1303,6 +1304,8 @@ int git_indexer_commit(git_indexer *idx, git_indexer_progress *stats)
 	/* Use the trailer hash as the pack file name to ensure
 	 * files with different contents have different names */
 	memcpy(idx->checksum, checksum, checksum_size);
+	if (git_oid_from_raw(&idx->checksum_oid, checksum, idx->oid_type) < 0)
+		return -1;
 	if (git_hash_fmt(idx->name, checksum, checksum_size) < 0)
 		return -1;
 
