@@ -242,6 +242,106 @@ void test_checkout_tree__can_remove_ignored(void)
 	cl_assert(!git_fs_path_isfile("testrepo/ignored_file"));
 }
 
+static void make_dir_with_ignored_and_untracked(const char *dir)
+{
+	git_str path = GIT_STR_INIT;
+
+	cl_git_pass(git_futils_mkdir_r(dir, 0777));
+
+	cl_git_pass(git_str_joinpath(&path, dir, "ignored.txt"));
+	cl_git_mkfile(path.ptr, "as you wish");
+
+	cl_git_pass(git_str_joinpath(&path, dir, "untracked.txt"));
+	cl_git_mkfile(path.ptr, "as you wish");
+
+	cl_git_pass(git_ignore_add_rule(g_repo, "ignored.txt\n"));
+
+	git_str_dispose(&path);
+}
+
+void test_checkout_tree__remove_untracked_keeps_ignored_sibling(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	make_dir_with_ignored_and_untracked("testrepo/dir");
+
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(git_fs_path_isfile("testrepo/dir/ignored.txt"));
+	cl_assert(!git_fs_path_exists("testrepo/dir/untracked.txt"));
+}
+
+void test_checkout_tree__remove_ignored_keeps_untracked_sibling(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_REMOVE_IGNORED;
+
+	make_dir_with_ignored_and_untracked("testrepo/dir");
+
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(!git_fs_path_exists("testrepo/dir/ignored.txt"));
+	cl_assert(git_fs_path_isfile("testrepo/dir/untracked.txt"));
+}
+
+void test_checkout_tree__remove_untracked_keeps_ignored_in_subdir(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	make_dir_with_ignored_and_untracked("testrepo/dir/sub");
+	cl_git_mkfile("testrepo/dir/untracked.txt", "as you wish");
+
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(git_fs_path_isfile("testrepo/dir/sub/ignored.txt"));
+	cl_assert(!git_fs_path_exists("testrepo/dir/sub/untracked.txt"));
+	cl_assert(!git_fs_path_exists("testrepo/dir/untracked.txt"));
+}
+
+void test_checkout_tree__remove_untracked_keeps_ignored_beside_tracked(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_index *index;
+
+	opts.checkout_strategy = GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	make_dir_with_ignored_and_untracked("testrepo/dir");
+	cl_git_mkfile("testrepo/dir/tracked.txt", "as you wish");
+
+	cl_git_pass(git_repository_index(&index, g_repo));
+	cl_git_pass(git_index_add_bypath(index, "dir/tracked.txt"));
+	cl_git_pass(git_index_write(index));
+	git_index_free(index);
+
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(git_fs_path_isfile("testrepo/dir/tracked.txt"));
+	cl_assert(git_fs_path_isfile("testrepo/dir/ignored.txt"));
+	cl_assert(!git_fs_path_exists("testrepo/dir/untracked.txt"));
+}
+
+void test_checkout_tree__remove_untracked_keeps_ignored_dir(void)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+
+	opts.checkout_strategy = GIT_CHECKOUT_REMOVE_UNTRACKED;
+
+	cl_must_pass(p_mkdir("testrepo/dir", 0777));
+	cl_git_mkfile("testrepo/dir/one.txt", "as you wish");
+	cl_git_mkfile("testrepo/dir/two.txt", "as you wish");
+	cl_git_pass(git_ignore_add_rule(g_repo, "dir/\n"));
+
+	cl_git_pass(git_checkout_head(g_repo, &opts));
+
+	cl_assert(git_fs_path_isfile("testrepo/dir/one.txt"));
+	cl_assert(git_fs_path_isfile("testrepo/dir/two.txt"));
+}
+
 static int checkout_tree_with_blob_ignored_in_workdir(int strategy, bool isdir)
 {
 	git_oid oid;
