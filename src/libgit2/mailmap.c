@@ -490,11 +490,12 @@ int git_mailmap_resolve_signature(
 	if (error < 0)
 		return error;
 
-	error = git_signature_new(out, name, email, sig->when.time, sig->when.offset);
-	if (error < 0)
-		return error;
-
-	/* Copy over the sign, as git_signature_new doesn't let you pass it. */
-	(*out)->when.sign = sig->when.sign;
-	return 0;
+	/*
+	 * Signatures that come out of an object can have an empty name or
+	 * email; git accepts such commits and our own parser reads them back,
+	 * so resolving one must not reject it. git_signature_new() is the
+	 * constructor for brand new signatures and refuses empty fields, so
+	 * build the resolved signature from the existing one instead.
+	 */
+	return git_signature__resolved(out, sig, name, email);
 }

@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "mailmap.h"
+#include "signature.h"
 
 static git_mailmap *mailmap = NULL;
 
@@ -98,4 +99,77 @@ void test_mailmap_basic__name_matching(void)
 		"Other Name That Doesn't Match", "yetanotheremail@foo.com"));
 	cl_assert_equal_s(name, "Other Name That Doesn't Match");
 	cl_assert_equal_s(email, "yetanotheremail@foo.com");
+}
+
+static void parse_signature(git_signature *sig, const char *header)
+{
+	const char *buf = header;
+
+	cl_git_pass(git_signature__parse(
+		sig, &buf, header + strlen(header), "author ", '\n'));
+}
+
+/*
+ * A commit can legitimately carry an empty name or email; git writes and reads
+ * those back happily. Resolving such a signature through a mailmap that has
+ * nothing to say about it must hand it back unchanged rather than fail.
+ */
+void test_mailmap_basic__resolve_signature_keeps_empty_email(void)
+{
+	git_signature parsed = {0};
+	git_signature *resolved = NULL;
+
+	parse_signature(&parsed, "author An Author <> 1461698487 +0000\n");
+	cl_assert_equal_s("An Author", parsed.name);
+	cl_assert_equal_s("", parsed.email);
+
+	cl_git_pass(git_mailmap_resolve_signature(&resolved, mailmap, &parsed));
+	cl_assert_equal_s("An Author", resolved->name);
+	cl_assert_equal_s("", resolved->email);
+	cl_assert_equal_i(1461698487, resolved->when.time);
+	git_signature_free(resolved);
+
+	/* the same holds with no mailmap at all */
+	cl_git_pass(git_mailmap_resolve_signature(&resolved, NULL, &parsed));
+	cl_assert_equal_s("An Author", resolved->name);
+	cl_assert_equal_s("", resolved->email);
+	git_signature_free(resolved);
+
+	git__free(parsed.name);
+	git__free(parsed.email);
+}
+
+void test_mailmap_basic__resolve_signature_keeps_empty_name(void)
+{
+	git_signature parsed = {0};
+	git_signature *resolved = NULL;
+
+	parse_signature(&parsed, "author  <an@author.com> 1461698487 +0000\n");
+	cl_assert_equal_s("", parsed.name);
+	cl_assert_equal_s("an@author.com", parsed.email);
+
+	cl_git_pass(git_mailmap_resolve_signature(&resolved, NULL, &parsed));
+	cl_assert_equal_s("", resolved->name);
+	cl_assert_equal_s("an@author.com", resolved->email);
+	git_signature_free(resolved);
+
+	git__free(parsed.name);
+	git__free(parsed.email);
+}
+
+/* a mailmap entry still replaces what it matches */
+void test_mailmap_basic__resolve_signature_applies_mailmap(void)
+{
+	git_signature parsed = {0};
+	git_signature *resolved = NULL;
+
+	parse_signature(&parsed, "author Some One <foo@baz.com> 1461698487 +0000\n");
+
+	cl_git_pass(git_mailmap_resolve_signature(&resolved, mailmap, &parsed));
+	cl_assert_equal_s("Foo bar", resolved->name);
+	cl_assert_equal_s("foo@bar.com", resolved->email);
+	git_signature_free(resolved);
+
+	git__free(parsed.name);
+	git__free(parsed.email);
 }
