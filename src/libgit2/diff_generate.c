@@ -208,7 +208,8 @@ static int diff_delta__from_one(
 		delta->new_file.id_abbrev = (uint16_t)git_oid_hexsize(oid_type);
 	}
 
-	delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
+	if (!has_old || !git_oid_is_zero(&delta->old_file.id))
+		delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 
 	if (has_old || !git_oid_is_zero(&delta->new_file.id))
 		delta->new_file.flags |= GIT_DIFF_FLAG_VALID_ID;
@@ -264,8 +265,10 @@ static int diff_delta__from_two(
 		delta->old_file.mode = old_mode;
 		git_oid_cpy(&delta->old_file.id, old_id);
 		delta->old_file.id_abbrev = (uint16_t)git_oid_hexsize(oid_type);
-		delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID |
-			GIT_DIFF_FLAG_EXISTS;
+		delta->old_file.flags |= GIT_DIFF_FLAG_EXISTS;
+
+		if (!git_oid_is_zero(&old_entry->id))
+			delta->old_file.flags |= GIT_DIFF_FLAG_VALID_ID;
 	}
 
 	if (!git_index_entry_is_conflict(new_entry)) {
