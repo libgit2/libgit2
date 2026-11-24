@@ -276,9 +276,14 @@ static bool iterator_pathlist_next_is(git_iterator *iter, const char *path)
 				return true;
 		}
 
-		/* this pathlist entry sorts before the given path, try the next */
+		/* this pathlist entry sorts before the given path, try the next.
+		 * skip it on later calls only if all the entries before it are
+		 * skipped too, since an earlier entry can still match a later
+		 * path (eg, "foo" does not match "foo-bar/a" but matches "foo/a").
+		 */
 		else if (cmp < 0) {
-			iter->pathlist_walk_idx++;
+			if (i == iter->pathlist_walk_idx)
+				iter->pathlist_walk_idx++;
 			continue;
 		}
 
