@@ -53,24 +53,23 @@ GIT_INLINE(int) git__is_int(int64_t p)
 #if (__has_builtin(__builtin_add_overflow) || \
      (defined(__GNUC__) && (__GNUC__ >= 5)))
 
-# if (SIZE_MAX == UINT_MAX)
-#  define git__add_sizet_overflow(out, one, two) \
-     __builtin_uadd_overflow(one, two, out)
-#  define git__multiply_sizet_overflow(out, one, two) \
-     __builtin_umul_overflow(one, two, out)
-# elif (SIZE_MAX == ULONG_MAX)
-#  define git__add_sizet_overflow(out, one, two) \
-     __builtin_uaddl_overflow(one, two, out)
-#  define git__multiply_sizet_overflow(out, one, two) \
-     __builtin_umull_overflow(one, two, out)
-# elif (SIZE_MAX == ULLONG_MAX)
-#  define git__add_sizet_overflow(out, one, two) \
-     __builtin_uaddll_overflow(one, two, out)
-#  define git__multiply_sizet_overflow(out, one, two) \
-     __builtin_umulll_overflow(one, two, out)
-# else
-#  error compiler has add with overflow intrinsics but SIZE_MAX is unknown
-# endif
+/*
+ * Use the type-generic intrinsics, which accept any integer pointer,
+ * and convert the operands to `size_t` first.
+ *
+ * NOTE: `SIZE_MAX` does not tell us the unsigned type of `size_t`. On
+ * some 32-bit targets (wasm32, armv7 iOS), it is `unsigned long` even
+ * though `SIZE_MAX == UINT_MAX`.
+ */
+GIT_INLINE(bool) git__add_sizet_overflow(size_t *out, size_t one, size_t two)
+{
+	return __builtin_add_overflow(one, two, out);
+}
+
+GIT_INLINE(bool) git__multiply_sizet_overflow(size_t *out, size_t one, size_t two)
+{
+	return __builtin_mul_overflow(one, two, out);
+}
 
 # define git__add_int_overflow(out, one, two) \
     __builtin_sadd_overflow(one, two, out)
