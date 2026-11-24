@@ -9,6 +9,9 @@ static git_net_url url = GIT_NET_URL_INIT;
 static char *orig_http_proxy = NULL;
 static char *orig_https_proxy = NULL;
 static char *orig_no_proxy = NULL;
+static char *orig_http_proxy_lc = NULL;
+static char *orig_https_proxy_lc = NULL;
+static char *orig_no_proxy_lc = NULL;
 
 void test_remote_httpproxy__initialize(void)
 {
@@ -24,10 +27,16 @@ void test_remote_httpproxy__initialize(void)
 	orig_http_proxy = cl_getenv("HTTP_PROXY");
 	orig_https_proxy = cl_getenv("HTTPS_PROXY");
 	orig_no_proxy = cl_getenv("NO_PROXY");
+	orig_http_proxy_lc = cl_getenv("http_proxy");
+	orig_https_proxy_lc = cl_getenv("https_proxy");
+	orig_no_proxy_lc = cl_getenv("no_proxy");
 
 	cl_setenv("HTTP_PROXY", NULL);
 	cl_setenv("HTTPS_PROXY", NULL);
 	cl_setenv("NO_PROXY", NULL);
+	cl_setenv("http_proxy", NULL);
+	cl_setenv("https_proxy", NULL);
+	cl_setenv("no_proxy", NULL);
 }
 
 void test_remote_httpproxy__cleanup(void)
@@ -35,10 +44,16 @@ void test_remote_httpproxy__cleanup(void)
 	cl_setenv("HTTP_PROXY", orig_http_proxy);
 	cl_setenv("HTTPS_PROXY", orig_https_proxy);
 	cl_setenv("NO_PROXY", orig_no_proxy);
+	cl_setenv("http_proxy", orig_http_proxy_lc);
+	cl_setenv("https_proxy", orig_https_proxy_lc);
+	cl_setenv("no_proxy", orig_no_proxy_lc);
 
 	git__free(orig_http_proxy);
 	git__free(orig_https_proxy);
 	git__free(orig_no_proxy);
+	git__free(orig_http_proxy_lc);
+	git__free(orig_https_proxy_lc);
+	git__free(orig_no_proxy_lc);
 
 	git_net_url_dispose(&url);
 	cl_git_sandbox_cleanup();
