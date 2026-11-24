@@ -353,10 +353,14 @@ int git_refspec__serialize(git_str *out, const git_refspec *refspec)
 
 int git_refspec_is_wildcard(const git_refspec *spec)
 {
+	size_t len;
+
 	GIT_ASSERT_ARG(spec);
 	GIT_ASSERT_ARG(spec->src);
 
-	return (spec->src[strlen(spec->src) - 1] == '*');
+	len = strlen(spec->src);
+
+	return (len > 0 && spec->src[len - 1] == '*');
 }
 
 int git_refspec_is_negative(const git_refspec *spec)

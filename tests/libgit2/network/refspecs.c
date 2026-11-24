@@ -189,3 +189,22 @@ void test_network_refspecs__parse_free(void)
 	cl_assert(spec != NULL);
 	git_refspec_free(spec);
 }
+
+void test_network_refspecs__is_wildcard(void)
+{
+	git_refspec spec;
+
+	cl_git_pass(git_refspec__parse(&spec, "refs/heads/*:refs/remotes/origin/*", true));
+	cl_assert_equal_i(1, git_refspec_is_wildcard(&spec));
+	git_refspec__dispose(&spec);
+
+	cl_git_pass(git_refspec__parse(&spec, "refs/heads/master:refs/remotes/origin/master", true));
+	cl_assert_equal_i(0, git_refspec_is_wildcard(&spec));
+	git_refspec__dispose(&spec);
+
+	/* an empty lhs means HEAD; there is no last character to look at */
+	cl_git_pass(git_refspec__parse(&spec, ":refs/remotes/origin/head-to-me", true));
+	cl_assert_equal_s("", spec.src);
+	cl_assert_equal_i(0, git_refspec_is_wildcard(&spec));
+	git_refspec__dispose(&spec);
+}
