@@ -180,3 +180,35 @@ void test_core_hashsig__similarity_metric_whitespace(void)
 
 	git_str_dispose(&buf);
 }
+
+/*
+ * `git_hashsig_create_fromfile` reads the file in fixed-size blocks, so a
+ * signature it produces must still match the one computed over the same
+ * content in memory - including when a run of characters spans a block
+ * boundary, as it does in a file with very long lines.
+ */
+void test_core_hashsig__similarity_metric_long_lines(void)
+{
+	git_hashsig *a, *b;
+	git_str buf = GIT_STR_INIT;
+	size_t i;
+
+	/* deterministic content, no newlines, several read blocks long */
+	for (i = 0; i < 12000; i++)
+		cl_git_pass(git_str_putc(&buf, (char)('a' + ((i * 7 + i / 13) % 26))));
+
+	cl_git_pass(git_hashsig_create(&a, buf.ptr, buf.size, GIT_HASHSIG_NORMAL));
+
+	cl_git_pass(git_futils_mkdir("scratch", 0755, GIT_MKDIR_PATH));
+	cl_git_mkfile("scratch/longlines", buf.ptr);
+	cl_git_pass(git_hashsig_create_fromfile(
+		&b, "scratch/longlines", GIT_HASHSIG_NORMAL));
+
+	cl_assert_equal_i(100, git_hashsig_compare(a, b));
+
+	git_hashsig_free(a);
+	git_hashsig_free(b);
+
+	git_str_dispose(&buf);
+	git_futils_rmdir_r("scratch", NULL, GIT_RMDIR_REMOVE_FILES);
+}
