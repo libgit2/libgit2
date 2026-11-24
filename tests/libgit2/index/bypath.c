@@ -357,3 +357,29 @@ void test_index_bypath__add_honors_symlink(void)
 	cl_assert((entry = git_index_get_bypath(g_idx, "README.txt", 0)) != NULL);
 	cl_assert_equal_i(GIT_FILEMODE_LINK, entry->mode);
 }
+
+void test_index_bypath__add_rejects_path_beyond_symlink(void)
+{
+	const git_index_entry *entry;
+	int symlinks;
+
+#ifdef GIT_WIN32
+	cl_skip();
+#endif
+
+	cl_git_pass(git_repository__configmap_lookup(&symlinks, g_repo,
+		GIT_CONFIGMAP_SYMLINKS));
+	if (!symlinks)
+		cl_skip();
+
+	cl_must_pass(p_mkdir("submod2/realdir", 0777));
+	cl_git_mkfile("submod2/realdir/file.txt", "hi\n");
+	cl_git_pass(p_symlink("realdir", "submod2/linkdir"));
+
+	cl_git_fail(git_index_add_bypath(g_idx, "linkdir/file.txt"));
+	cl_assert(git_index_get_bypath(g_idx, "linkdir/file.txt", 0) == NULL);
+
+	cl_git_pass(git_index_add_bypath(g_idx, "linkdir"));
+	cl_assert(entry = git_index_get_bypath(g_idx, "linkdir", 0));
+	cl_assert_equal_i(GIT_FILEMODE_LINK, entry->mode);
+}
