@@ -26,13 +26,13 @@ void git_signature_free(git_signature *sig)
 
 static int signature_parse_error(const char *msg)
 {
-	git_error_set(GIT_ERROR_INVALID, "failed to parse signature - %s", msg);
+	git_error_set(GIT_ERROR_INVALID, "cannot parse signature - %s", msg);
 	return GIT_EINVALID;
 }
 
 static int signature_error(const char *msg)
 {
-	git_error_set(GIT_ERROR_INVALID, "failed to parse signature - %s", msg);
+	git_error_set(GIT_ERROR_INVALID, "cannot parse signature - %s", msg);
 	return -1;
 }
 
@@ -76,11 +76,11 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 
 	*sig_out = NULL;
 
-	if (contains_angle_brackets(name) ||
-		contains_angle_brackets(email)) {
-		return signature_error(
-			"Neither `name` nor `email` should contain angle brackets chars.");
-	}
+	if (contains_angle_brackets(name))
+		return signature_error("name cannot contain angle brackets");
+
+	if (contains_angle_brackets(email))
+		return signature_error("email cannot contain angle brackets");
 
 	p = git__calloc(1, sizeof(git_signature));
 	GIT_ERROR_CHECK_ALLOC(p);
@@ -90,9 +90,9 @@ int git_signature_new(git_signature **sig_out, const char *name, const char *ema
 	p->email = extract_trimmed(email, strlen(email));
 	GIT_ERROR_CHECK_ALLOC(p->email);
 
-	if (p->name[0] == '\0' || p->email[0] == '\0') {
+	if (!p->name[0]) {
 		git_signature_free(p);
-		return signature_error("Signature cannot have an empty name or email");
+		return signature_error("name cannot be empty");
 	}
 
 	p->when.time = time;
