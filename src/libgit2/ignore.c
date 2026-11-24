@@ -562,21 +562,41 @@ int git_ignore_path_is_ignored(
 		goto cleanup;
 
 	while (1) {
+		bool matched = false;
+
 		/* first process builtins - success means path was found */
 		if (ignore_lookup_in_rules(ignored, ignores.ign_internal, &path))
-			goto cleanup;
+			matched = true;
 
 		/* next process files in the path */
-		git_vector_foreach(&ignores.ign_path, i, file) {
-			if (ignore_lookup_in_rules(ignored, file, &path))
-				goto cleanup;
+		if (!matched) {
+			git_vector_foreach(&ignores.ign_path, i, file) {
+				if (ignore_lookup_in_rules(ignored, file, &path)) {
+					matched = true;
+					break;
+				}
+			}
 		}
 
 		/* last process global ignores */
-		git_vector_foreach(&ignores.ign_global, i, file) {
-			if (ignore_lookup_in_rules(ignored, file, &path))
-				goto cleanup;
+		if (!matched) {
+			git_vector_foreach(&ignores.ign_global, i, file) {
+				if (ignore_lookup_in_rules(ignored, file, &path)) {
+					matched = true;
+					break;
+				}
+			}
 		}
+
+		/*
+		 * If the path is ignored, we are done. A negative rule is not
+		 * conclusive, though: a file cannot be re-included when one of
+		 * its parent directories is excluded, as git never descends into
+		 * an excluded directory. Keep walking up so that such a parent
+		 * takes precedence over the negative rule.
+		 */
+		if (matched && *ignored == GIT_IGNORE_TRUE)
+			goto cleanup;
 
 		/* move up one directory */
 		if (path.basename == path.path)
