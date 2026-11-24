@@ -59,6 +59,7 @@ size_t git_http_parser_execute(
 # define git_http_parser_remain_after_pause(parser) 1
 # define git_http_parser_errno(parser) parser->parser.http_errno
 # define git_http_parser_errmsg(parser, errno) http_errno_description(errno)
+# define git_http_parser_finish(parser) git_http_parser_execute(parser, NULL, 0)
 
 #elif defined(GIT_HTTPPARSER_LLHTTP) || defined(GIT_HTTPPARSER_BUILTIN)
 
@@ -91,6 +92,7 @@ size_t git_http_parser_execute(
 # define git_http_parser_remain_after_pause(parser) 0
 # define git_http_parser_errno(parser) parser->error
 # define git_http_parser_errmsg(parser, errno) llhttp_get_error_reason(parser)
+# define git_http_parser_finish(parser) llhttp_finish(parser)
 
 #else
 # error unknown http-parser
