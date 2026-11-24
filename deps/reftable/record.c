@@ -589,6 +589,10 @@ static int reftable_obj_record_decode(void *rec, struct reftable_buf key,
 	if (count == 0)
 		return start.len - in.len;
 
+	/* each offset takes at least a byte */
+	if (count > in.len)
+		return REFTABLE_FORMAT_ERROR;
+
 	REFTABLE_ALLOC_ARRAY(r->offsets, count);
 	if (!r->offsets)
 		return REFTABLE_OUT_OF_MEMORY_ERROR;
