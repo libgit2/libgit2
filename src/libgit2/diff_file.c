@@ -61,7 +61,7 @@ static int diff_file_content_init_common(
 	/* give driver a chance to modify options */
 	git_diff_driver_update_options(&fc->opts_flags, fc->driver);
 
-	/* make sure file is conceivable mmap-able */
+	/* make sure file is conceivably loadable into memory */
 	if ((size_t)fc->file->size != fc->file->size)
 		fc->file->flags |= GIT_DIFF_FLAG_BINARY;
 	/* check if user is forcing text diff the file */
@@ -357,7 +357,7 @@ static int diff_file_content_load_workdir_file(
 		goto cleanup;
 	}
 
-	/* if file is empty, don't attempt to mmap or readbuffer */
+	/* if file is empty, don't attempt to readbuffer */
 	if (fc->file->size == 0) {
 		fc->map.len = 0;
 		fc->map.data = git_str__initstr;
@@ -373,18 +373,12 @@ static int diff_file_content_load_workdir_file(
 			GIT_FILTER_TO_ODB, GIT_FILTER_ALLOW_UNSAFE)) < 0)
 		goto cleanup;
 
-	/* if there are no filters, try to mmap the file */
-	if (fl == NULL) {
-		if (!(error = git_futils_mmap_ro(
-				&fc->map, fd, 0, (size_t)fc->file->size))) {
-			fc->flags |= GIT_DIFF_FLAG__UNMAP_DATA;
-			goto cleanup;
-		}
-
-		/* if mmap failed, fall through to try readbuffer below */
-		git_error_clear();
-	}
-
+	/*
+	 * Read the file rather than mapping it: working directory files
+	 * can be truncated by another process while we diff them, and
+	 * touching a mapped page past the new end of file raises SIGBUS.
+	 * A short read is reported as an ordinary error instead.
+	 */
 	if (!(error = git_futils_readbuffer_fd(&raw, fd, (size_t)fc->file->size))) {
 		git_str out = GIT_STR_INIT;
 
@@ -477,12 +471,6 @@ void git_diff_file_content__unload(git_diff_file_content *fc)
 		fc->map.data = "";
 		fc->map.len  = 0;
 		fc->flags &= ~GIT_DIFF_FLAG__FREE_DATA;
-	}
-	else if (fc->flags & GIT_DIFF_FLAG__UNMAP_DATA) {
-		git_futils_mmap_free(&fc->map);
-		fc->map.data = "";
-		fc->map.len  = 0;
-		fc->flags &= ~GIT_DIFF_FLAG__UNMAP_DATA;
 	}
 
 	if (fc->flags & GIT_DIFF_FLAG__FREE_BLOB) {
