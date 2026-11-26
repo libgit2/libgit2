@@ -261,3 +261,41 @@ void test_attr_lookup__from_buffer(void)
 
 	git_attr_file__free(file);
 }
+
+void test_attr_lookup__quoted_patterns(void)
+{
+	git_attr_file *file;
+	git_attr_file_source source = {0};
+
+	struct attr_expected cases[] = {
+		{ "test file", "attr", EXPECT_TRUE, NULL },
+		{ "test file", "file", EXPECT_UNDEFINED, NULL },
+		{ "test", "attr", EXPECT_UNDEFINED, NULL },
+		{ "tab\there", "tab", EXPECT_TRUE, NULL },
+		{ "q\"uote", "quote", EXPECT_TRUE, NULL },
+		{ "sub dir/a.txt", "glob", EXPECT_TRUE, NULL },
+		{ "a.txt", "glob", EXPECT_UNDEFINED, NULL },
+		{ "caf\303\251", "octal", EXPECT_TRUE, NULL },
+		{ "spaced ", "sp", EXPECT_TRUE, NULL },
+		{ "spaced", "sp", EXPECT_UNDEFINED, NULL },
+		{ "\"bad", "bad", EXPECT_TRUE, NULL },
+		{ NULL, NULL, 0, NULL }
+	};
+
+	cl_git_pass(git_attr_file__new(&file, NULL, &source));
+
+	cl_git_pass(git_attr_file__parse_buffer(NULL, file,
+		"\"test file\" attr\n"
+		"\"tab\\there\" tab\n"
+		"\"q\\\"uote\" quote\n"
+		"\"sub dir/*.txt\" glob\n"
+		"\"caf\\303\\251\" octal\n"
+		"\"spaced \" sp\n"
+		"\"bad bad\n", true));
+
+	cl_assert(file->rules.length == 7);
+
+	run_test_cases(file, cases, 0);
+
+	git_attr_file__free(file);
+}

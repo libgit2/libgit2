@@ -367,7 +367,8 @@ int git_attr_file__parse_buffer(
 		} else
 			git_attr_rule__clear(rule);
 
-		rule->match.flags = GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO;
+		rule->match.flags = GIT_ATTR_FNMATCH_ALLOWNEG | GIT_ATTR_FNMATCH_ALLOWMACRO |
+		                    GIT_ATTR_FNMATCH_ALLOWQUOTE;
 
 		/* Parse the next "pattern attr attr attr" line */
 		if ((error = git_attr_fnmatch__parse(&rule->match, &attrs->pool, context, &scan)) < 0 ||
@@ -710,6 +711,38 @@ static size_t unescape_spaces(char *str)
 }
 
 /*
+ * Patterns that begin with a double quote are quoted in C style.  If
+ * the pattern is not a valid quoted string, `end` is left NULL and the
+ * pattern is used as written, like git does.
+ */
+static int unquote_pattern(git_str *out, const char **end, const char *pattern)
+{
+	const char *scan;
+
+	*end = NULL;
+
+	for (scan = pattern + 1; *scan && *scan != '"' && *scan != '\n'; scan++) {
+		if (*scan == '\\' && scan[1] && scan[1] != '\n')
+			scan++;
+	}
+
+	if (*scan != '"')
+		return 0;
+
+	if (git_str_put(out, pattern, scan - pattern + 1) < 0)
+		return -1;
+
+	if (git_str_unquote(out) < 0) {
+		git_error_clear();
+		git_str_clear(out);
+		return 0;
+	}
+
+	*end = scan + 1;
+	return 0;
+}
+
+/*
  * This will return 0 if the spec was filled out,
  * GIT_ENOTFOUND if the fnmatch does not require matching, or
  * another error code there was an actual problem.
@@ -720,8 +753,9 @@ int git_attr_fnmatch__parse(
 	const char *context,
 	const char **base)
 {
-	const char *pattern, *scan;
-	int slash_count, allow_space;
+	git_str unquoted = GIT_STR_INIT;
+	const char *pattern, *scan, *quote_end = NULL;
+	int slash_count, allow_space, error = 0;
 	bool escaped;
 
 	GIT_ASSERT_ARG(spec);
@@ -742,6 +776,21 @@ int git_attr_fnmatch__parse(
 	    (*pattern == '\r' && *(pattern + 1) == '\n')) {
 		*base = git__next_line(pattern);
 		return GIT_ENOTFOUND;
+	}
+
+	if (*pattern == '"' && (spec->flags & GIT_ATTR_FNMATCH_ALLOWQUOTE) != 0) {
+		if ((error = unquote_pattern(&unquoted, &quote_end, pattern)) < 0)
+			goto done;
+
+		if (quote_end) {
+			if (!unquoted.size) {
+				*base = git__next_line(pattern);
+				error = GIT_ENOTFOUND;
+				goto done;
+			}
+
+			pattern = unquoted.ptr;
+		}
 	}
 
 	if (*pattern == '[' && (spec->flags & GIT_ATTR_FNMATCH_ALLOWMACRO) != 0) {
@@ -766,7 +815,7 @@ int git_attr_fnmatch__parse(
 		if (c == '\\' && !escaped) {
 			escaped = true;
 			continue;
-		} else if (git__isspace(c) && !escaped) {
+		} else if (git__isspace(c) && !escaped && !quote_end) {
 			if (!allow_space || (c != ' ' && c != '\t' && c != '\r'))
 				break;
 		} else if (c == '/') {
@@ -783,25 +832,31 @@ int git_attr_fnmatch__parse(
 		escaped = false;
 	}
 
-	*base = scan;
+	*base = quote_end ? quote_end : scan;
 
-	if ((spec->length = scan - pattern) == 0)
-		return GIT_ENOTFOUND;
+	if ((spec->length = scan - pattern) == 0) {
+		error = GIT_ENOTFOUND;
+		goto done;
+	}
 
-	/*
-	 * Remove one trailing \r in case this is a CRLF delimited
-	 * file, in the case of Icon\r\r\n, we still leave the first
-	 * \r there to match against.
-	 */
-	if (pattern[spec->length - 1] == '\r')
-		if (--spec->length == 0)
-			return GIT_ENOTFOUND;
+	/* A quoted pattern keeps everything between the quotes. */
+	if (!quote_end) {
+		/*
+		 * Remove one trailing \r in case this is a CRLF delimited
+		 * file, in the case of Icon\r\r\n, we still leave the first
+		 * \r there to match against.
+		 */
+		if (pattern[spec->length - 1] == '\r')
+			spec->length--;
 
-	/* Remove trailing spaces. */
-	spec->length -= trailing_space_length(pattern, spec->length);
+		/* Remove trailing spaces. */
+		spec->length -= trailing_space_length(pattern, spec->length);
+	}
 
-	if (spec->length == 0)
-		return GIT_ENOTFOUND;
+	if (spec->length == 0) {
+		error = GIT_ENOTFOUND;
+		goto done;
+	}
 
 	if (pattern[spec->length - 1] == '/') {
 		spec->length--;
@@ -824,14 +879,16 @@ int git_attr_fnmatch__parse(
 	spec->pattern = git_pool_strndup(pool, pattern, spec->length);
 
 	if (!spec->pattern) {
-		*base = git__next_line(pattern);
-		return -1;
+		*base = git__next_line(quote_end ? quote_end : pattern);
+		error = -1;
 	} else {
 		/* strip '\' that might have been used for internal whitespace */
 		spec->length = unescape_spaces(spec->pattern);
 	}
 
-	return 0;
+done:
+	git_str_dispose(&unquoted);
+	return error;
 }
 
 static bool parse_optimized_patterns(
