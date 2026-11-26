@@ -187,6 +187,8 @@ int git_commit_list_parse(git_revwalk *walk, git_commit_list_node *commit)
 		if (error == 0 && git__is_uint16(e.parent_count)) {
 			size_t i;
 			commit->generation = (uint32_t)e.generation;
+			commit->graph_id = (uint32_t)e.graph_id;
+			commit->in_graph = 1;
 			commit->time = e.commit_time;
 			commit->out_degree = (uint16_t)e.parent_count;
 			commit->parents = alloc_parents(walk, commit, commit->out_degree);
