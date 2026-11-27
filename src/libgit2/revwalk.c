@@ -970,7 +970,7 @@ static bool pathspec_has_wildcard(git_pathspec *pathspec)
 	size_t i;
 	git_attr_fnmatch *match;
 	git_vector_foreach(&pathspec->pathspec, i, match) {
-		if (match->flags & GIT_ATTR_FNMATCH_HASWILD) {
+		if (match->flags & (GIT_ATTR_FNMATCH_HASWILD | GIT_ATTR_FNMATCH_MATCH_ALL)) {
 			return true;
 		}
 	}
