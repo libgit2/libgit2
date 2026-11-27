@@ -21,7 +21,12 @@
 #define COMMIT_ALLOC \
 	(sizeof(git_commit_list_node) + PARENTS_PER_COMMIT * sizeof(git_commit_list_node *))
 
-#define FLAG_BITS 4
+/*
+ * describe uses one flag bit to mark seen commits and one more per
+ * candidate tag, so this must allow for
+ * GIT_DESCRIBE_DEFAULT_MAX_CANDIDATES_TAGS + 1 bits.
+ */
+#define FLAG_BITS 11
 
 typedef struct git_commit_list_node {
 	git_oid oid;
