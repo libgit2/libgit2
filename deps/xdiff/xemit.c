@@ -35,7 +35,7 @@ static int xdl_emit_record(xdfile_t *xdf, long ri, char const *pre, xdemitcb_t *
 
 static long saturating_add(long a, long b)
 {
-	return signed_add_overflows(a, b) ? LONG_MAX : a + b;
+	return xdl_signed_add_overflows(a, b) ? LONG_MAX : a + b;
 }
 
 /*
@@ -51,9 +51,9 @@ xdchange_t *xdl_get_hunk(xdchange_t **xscr, xdemitconf_t const *xecfg)
 	long ignored = 0; /* number of ignored blank lines */
 
 	if (xecfg->ctxlen < 0)
-		XDL_BUG("negative context length"); /* TODO: XDL_BUG("negative context length: %ld", xecfg->ctxlen); */
+		XDL_BUG(NULL, "negative context length: %ld", xecfg->ctxlen);
 	if (xecfg->interhunkctxlen < 0)
-		XDL_BUG("negative inter-hunk context length"); /* TODO: XDL_BUG("negative inter-hunk context length: %ld", xecfg->interhunkctxlen); */
+		XDL_BUG(NULL, "negative inter-hunk context length: %ld", xecfg->interhunkctxlen);
 
 	max_common = saturating_add(saturating_add(xecfg->ctxlen,
 						   xecfg->ctxlen),

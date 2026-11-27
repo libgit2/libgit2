@@ -403,9 +403,9 @@ static int recs_match(xrecord_t *rec1, xrecord_t *rec2)
  */
 static int get_indent(xrecord_t *rec)
 {
+	size_t i;
 	int ret = 0;
 
-	size_t i;
 	for (i = 0; i < rec->size; i++) {
 		char c = (char) rec->ptr[i];
 
@@ -828,7 +828,7 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 			/* Shift the group backward as much as possible: */
 			while (!group_slide_up(xdf, &g))
 				if (group_previous(xdfo, &go))
-					XDL_BUG("group sync broken sliding up");
+					XDL_BUG(-1, "group sync broken sliding up");
 
 			/*
 			 * This is this highest that this group can be shifted.
@@ -844,7 +844,7 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 				if (group_slide_down(xdf, &g))
 					break;
 				if (group_next(xdfo, &go))
-					XDL_BUG("group sync broken sliding down");
+					XDL_BUG(-1, "group sync broken sliding down");
 
 				if (go.end > go.start)
 					end_matching_other = g.end;
@@ -870,9 +870,9 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 			 */
 			while (go.end == go.start) {
 				if (group_slide_up(xdf, &g))
-					XDL_BUG("match disappeared");
+					XDL_BUG(-1, "match disappeared");
 				if (group_previous(xdfo, &go))
-					XDL_BUG("group sync broken sliding to match");
+					XDL_BUG(-1, "group sync broken sliding to match");
 			}
 		} else if (flags & XDF_INDENT_HEURISTIC) {
 			/*
@@ -913,9 +913,9 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 
 			while (g.end > best_shift) {
 				if (group_slide_up(xdf, &g))
-					XDL_BUG("best shift unreached");
+					XDL_BUG(-1, "best shift unreached");
 				if (group_previous(xdfo, &go))
-					XDL_BUG("group sync broken sliding to blank line");
+					XDL_BUG(-1, "group sync broken sliding to blank line");
 			}
 		}
 
@@ -963,11 +963,11 @@ int xdl_change_compact(xdfile_t *xdf, xdfile_t *xdfo, long flags) {
 		if (group_next(xdf, &g))
 			break;
 		if (group_next(xdfo, &go))
-			XDL_BUG("group sync broken moving to next group");
+			XDL_BUG(-1, "group sync broken moving to next group");
 	}
 
 	if (!group_next(xdfo, &go))
-		XDL_BUG("group sync broken at end of file");
+		XDL_BUG(-1, "group sync broken at end of file");
 
 	return 0;
 }

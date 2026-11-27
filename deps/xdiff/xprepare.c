@@ -191,7 +191,7 @@ void xdl_free_env(xdfenv_t *xe) {
 }
 
 
-static bool xdl_clean_mmatch(uint8_t const *action, ptrdiff_t i, ptrdiff_t len) {
+static int xdl_clean_mmatch(bool *clean, uint8_t const *action, ptrdiff_t i, ptrdiff_t len) {
 	ptrdiff_t r, rdis0, rpdis0, rdis1, rpdis1;
 	ptrdiff_t s = 0, e = len - 1;
 
@@ -222,7 +222,7 @@ static bool xdl_clean_mmatch(uint8_t const *action, ptrdiff_t i, ptrdiff_t len) 
 		else if (action[i - r] == KEEP)
 			break;
 		else
-			XDL_BUG("Illegal value for action[i - r]");
+			XDL_BUG(-1, "Illegal value for action[i - r]");
 	}
 	/*
 	 * If the run before the line 'i' found only multimatch lines,
@@ -231,8 +231,11 @@ static bool xdl_clean_mmatch(uint8_t const *action, ptrdiff_t i, ptrdiff_t len) 
 	 * they appear in the middle of runs with nomatch lines
 	 * (action[j] == DISCARD).
 	 */
-	if (rdis0 == 0)
+	if (rdis0 == 0) {
+		*clean = false;
 		return 0;
+	}
+
 	for (r = 1, rdis1 = 0, rpdis1 = 1; (i + r) <= e; r++) {
 		if (action[i + r] == DISCARD)
 			rdis1++;
@@ -241,19 +244,23 @@ static bool xdl_clean_mmatch(uint8_t const *action, ptrdiff_t i, ptrdiff_t len) 
 		else if (action[i + r] == KEEP)
 			break;
 		else
-			XDL_BUG("Illegal value for action[i + r]");
+			XDL_BUG(-1, "Illegal value for action[i + r]");
 	}
 	/*
 	 * If the run after the line 'i' found only multimatch lines,
 	 * we return false and hence we don't make the current line (i)
 	 * discarded.
 	 */
-	if (rdis1 == 0)
-		return false;
+	if (rdis1 == 0) {
+		*clean = false;
+		return 0;
+	}
+
 	rdis1 += rdis0;
 	rpdis1 += rpdis0;
 
-	return rpdis1 * XDL_KPDIS_RUN < (rpdis1 + rdis1);
+	*clean = rpdis1 * XDL_KPDIS_RUN < (rpdis1 + rdis1);
+	return 0;
 }
 
 
@@ -337,10 +344,12 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 		uint8_t action = action1[i];
 
 		if (action == INVESTIGATE) {
-			if (!xdl_clean_mmatch(action1, i, len1))
-				action = KEEP;
-			else
-				action = DISCARD;
+			bool clean;
+
+			if (xdl_clean_mmatch(&clean, action1, i, len1) < 0)
+				return -1;
+
+			action = !clean ? KEEP : DISCARD;
 		}
 
 		if (action == KEEP) {
@@ -349,7 +358,7 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 		} else if (action == DISCARD) {
 			xdf1->changed[i + off] = true;
 		} else {
-			XDL_BUG("Illegal state for action");
+			XDL_BUG(-1, "Illegal state for action");
 		}
 	}
 
@@ -358,10 +367,12 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 		uint8_t action = action2[i];
 
 		if (action == INVESTIGATE) {
-			if (!xdl_clean_mmatch(action2, i, len2))
-				action = KEEP;
-			else
-				action = DISCARD;
+			bool clean;
+
+			if (xdl_clean_mmatch(&clean, action2, i, len1) < 0)
+				return -1;
+
+			action = !clean ? KEEP : DISCARD;
 		}
 
 		if (action == KEEP) {
@@ -370,7 +381,7 @@ static int xdl_cleanup_records(xdlclassifier_t *cf, xdfile_t *xdf1, xdfile_t *xd
 		} else if (action == DISCARD) {
 			xdf2->changed[i + off] = true;
 		} else {
-			XDL_BUG("Illegal state for action");
+			XDL_BUG(-1, "Illegal state for action");
 		}
 	}
 

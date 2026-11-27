@@ -119,21 +119,30 @@ static size_t xdl_recs_copy_0(int use_orig, xdfenv_t *xe, int i, int count, int 
 	if (count < 1)
 		return 0;
 
-	for (i = 0; i < count; size = st_add(size, recs[i++].size))
+	for (i = 0; i < count; i++) {
 		if (dest)
 			memcpy(dest + size, recs[i].ptr, recs[i].size);
+
+		if (xdl_st_add_overflow(size, recs[i].size, &size))
+			return SIZE_MAX;
+	}
+
 	if (add_nl) {
 		i = (int)recs[count - 1].size;
 		if (i == 0 || recs[count - 1].ptr[i - 1] != '\n') {
 			if (needs_cr) {
 				if (dest)
 					dest[size] = '\r';
-				size = st_add(size, 1);
+
+				if (xdl_st_add_overflow(size, 1, &size))
+					return SIZE_MAX;
 			}
 
 			if (dest)
 				dest[size] = '\n';
-			size = st_add(size, 1);
+
+			if (xdl_st_add_overflow(size, 1, &size))
+				return SIZE_MAX;
 		}
 	}
 	return size;
@@ -208,11 +217,13 @@ static size_t fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 		marker_size = DEFAULT_CONFLICT_MARKER_SIZE;
 
 	/* Before conflicting part */
-	size = st_add(size, xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
-					  dest ? dest + size : NULL));
+	if (xdl_st_add_overflow(size, xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
+				  dest ? dest + size : NULL), &size))
+		return SIZE_MAX;
 
 	if (!dest) {
-		size = st_add5(size, marker_size, 1, needs_cr, marker1_size);
+		if (xdl_st_add5_overflow(size, marker_size, 1, needs_cr, marker1_size, &size))
+			return SIZE_MAX;
 	} else {
 		memset(dest + size, '<', marker_size);
 		size += marker_size;
@@ -227,13 +238,15 @@ static size_t fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 	}
 
 	/* Postimage from side #1 */
-	size = st_add(size, xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, 1,
-					  dest ? dest + size : NULL));
+	if (xdl_st_add_overflow(size, xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, 1,
+				  dest ? dest + size : NULL), &size))
+		return SIZE_MAX;
 
 	if (style == XDL_MERGE_DIFF3 || style == XDL_MERGE_ZEALOUS_DIFF3) {
 		/* Shared preimage */
 		if (!dest) {
-			size = st_add5(size, marker_size, 1, needs_cr, marker3_size);
+			if (xdl_st_add5_overflow(size, marker_size, 1, needs_cr, marker3_size, &size))
+				return SIZE_MAX;
 		} else {
 			memset(dest + size, '|', marker_size);
 			size += marker_size;
@@ -246,12 +259,15 @@ static size_t fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 				dest[size++] = '\r';
 			dest[size++] = '\n';
 		}
-		size = st_add(size, xdl_orig_copy(xe1, m->i0, m->chg0, needs_cr, 1,
-						  dest ? dest + size : NULL));
+
+		if (xdl_st_add_overflow(size, xdl_orig_copy(xe1, m->i0, m->chg0, needs_cr, 1,
+					  dest ? dest + size : NULL), &size))
+			return SIZE_MAX;
 	}
 
 	if (!dest) {
-		size = st_add4(size, marker_size, 1, needs_cr);
+		if (xdl_st_add4_overflow(size, marker_size, 1, needs_cr, &size))
+			return SIZE_MAX;
 	} else {
 		memset(dest + size, '=', marker_size);
 		size += marker_size;
@@ -261,10 +277,13 @@ static size_t fill_conflict_hunk(xdfenv_t *xe1, const char *name1,
 	}
 
 	/* Postimage from side #2 */
-	size = st_add(size, xdl_recs_copy(xe2, m->i2, m->chg2, needs_cr, 1,
-					  dest ? dest + size : NULL));
+	if (xdl_st_add_overflow(size, xdl_recs_copy(xe2, m->i2, m->chg2, needs_cr, 1,
+			  dest ? dest + size : NULL), &size))
+		return SIZE_MAX;
+
 	if (!dest) {
-		size = st_add5(size, marker_size, 1, needs_cr, marker2_size);
+		if (xdl_st_add5_overflow(size, marker_size, 1, needs_cr, marker2_size, &size))
+			return SIZE_MAX;
 	} else {
 		memset(dest + size, '>', marker_size);
 		size += marker_size;
@@ -294,32 +313,46 @@ static size_t xdl_fill_merge_buffer(xdfenv_t *xe1, const char *name1,
 		if (favor && !m->mode)
 			m->mode = favor;
 
-		if (m->mode == 0)
+		if (m->mode == 0) {
 			size = fill_conflict_hunk(xe1, name1, xe2, name2,
 						  ancestor_name,
 						  size, i, style, m, dest,
 						  marker_size);
-		else if (m->mode & 3) {
+
+			if (size > LONG_MAX)
+				return SIZE_MAX;
+		} else if (m->mode & 3) {
 			/* Before conflicting part */
-			size = st_add(size, xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
-							  dest ? dest + size : NULL));
+			if (xdl_st_add_overflow(size,
+					xdl_recs_copy(xe1, i, m->i1 - i, 0, 0,
+					dest ? dest + size : NULL), &size))
+				return SIZE_MAX;
+
 			/* Postimage from side #1 */
 			if (m->mode & 1) {
 				int needs_cr = is_cr_needed(xe1, xe2, m);
 
-				size = st_add(size, xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, (m->mode & 2),
-								  dest ? dest + size : NULL));
+				if (xdl_st_add_overflow(size,
+						xdl_recs_copy(xe1, m->i1, m->chg1, needs_cr, (m->mode & 2),
+						dest ? dest + size : NULL), &size))
+					return SIZE_MAX;
 			}
 			/* Postimage from side #2 */
-			if (m->mode & 2)
-				size = st_add(size, xdl_recs_copy(xe2, m->i2, m->chg2, 0, 0,
-								  dest ? dest + size : NULL));
+			if (m->mode & 2) {
+				if (xdl_st_add_overflow(size,
+						xdl_recs_copy(xe2, m->i2, m->chg2, 0, 0,
+						dest ? dest + size : NULL), &size))
+					return SIZE_MAX;
+			}
 		} else
 			continue;
 		i = m->i1 + m->chg1;
 	}
-	size = st_add(size, xdl_recs_copy(xe1, i, xe1->xdf2.nrec - i, 0, 0,
-					  dest ? dest + size : NULL));
+
+	if (xdl_st_add_overflow(size, xdl_recs_copy(xe1, i, xe1->xdf2.nrec - i, 0, 0,
+			dest ? dest + size : NULL), &size))
+		return SIZE_MAX;
+
 	return size;
 }
 
@@ -714,19 +747,23 @@ int xdl_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
 		goto out;
 
 	if (!xscr1) {
-		result->ptr = xdl_malloc(mf2->size);
-		if (!result->ptr)
-			goto out;
+		if (mf2->size) {
+			result->ptr = xdl_malloc(mf2->size);
+			if (!result->ptr)
+				goto out;
+			memcpy(result->ptr, mf2->ptr, mf2->size);
+			result->size = mf2->size;
+		}
 		status = 0;
-		memcpy(result->ptr, mf2->ptr, mf2->size);
-		result->size = mf2->size;
 	} else if (!xscr2) {
-		result->ptr = xdl_malloc(mf1->size);
-		if (!result->ptr)
-			goto out;
+		if (mf1->size) {
+			result->ptr = xdl_malloc(mf1->size);
+			if (!result->ptr)
+				goto out;
+			memcpy(result->ptr, mf1->ptr, mf1->size);
+			result->size = mf1->size;
+		}
 		status = 0;
-		memcpy(result->ptr, mf1->ptr, mf1->size);
-		result->size = mf1->size;
 	} else {
 		status = xdl_do_merge(&xe1, xscr1,
 				      &xe2, xscr2,

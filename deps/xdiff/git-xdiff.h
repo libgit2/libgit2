@@ -15,7 +15,7 @@
 #define INCLUDE_git_xdiff_h__
 
 #include <stddef.h>
-
+#include <stdbool.h>
 #include "regexp.h"
 
 /* Work around C90-conformance issues */
@@ -36,7 +36,41 @@
 #define xdl_free(ptr) git__free(ptr)
 #define xdl_realloc(ptr, x) git__realloc(ptr, x)
 
-#define XDL_BUG(msg) abort();
+#if (defined(_DEBUG) || defined(GIT_ASSERT_HARD)) && GIT_ASSERT_HARD != 0
+# define XDL_BUG(...) assert(0)
+#else
+# define XDL_BUG(ret, ...) do { \
+		git_error_set(GIT_ERROR_INVALID, __VA_ARGS__); \
+		return ret; \
+	} while(0)
+#endif
+
+static inline bool xdl_signed_add_overflows(long a, long b)
+{
+	return (((b) > 0 && (a) > (LONG_MAX - (b))) ||
+	        ((b) < 0 && (a) < (LONG_MAX - (b))));
+}
+
+static inline bool xdl_st_add_overflow(size_t a, size_t b, size_t *out)
+{
+	if (((b) > 0 && (a) > (SIZE_MAX - (b))) ||
+	    ((b) < 0 && (a) < (SIZE_MAX - (b))))
+		return true;
+
+	*out = a + b;
+	return false;
+}
+
+#define xdl_st_add3_overflow(a, b, c, out) \
+	xdl_st_add_overflow((a), (b), (out)) || \
+	xdl_st_add_overflow(*(out), (c), (out))
+#define xdl_st_add4_overflow(a, b, c, d, out) \
+	xdl_st_add3_overflow((a), (b), (c), (out)) || \
+	xdl_st_add_overflow(*(out), (d), (out))
+#define xdl_st_add5_overflow(a, b, c, d, e, out) \
+	xdl_st_add4_overflow((a), (b), (c), (d), (out)) || \
+	xdl_st_add_overflow(*(out), (e), (out))
+
 
 #define xdl_regex_t git_regexp
 #define xdl_regmatch_t git_regmatch
@@ -54,23 +88,5 @@ GIT_INLINE(int) xdl_regexec_buf(
 	GIT_ASSERT("not implemented");
 	return -1;
 }
-
-GIT_INLINE(bool) signed_add_overflows(int a, int b)
-{
-	int result;
-	return git__add_int_overflow(&result, a, b);
-}
-
-GIT_INLINE(size_t) st_add(size_t a, size_t b)
-{
-	size_t result;
-	if (git__add_sizet_overflow(&result, a, b))
-		abort();
-
-	return result;
-}
-#define st_add3(a, b, c) st_add(st_add((a), (b)), (c))
-#define st_add4(a, b, c, d) st_add(st_add3((a), (b), (c)), (d))
-#define st_add5(a, b, c, d, e) st_add(st_add4((a), (b), (c), (d)), (e))
 
 #endif
