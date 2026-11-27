@@ -122,10 +122,10 @@ static int commit_graph_parse_oid_fanout(
 	if (chunk_oid_fanout->length != 256 * 4)
 		return commit_graph_error("OID Fanout chunk has wrong length");
 
-	file->oid_fanout = (const uint32_t *)(data + chunk_oid_fanout->offset);
+	file->oid_fanout = data + chunk_oid_fanout->offset;
 	nr = 0;
 	for (i = 0; i < 256; ++i) {
-		uint32_t n = ntohl(file->oid_fanout[i]);
+		uint32_t n = git__get_be32(file->oid_fanout + i * 4);
 		if (n < nr)
 			return commit_graph_error("index is non-monotonic");
 		nr = n;
@@ -204,7 +204,7 @@ static int commit_graph_parse_bloom_filter(
 		struct git_commit_graph_chunk *bloom_filter_index,
 		struct git_commit_graph_chunk *bloom_filter_data)
 {
-	const uint32_t *data_header = (const uint32_t *)(data + bloom_filter_data->offset);
+	const unsigned char *data_header = data + bloom_filter_data->offset;
 	uint32_t hash_version;
 
 	/*
@@ -219,7 +219,7 @@ static int commit_graph_parse_bloom_filter(
 	if (bloom_filter_index->length != file->num_commits * sizeof(uint32_t))
 		return commit_graph_error("malformed Bloom Filter Index chunk");
 	
-	hash_version = ntohl(data_header[0]);
+	hash_version = git__get_be32(data_header);
 
 	if (hash_version < 1 || hash_version > 2)
 		return commit_graph_error("unknown Bloom Filter Hash version");
@@ -227,8 +227,8 @@ static int commit_graph_parse_bloom_filter(
 	file->bloom_filter_indexes = (const uint32_t *)(data + bloom_filter_index->offset);
 
 	file->bloom_filter_hash_version = hash_version;
-	file->bloom_filter_num_hashes = ntohl(data_header[1]);
-	file->bloom_filter_bits = ntohl(data_header[2]);
+	file->bloom_filter_num_hashes = git__get_be32(data_header + 4);
+	file->bloom_filter_bits = git__get_be32(data_header + 8);
 	file->bloom_filter_data = data + bloom_filter_data->offset + 12;
 	return 0;
 }
@@ -238,7 +238,7 @@ int git_commit_graph_file_parse(
 		const unsigned char *data,
 		size_t size)
 {
-	struct git_commit_graph_header *hdr;
+	struct git_commit_graph_header hdr;
 	const unsigned char *chunk_hdr;
 	struct git_commit_graph_chunk *last_chunk;
 	uint32_t i;
@@ -257,20 +257,20 @@ int git_commit_graph_file_parse(
 	if (size < sizeof(struct git_commit_graph_header) + checksum_size)
 		return commit_graph_error("commit-graph is too short");
 
-	hdr = ((struct git_commit_graph_header *)data);
+	memcpy(&hdr, data, sizeof(hdr));
 
-	if (hdr->signature != htonl(COMMIT_GRAPH_SIGNATURE) || hdr->version != COMMIT_GRAPH_VERSION
-	    || hdr->object_id_version != COMMIT_GRAPH_OBJECT_ID_VERSION) {
+	if (hdr.signature != htonl(COMMIT_GRAPH_SIGNATURE) || hdr.version != COMMIT_GRAPH_VERSION
+	    || hdr.object_id_version != COMMIT_GRAPH_OBJECT_ID_VERSION) {
 		return commit_graph_error("unsupported commit-graph version");
 	}
-	if (hdr->chunks == 0)
+	if (hdr.chunks == 0)
 		return commit_graph_error("no chunks in commit-graph");
 
 	/*
 	 * The very first chunk's offset should be after the header, all the chunk
 	 * headers, and a special zero chunk.
 	 */
-	last_chunk_offset = sizeof(struct git_commit_graph_header) + (1 + hdr->chunks) * 12;
+	last_chunk_offset = sizeof(struct git_commit_graph_header) + (1 + hdr.chunks) * 12;
 	trailer_offset = size - checksum_size;
 
 	if (trailer_offset < last_chunk_offset)
@@ -279,9 +279,8 @@ int git_commit_graph_file_parse(
 
 	chunk_hdr = data + sizeof(struct git_commit_graph_header);
 	last_chunk = NULL;
-	for (i = 0; i < hdr->chunks; ++i, chunk_hdr += 12) {
-		chunk_offset = ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 4)))) << 32
-				| ((uint64_t)ntohl(*((uint32_t *)(chunk_hdr + 8))));
+	for (i = 0; i < hdr.chunks; ++i, chunk_hdr += 12) {
+		chunk_offset = git__get_be64(chunk_hdr + 4);
 		if (chunk_offset < last_chunk_offset)
 			return commit_graph_error("chunks are non-monotonic");
 		if (chunk_offset >= trailer_offset)
@@ -290,7 +289,7 @@ int git_commit_graph_file_parse(
 			last_chunk->length = (size_t)(chunk_offset - last_chunk_offset);
 		last_chunk_offset = chunk_offset;
 
-		switch (ntohl(*((uint32_t *)(chunk_hdr + 0)))) {
+		switch (git__get_be32(chunk_hdr + 0)) {
 		case COMMIT_GRAPH_OID_FANOUT_ID:
 			chunk_oid_fanout.offset = last_chunk_offset;
 			last_chunk = &chunk_oid_fanout;
@@ -551,13 +550,13 @@ static int git_commit_graph_entry_get_byindex(
 
 	commit_data = file->commit_data + pos * (oid_size + 4 * sizeof(uint32_t));
 	git_oid_from_raw(&e->tree_oid, commit_data, file->oid_type);
-	e->parent_indices[0] = ntohl(*((uint32_t *)(commit_data + oid_size)));
-	e->parent_indices[1] = ntohl(
-			*((uint32_t *)(commit_data + oid_size + sizeof(uint32_t))));
+	e->parent_indices[0] = git__get_be32(commit_data + oid_size);
+	e->parent_indices[1] = git__get_be32(
+			commit_data + oid_size + sizeof(uint32_t));
 	e->parent_count = (e->parent_indices[0] != GIT_COMMIT_GRAPH_MISSING_PARENT)
 			+ (e->parent_indices[1] != GIT_COMMIT_GRAPH_MISSING_PARENT);
-	e->generation = ntohl(*((uint32_t *)(commit_data + oid_size + 2 * sizeof(uint32_t))));
-	e->commit_time = ntohl(*((uint32_t *)(commit_data + oid_size + 3 * sizeof(uint32_t))));
+	e->generation = git__get_be32(commit_data + oid_size + 2 * sizeof(uint32_t));
+	e->commit_time = git__get_be32(commit_data + oid_size + 3 * sizeof(uint32_t));
 
 	e->commit_time |= (e->generation & UINT64_C(0x3)) << UINT64_C(32);
 	e->generation >>= 2u;
@@ -574,9 +573,8 @@ static int git_commit_graph_entry_get_byindex(
 
 		e->extra_parents_index = extra_edge_list_pos;
 		while (extra_edge_list_pos < file->num_extra_edge_list
-		       && (ntohl(*(
-					   (uint32_t *)(file->extra_edge_list
-							+ extra_edge_list_pos * sizeof(uint32_t))))
+		       && (git__get_be32(file->extra_edge_list
+					+ extra_edge_list_pos * sizeof(uint32_t))
 			   & 0x80000000u)
 				       == 0) {
 			extra_edge_list_pos++;
@@ -638,8 +636,8 @@ int git_commit_graph_entry_find(
 	oid_size = git_oid_size(file->oid_type);
 	oid_hexsize = git_oid_hexsize(file->oid_type);
 
-	hi = ntohl(file->oid_fanout[(int)short_oid->id[0]]);
-	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(file->oid_fanout[(int)short_oid->id[0] - 1]));
+	hi = git__get_be32(file->oid_fanout + 4 * (int)short_oid->id[0]);
+	lo = ((short_oid->id[0] == 0x0) ? 0 : git__get_be32(file->oid_fanout + 4 * ((int)short_oid->id[0] - 1)));
 
 	pos = git_pack__lookup_id(file->oid_lookup, oid_size, lo, hi,
 		short_oid->id, file->oid_type);
@@ -698,10 +696,9 @@ int git_commit_graph_entry_parent(
 	return git_commit_graph_entry_get_byindex(
 			parent,
 			file,
-			ntohl(
-					*(uint32_t *)(file->extra_edge_list
-						      + (entry->extra_parents_index + n - 1)
-								      * sizeof(uint32_t)))
+			git__get_be32(file->extra_edge_list
+					+ (entry->extra_parents_index + n - 1)
+							* sizeof(uint32_t))
 					& 0x7fffffff);
 }
 

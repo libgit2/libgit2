@@ -199,7 +199,8 @@ static void pack_index_free(struct git_pack_file *p)
 static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 {
 	struct git_pack_idx_header *hdr;
-	uint32_t version, nr = 0, i, *index;
+	uint32_t version, nr = 0, i;
+	const unsigned char *index;
 	void *idx_map;
 	size_t idx_size;
 	struct stat st;
@@ -248,10 +249,10 @@ static int pack_index_check_locked(const char *path, struct git_pack_file *p)
 	index = idx_map;
 
 	if (version > 1)
-		index += 2; /* skip index header */
+		index += 8; /* skip index header */
 
 	for (i = 0; i < 256; i++) {
-		uint32_t n = ntohl(index[i]);
+		uint32_t n = git__get_be32(index + i * 4);
 		if (n < nr) {
 			git_futils_mmap_free(&p->index_map);
 			return packfile_error("index is non-monotonic");
@@ -1270,10 +1271,10 @@ static off64_t nth_packed_object_offset_locked(struct git_pack_file *p, uint32_t
 	end = index + p->index_map.len;
 	index += 4 * 256;
 	if (p->index_version == 1)
-		return ntohl(*((uint32_t *)(index + (p->oid_size + 4) * (size_t) n)));
+		return git__get_be32(index + (p->oid_size + 4) * (size_t) n);
 
 	index += 8 + (size_t) p->num_objects * (p->oid_size + 4);
-	off32 = ntohl(*((uint32_t *)(index + 4 * n)));
+	off32 = git__get_be32(index + 4 * n);
 	if (!(off32 & 0x80000000))
 		return off32;
 	index += (size_t) p->num_objects * 4 + (off32 & 0x7fffffff) * 8;
@@ -1282,8 +1283,7 @@ static off64_t nth_packed_object_offset_locked(struct git_pack_file *p, uint32_t
 	if (index >= end - 8)
 		return -1;
 
-	return (((uint64_t)ntohl(*((uint32_t *)(index + 0)))) << 32) |
-	       ntohl(*((uint32_t *)(index + 4)));
+	return git__get_be64(index);
 }
 
 static int git__memcmp4(const void *a, const void *b) {
@@ -1433,15 +1433,14 @@ int git_pack_foreach_entry_offset(
 		const unsigned char *large_offsets_end = ((const unsigned char *)p->index_map.data) + p->index_map.len - p->oid_size;
 
 		for (i = 0; i < p->num_objects; i++) {
-			current_offset = ntohl(*(const uint32_t *)(offsets + 4 * i));
+			current_offset = git__get_be32(offsets + 4 * i);
 			if (current_offset & 0x80000000) {
 				large_offset_ptr = large_offsets + (current_offset & 0x7fffffff) * 8;
 				if (large_offset_ptr >= large_offsets_end) {
 					error = packfile_error("invalid large offset");
 					goto cleanup;
 				}
-				current_offset = (((off64_t)ntohl(*((uint32_t *)(large_offset_ptr + 0)))) << 32) |
-						ntohl(*((uint32_t *)(large_offset_ptr + 4)));
+				current_offset = git__get_be64(large_offset_ptr);
 			}
 
 			git_oid_from_raw(&current_oid, (index + p->oid_size * i), p->oid_type);
@@ -1452,7 +1451,7 @@ int git_pack_foreach_entry_offset(
 		}
 	} else {
 		for (i = 0; i < p->num_objects; i++) {
-			current_offset = ntohl(*(const uint32_t *)(index + (p->oid_size + 4) * i));
+			current_offset = git__get_be32(index + (p->oid_size + 4) * i);
 			git_oid_from_raw(&current_oid, (index + (p->oid_size + 4) * i + 4), p->oid_type);
 			if ((error = cb(&current_oid, current_offset, data)) != 0) {
 				error = git_error_set_after_callback(error);
@@ -1500,7 +1499,7 @@ static int pack_entry_find_offset(
 	const git_oid *short_oid,
 	size_t len)
 {
-	const uint32_t *level1_ofs;
+	const unsigned char *level1_ofs;
 	size_t ofs_delta = 0;
 	const unsigned char *index;
 	unsigned hi, lo, stride;
@@ -1526,7 +1525,7 @@ static int pack_entry_find_offset(
 	level1_ofs = p->index_map.data;
 
 	if (p->index_version > 1) {
-		level1_ofs += 2;
+		level1_ofs += 8;
 		ofs_delta = 2;
 		index += 8;
 	}
@@ -1537,8 +1536,8 @@ static int pack_entry_find_offset(
 	}
 
 	index += 4 * 256;
-	hi = ntohl(level1_ofs[(int)short_oid->id[0]]);
-	lo = ((short_oid->id[0] == 0x0) ? 0 : ntohl(level1_ofs[(int)short_oid->id[0] - 1]));
+	hi = git__get_be32(level1_ofs + 4 * (int)short_oid->id[0]);
+	lo = ((short_oid->id[0] == 0x0) ? 0 : git__get_be32(level1_ofs + 4 * ((int)short_oid->id[0] - 1)));
 
 	if (p->index_version > 1) {
 		stride = p->oid_size;
