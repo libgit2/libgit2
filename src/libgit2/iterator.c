@@ -276,9 +276,15 @@ static bool iterator_pathlist_next_is(git_iterator *iter, const char *path)
 				return true;
 		}
 
-		/* this pathlist entry sorts before the given path, try the next */
+		/* this pathlist entry sorts before the given path, try the next.
+		 * Only advance the walk index when the entry at that index is the
+		 * one being examined: an earlier entry may be a prefix of a later
+		 * path even though it does not match this one (eg, pathlist "foo"
+		 * does not match "foo-bar/c" but does match "foo/y").
+		 */
 		else if (cmp < 0) {
-			iter->pathlist_walk_idx++;
+			if (i == iter->pathlist_walk_idx)
+				iter->pathlist_walk_idx++;
 			continue;
 		}
 
