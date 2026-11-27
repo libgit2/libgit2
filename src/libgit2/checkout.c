@@ -270,8 +270,16 @@ static int checkout_action_common(
 {
 	git_checkout_notify_t notify = GIT_CHECKOUT_NOTIFY_NONE;
 
-	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0)
+	/*
+	 * Only update files that already exist with the same type; skip
+	 * adds, deletes and typechanges.
+	 */
+	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0) {
 		*action = (*action & ~CHECKOUT_ACTION__REMOVE);
+
+		if (!wd || (wd->mode & S_IFMT) != (delta->new_file.mode & S_IFMT))
+			*action = (*action & ~CHECKOUT_ACTION__UPDATE_BLOB);
+	}
 
 	if ((*action & CHECKOUT_ACTION__UPDATE_BLOB) != 0) {
 		if (S_ISGITLINK(delta->new_file.mode))
@@ -1796,7 +1804,8 @@ static int checkout_write_content(
 
 static int checkout_blob(
 	checkout_data *data,
-	const git_diff_file *file)
+	const git_diff_file *file,
+	bool replacing)
 {
 	git_str *fullpath;
 	struct stat st;
@@ -1805,7 +1814,12 @@ static int checkout_blob(
 	if (checkout_target_fullpath(&fullpath, data, file->path) < 0)
 		return -1;
 
-	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0) {
+	/*
+	 * If we removed the file ourselves in order to replace it, then
+	 * checkout_action_common already checked that it existed with the
+	 * same type.
+	 */
+	if ((data->strategy & GIT_CHECKOUT_UPDATE_ONLY) != 0 && !replacing) {
 		int rval = checkout_safe_for_update_only(
 			data, fullpath->ptr, file->mode);
 
@@ -1896,7 +1910,8 @@ static int checkout_create_the_new(
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
 		if (actions[i] & CHECKOUT_ACTION__UPDATE_BLOB && !S_ISLNK(delta->new_file.mode)) {
-			if ((error = checkout_blob(data, &delta->new_file)) < 0)
+			if ((error = checkout_blob(data, &delta->new_file,
+					(actions[i] & CHECKOUT_ACTION__REMOVE) != 0)) < 0)
 				return error;
 			data->completed_steps++;
 			report_progress(data, delta->new_file.path);
@@ -1905,7 +1920,8 @@ static int checkout_create_the_new(
 
 	git_vector_foreach(&data->diff->deltas, i, delta) {
 		if (actions[i] & CHECKOUT_ACTION__UPDATE_BLOB && S_ISLNK(delta->new_file.mode)) {
-			if ((error = checkout_blob(data, &delta->new_file)) < 0)
+			if ((error = checkout_blob(data, &delta->new_file,
+					(actions[i] & CHECKOUT_ACTION__REMOVE) != 0)) < 0)
 				return error;
 			data->completed_steps++;
 			report_progress(data, delta->new_file.path);
