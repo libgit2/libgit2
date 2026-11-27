@@ -45,9 +45,9 @@ struct git_process {
  * invoked application into arguments (instead of an array of
  * command-line arguments).  This command-line is split by space or
  * tab delimiters, unless that whitespace is within a double quote.
- * Literal double-quotes themselves can be escaped by a backslash,
- * but only when not within double quotes.  Literal backslashes can
- * be escaped by a backslash.
+ * Literal double-quotes themselves can be escaped by a backslash.
+ * Backslashes are literal, unless they immediately precede a double
+ * quote; then each pair of backslashes produces a single backslash.
  *
  * Effectively, this means that instead of thinking about quoting
  * individual strings, think about double quotes as an escaping
@@ -69,25 +69,48 @@ int git_process__cmdline(
 	size_t i;
 
 	for (i = 0; i < in_len; i++) {
+		size_t backslashes = 0;
+
 		/* Arguments are delimited by an unquoted space */
 		if (i)
 			git_str_putc(out, ' ');
 
 		for (c = in[i]; *c; c++) {
-			/* Start or stop quoting spaces within an argument */
-			if ((*c == ' ' || *c == '\t') && !quoted) {
-				git_str_putc(out, '"');
-				quoted = true;
-			} else if (*c != ' ' && *c != '\t' && quoted) {
-				git_str_putc(out, '"');
-				quoted = false;
+			bool whitespace = (*c == ' ' || *c == '\t');
+
+			/* Backslashes are only special before a double-quote */
+			if (*c == '\\') {
+				backslashes++;
+				continue;
 			}
 
-			/* Escape double-quotes and backslashes */
-			if (*c == '"' || *c == '\\')
+			/* Escape backslashes that precede a double-quote */
+			if (whitespace != quoted || *c == '"')
+				backslashes *= 2;
+
+			git_str_putcn(out, '\\', backslashes);
+			backslashes = 0;
+
+			/* Start or stop quoting spaces within an argument */
+			if (whitespace != quoted) {
+				git_str_putc(out, '"');
+				quoted = !quoted;
+			}
+
+			/* Escape double-quotes */
+			if (*c == '"')
 				git_str_putc(out, '\\');
 
 			git_str_putc(out, *c);
+		}
+
+		/* Close any quoting so it does not join the next argument */
+		if (quoted) {
+			git_str_putcn(out, '\\', backslashes * 2);
+			git_str_putc(out, '"');
+			quoted = false;
+		} else {
+			git_str_putcn(out, '\\', backslashes);
 		}
 	}
 
