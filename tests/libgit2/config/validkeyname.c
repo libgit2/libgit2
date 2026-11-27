@@ -47,3 +47,14 @@ void test_config_validkeyname__accessing_requires_a_valid_name(void)
 	assert_invalid_config_key_name("dif.dir\nstat.lines");
 	assert_invalid_config_key_name("dif.dirstat.li\nes");
 }
+
+void test_config_validkeyname__variable_name_starts_with_a_letter(void)
+{
+	assert_invalid_config_key_name("core.0dirstat");
+	assert_invalid_config_key_name("core.9lines");
+	assert_invalid_config_key_name("core.-lines");
+	assert_invalid_config_key_name("diff.dirstat.0lines");
+
+	/* a section name, unlike a variable name, may start with a digit */
+	cl_git_pass(git_config_set_string(cfg, "0diff.lines", "42"));
+}
