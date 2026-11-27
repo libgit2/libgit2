@@ -108,6 +108,9 @@ const char *p_gai_strerror(int ret)
 int p_open(const char *path, volatile int flags, ...)
 {
 	mode_t mode = 0;
+	struct stat st;
+	int fd, error;
+	int open_flags = flags | O_BINARY | O_CLOEXEC | O_NOCTTY;
 
 	#ifdef GIT_DEBUG_STRICT_OPEN
 	if (strstr(path, "//") != NULL) {
@@ -124,7 +127,40 @@ int p_open(const char *path, volatile int flags, ...)
 		va_end(arg_list);
 	}
 
-	return open(path, flags | O_BINARY | O_CLOEXEC, mode);
+	/*
+	 * A FIFO at a path that we expect to hold a file - a repository that
+	 * someone else packed can have one at .git/config, .git/index or in the
+	 * work tree - blocks open(2) until a writer appears, and a thread stuck
+	 * there cannot be cancelled.  Open without blocking and keep the
+	 * descriptor only for the files that we can actually read.
+	 */
+	fd = open(path, open_flags | O_NONBLOCK, mode);
+
+	if (fd < 0)
+		return -1;
+
+	if (p_fstat(fd, &st) < 0)
+		goto fail;
+
+	if (!S_ISREG(st.st_mode) && !S_ISDIR(st.st_mode) && !S_ISCHR(st.st_mode)) {
+		errno = ENXIO;
+		goto fail;
+	}
+
+	if (!(flags & O_NONBLOCK)) {
+		int status = fcntl(fd, F_GETFL, 0);
+
+		if (status < 0 || fcntl(fd, F_SETFL, status & ~O_NONBLOCK) < 0)
+			goto fail;
+	}
+
+	return fd;
+
+fail:
+	error = errno;
+	p_close(fd);
+	errno = error;
+	return -1;
 }
 
 int p_creat(const char *path, mode_t mode)
