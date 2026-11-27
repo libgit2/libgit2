@@ -10,6 +10,7 @@
 #include "buf.h"
 #include "common.h"
 #include "filter.h"
+#include "fs_path.h"
 #include "hash.h"
 #include "merge_driver.h"
 #include "pool.h"
@@ -44,6 +45,9 @@ int git_libgit2_init(void)
 		git_oid_global_init,
 		git_rand_global_init,
 		git_hash_global_init,
+#ifdef GIT_I18N_ICONV
+		git_fs_path_iconv_global_init,
+#endif
 		git_sysdir_global_init,
 		git_filter_global_init,
 		git_merge_driver_global_init,

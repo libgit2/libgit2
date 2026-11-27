@@ -10,6 +10,7 @@
 #include "git2_util.h"
 #include "futils.h"
 #include "posix.h"
+#include "runtime.h"
 #ifdef GIT_WIN32
 #include "win32/posix.h"
 #include "win32/w32_buffer.h"
@@ -1017,18 +1018,54 @@ bool git_fs_path_has_non_ascii(const char *path, size_t pathlen)
 
 #ifdef GIT_I18N_ICONV
 
+/*
+ * Serializes `iconv_open` and `iconv_close`.  The iconv in macOS 14 and
+ * newer guards both with a process-wide pthread rwlock, and a thread
+ * that is waiting for that lock when a signal arrives can lose its
+ * wakeup, leaving every waiter blocked forever.  We open and close a
+ * converter for every directory that we iterate and every reference
+ * name that we normalize, so holding this mutex around those calls
+ * keeps iconv's own lock uncontended.
+ */
+static git_mutex iconv_lock;
+
+static void git_fs_path_iconv_global_shutdown(void)
+{
+	git_mutex_free(&iconv_lock);
+}
+
+int git_fs_path_iconv_global_init(void)
+{
+	if (git_mutex_init(&iconv_lock) != 0)
+		return -1;
+
+	return git_runtime_shutdown_register(git_fs_path_iconv_global_shutdown);
+}
+
 int git_fs_path_iconv_init_precompose(git_fs_path_iconv_t *ic)
 {
 	git_str_init(&ic->buf, 0);
+	ic->map = (iconv_t)-1;
+
+	if (git_mutex_lock(&iconv_lock)) {
+		git_error_set(GIT_ERROR_THREAD, "unable to lock iconv mutex");
+		return -1;
+	}
+
 	ic->map = iconv_open(GIT_PATH_REPO_ENCODING, GIT_PATH_NATIVE_ENCODING);
+	git_mutex_unlock(&iconv_lock);
+
 	return 0;
 }
 
 void git_fs_path_iconv_clear(git_fs_path_iconv_t *ic)
 {
 	if (ic) {
-		if (ic->map != (iconv_t)-1)
+		if (ic->map != (iconv_t)-1) {
+			git_mutex_lock(&iconv_lock);
 			iconv_close(ic->map);
+			git_mutex_unlock(&iconv_lock);
+		}
 		git_str_dispose(&ic->buf);
 	}
 }
