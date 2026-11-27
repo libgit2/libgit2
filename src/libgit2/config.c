@@ -1532,6 +1532,15 @@ int git_config__normalize_name(const char *in, char **out)
 	    normalize_section(ldot + 1, NULL) < 0)
 		goto invalid;
 
+	/*
+	 * A variable name has to begin with a letter. git refuses to parse
+	 * a config file that contains one that does not, so accepting it
+	 * here lets us write a file that git cannot read at all. A section
+	 * name has no such restriction.
+	 */
+	if (!git__isalpha(ldot[1]))
+		goto invalid;
+
 	/* If there is a middle range, make sure it doesn't have newlines */
 	while (fdot < ldot)
 		if (*fdot++ == '\n')
