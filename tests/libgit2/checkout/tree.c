@@ -1672,3 +1672,80 @@ void test_checkout_tree__dry_run(void)
 
 	git_object_free(obj);
 }
+
+static void checkout_update_only_with_entry(
+	const char *path, const char *content, git_filemode_t mode)
+{
+	git_checkout_options opts = GIT_CHECKOUT_OPTIONS_INIT;
+	git_object *head;
+	git_tree *head_tree, *tree;
+	git_treebuilder *builder;
+	git_oid blob_id, tree_id;
+
+	cl_git_pass(git_revparse_single(&head, g_repo, "HEAD"));
+	cl_git_pass(git_checkout_tree(g_repo, head, &g_opts));
+	cl_git_pass(git_commit_tree(&head_tree, (git_commit *)head));
+
+	cl_git_pass(git_blob_create_from_buffer(&blob_id, g_repo,
+		content, strlen(content)));
+	cl_git_pass(git_treebuilder_new(&builder, g_repo, head_tree));
+	cl_git_pass(git_treebuilder_insert(NULL, builder, path, &blob_id, mode));
+	cl_git_pass(git_treebuilder_write(&tree_id, builder));
+	cl_git_pass(git_tree_lookup(&tree, g_repo, &tree_id));
+
+	opts.checkout_strategy = GIT_CHECKOUT_UPDATE_ONLY;
+	cl_git_pass(git_checkout_tree(g_repo, (git_object *)tree, &opts));
+
+	git_tree_free(tree);
+	git_treebuilder_free(builder);
+	git_tree_free(head_tree);
+	git_object_free(head);
+}
+
+void test_checkout_tree__update_only_skips_typechange(void)
+{
+	struct stat st;
+
+	checkout_update_only_with_entry(
+		"branch_file.txt", "new.txt", GIT_FILEMODE_LINK);
+
+	cl_must_pass(p_lstat("testrepo/branch_file.txt", &st));
+	cl_assert(S_ISREG(st.st_mode));
+	check_file_contents_nocr("testrepo/branch_file.txt", "hi\nbye!\n");
+}
+
+void test_checkout_tree__update_only_updates_symlink(void)
+{
+	char link_data[GIT_PATH_MAX];
+	ssize_t link_size;
+
+	if (!git_fs_path_supports_symlinks("testrepo/test"))
+		cl_skip();
+
+	cl_repo_set_bool(g_repo, "core.symlinks", true);
+
+	checkout_update_only_with_entry(
+		"link_to_new.txt", "README", GIT_FILEMODE_LINK);
+
+	link_size = p_readlink("testrepo/link_to_new.txt",
+		link_data, sizeof(link_data) - 1);
+	cl_assert(link_size >= 0);
+	link_data[link_size] = '\0';
+	cl_assert_equal_s("README", link_data);
+}
+
+void test_checkout_tree__update_only_updates_mode(void)
+{
+	struct stat st;
+
+	if (!cl_is_chmod_supported())
+		cl_skip();
+
+	checkout_update_only_with_entry(
+		"new.txt", "my new file\n", GIT_FILEMODE_BLOB_EXECUTABLE);
+
+	cl_must_pass(p_lstat("testrepo/new.txt", &st));
+	cl_assert(S_ISREG(st.st_mode));
+	cl_assert(GIT_PERMS_IS_EXEC(st.st_mode));
+	check_file_contents_nocr("testrepo/new.txt", "my new file\n");
+}
