@@ -584,6 +584,18 @@ typedef struct {
 	bool *is_safe;
 } validate_ownership_data;
 
+/*
+ * Windows paths are compared case-insensitively; Git canonicalizes
+ * both the repository path and the configured `safe.directory` entry
+ * to their on-disk form, so eg `c:/repo` matches `C:/Repo`. POSIX
+ * filesystems are case-sensitive, so compare exactly there.
+ */
+#ifdef GIT_WIN32
+# define OWNERSHIP_PATH_IGNORE_CASE 1
+#else
+# define OWNERSHIP_PATH_IGNORE_CASE 0
+#endif
+
 static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 {
 	validate_ownership_data *data = payload;
@@ -647,8 +659,11 @@ static int validate_ownership_cb(const git_config_entry *entry, void *payload)
 			test_path += strlen("%(prefix)/");
 
 		match = is_prefix ?
-			(git__prefixcmp(data->repo_path, test_path) == 0) :
-			(strcmp(test_path, data->repo_path) == 0);
+			(CASESELECT(OWNERSHIP_PATH_IGNORE_CASE,
+				git__prefixcmp_icase(data->repo_path, test_path),
+				git__prefixcmp(data->repo_path, test_path)) == 0) :
+			(STRCMP_CASESELECT(OWNERSHIP_PATH_IGNORE_CASE,
+				test_path, data->repo_path) == 0);
 
 		if (match)
 			*data->is_safe = true;
