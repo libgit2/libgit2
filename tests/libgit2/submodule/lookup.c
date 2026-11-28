@@ -539,3 +539,32 @@ void test_submodule_lookup__fail_invalid_gitmodules(void)
 
 	cl_git_fail(git_submodule_foreach(g_repo, sm_lookup_cb, &data));
 }
+
+void test_submodule_lookup__by_path_when_name_differs(void)
+{
+	git_submodule *sm;
+	git_index *idx;
+	unsigned int location = 0, status = 0;
+
+	cl_git_rewritefile("submod2/.gitmodules",
+			   "[submodule \"custom_name\"]\n"
+			   "    path = sm_changed_file\n"
+			   "    url = ../submod2_target\n"
+			   "    ignore = dirty\n");
+
+	cl_git_pass(git_repository_index__weakptr(&idx, g_repo));
+	cl_git_pass(git_index_add_bypath(idx, ".gitmodules"));
+	cl_git_pass(git_index_write(idx));
+
+	cl_git_pass(git_submodule_lookup(&sm, g_repo, "sm_changed_file"));
+	cl_assert_equal_s("custom_name", git_submodule_name(sm));
+	cl_assert_equal_s("sm_changed_file", git_submodule_path(sm));
+	cl_assert_equal_i(GIT_SUBMODULE_IGNORE_DIRTY, git_submodule_ignore(sm));
+
+	cl_git_pass(git_submodule_location(&location, sm));
+	cl_assert((location & GIT_SUBMODULE_STATUS_IN_CONFIG) != 0);
+	git_submodule_free(sm);
+
+	cl_git_pass(git_status_file(&status, g_repo, "sm_changed_file"));
+	cl_assert_equal_i(0, status);
+}
